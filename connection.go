@@ -28,8 +28,6 @@ func (c *Connection) Connect() error {
 }
 
 func (c *Connection) Close() {
-	return errorlib.Error(packageName, modConnection,
-		"Connect", errorlib.NotYetImplemented)
 }
 
 func (c *Connection) Query() IQuery {

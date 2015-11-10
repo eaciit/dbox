@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"github.com/eaciit/dbox"
-	"github.com/eaciit/dbox/dbc/mongo"
 	"gopkg.in/mgo.v2"
 
 	"github.com/eaciit/toolkit"

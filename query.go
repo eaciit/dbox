@@ -1,4 +1,4 @@
-package DB_OP
+package dbox
 
 type IQuery interface {
 	Cursor() *Cursor

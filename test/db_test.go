@@ -1,8 +1,9 @@
-package dbox
+package dbox_test
 
 import (
-	"./dbc/mongo"
 	"fmt"
+	"github.com/eaciit/dbox"
+	"github.com/eaciit/dbox/dbc/mongo"
 	"testing"
 )
 
@@ -34,5 +35,17 @@ func TestQuery(t *testing.T) {
 
 	defer close()
 
-	cursor, error := ctx.NewQuery().Cursor()
+	cursor, e := ctx.NewQuery().Select("_id", "title").From("testtable").
+		Where(ctx.Or(ctx.Eq("_id", 20), ctx.Eq("title", "default"))).
+		Cursor()
+	if e != nil {
+		t.Errorf("Unable to generate cursor. %s", e.Error())
+	}
+	defer cursor.Close()
+
+	results := make([]toolkit.M, 0)
+	e = cursor.Fetch(results, 0, false)
+	if e != nil {
+		t.Errorf("Unable to iterate cursor %s", e.Error())
+	}
 }
