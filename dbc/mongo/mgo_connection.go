@@ -15,6 +15,20 @@ type Connection struct {
 	session *mgo.Session
 }
 
+func NewConnection(host, database, username,
+	password string, settings toolkit.M) *Connection {
+	if settings == nil {
+		settings = toolkit.M{}
+	}
+	c := new(Connection)
+	c.Host = host
+	c.Database = database
+	c.UserName = username
+	c.Password = password
+	c.Settings = settings
+	return c
+}
+
 func (c *Connection) Connect() error {
 	info := new(mgo.DialInfo)
 	if c.UserName != "" {
