@@ -2,16 +2,25 @@ package dbox_test
 
 import (
 	"fmt"
+
 	"github.com/eaciit/dbox"
-	"github.com/eaciit/dbox/dbc/mongo"
+	_ "github.com/eaciit/dbox/dbc/mongo"
+	"github.com/eaciit/toolkit"
 	"testing"
 )
 
 var ctx dbox.IConnection
 
 func connect() error {
-	ctx := mongo.NewConnection("localhost:27123", "ectest", "", "", nil)
-	e := ctx.Connect()
+	var e error
+	if ctx == nil {
+		ctx, e = dbox.NewConnection("mongo",
+			&dbox.ConnectionInfo{"localhost:27123", "ectest", "", "", nil})
+		if e != nil {
+			return e
+		}
+	}
+	e = ctx.Connect()
 	return e
 }
 
@@ -32,16 +41,16 @@ func TestConnect(t *testing.T) {
 }
 
 func TestQuery(t *testing.T) {
-	fmt.Println("Testing connection")
+	fmt.Println("Testing Query")
 	e := connect()
 	if e != nil {
 		t.Errorf("Error connecting to database: %s \n", e.Error())
 	}
-
 	defer close()
 
+	fb := ctx.Fb()
 	cursor, e := ctx.NewQuery().Select("_id", "title").From("testtable").
-		Where(ctx.Or(ctx.Eq("_id", 20), ctx.Eq("title", "default"))).
+		Where(fb.Or(fb.Eq("_id", 20), fb.Eq("title", "default"))).
 		Cursor()
 	if e != nil {
 		t.Errorf("Unable to generate cursor. %s", e.Error())

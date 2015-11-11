@@ -20,35 +20,35 @@ type Connection struct {
 	session *mgo.Session
 }
 
-func NewConnection(host, database, username,
-	password string, settings toolkit.M) *Connection {
-	if settings == nil {
-		settings = toolkit.M{}
+func init() {
+	dbox.RegisterConnector("mongo", NewConnection)
+}
+
+func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
+	if ci.Settings == nil {
+		ci.Settings = toolkit.M{}
 	}
 	c := new(Connection)
-	c.Host = host
-	c.Database = database
-	c.UserName = username
-	c.Password = password
-	c.Settings = settings
-	return c
+	c.Info = ci
+	return c, nil
 }
 
 func (c *Connection) Connect() error {
 	info := new(mgo.DialInfo)
-	if c.UserName != "" {
-		info.Username = c.UserName
-		info.Password = c.Password
+	ci := c.Info
+	if ci.UserName != "" {
+		info.Username = ci.UserName
+		info.Password = ci.Password
 	}
-	info.Addrs = []string{c.Host}
-	info.Database = c.Database
+	info.Addrs = []string{ci.Host}
+	info.Database = ci.Database
 	info.Source = "admin"
 
-	if c.Settings != nil {
-		c.Settings = toolkit.M{}
+	if ci.Settings != nil {
+		ci.Settings = toolkit.M{}
 	}
 
-	if c.Settings.Get("poollimit", 0).(int) > 0 {
+	if ci.Settings.Get("poollimit", 0).(int) > 0 {
 		info.PoolLimit = 100
 	}
 

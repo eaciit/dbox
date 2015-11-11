@@ -1,9 +1,8 @@
 package dbox
 
 import (
-	"github.com/eaciit/toolkit"
-
 	"github.com/eaciit/errorlib"
+	"github.com/eaciit/toolkit"
 )
 
 type IConnection interface {
@@ -14,15 +13,42 @@ type IConnection interface {
 	Fb() IFilterBuilder
 }
 
-type Connection struct {
+type FnNewConnection func(*ConnectionInfo) (IConnection, error)
+
+var connectors map[string]FnNewConnection
+
+func RegisterConnector(connector string, fn FnNewConnection) {
+	if connectors == nil {
+		connectors = map[string]FnNewConnection{}
+	}
+	connectors[connector] = fn
+}
+
+func NewConnection(connector string, ci *ConnectionInfo) (IConnection, error) {
+	if connectors == nil {
+		return nil, errorlib.Error(packageName, "", "NewConnection", "Invalid connector")
+	}
+
+	fn, found := connectors[connector]
+	if found == false {
+		return nil, errorlib.Error(packageName, "", "NewConnection", "Invalid connector")
+	}
+
+	return fn(ci)
+}
+
+type ConnectionInfo struct {
 	Host     string
+	Database string
 	UserName string
 	Password string
-	Database string
 
 	Settings toolkit.M
+}
 
-	fb IFilterBuilder
+type Connection struct {
+	Info *ConnectionInfo
+	fb   IFilterBuilder
 }
 
 func (c *Connection) Connect() error {
@@ -42,5 +68,6 @@ func (c *Connection) Close() {
 }
 
 func (c *Connection) NewQuery() IQuery {
-	return nil
+	q := new(Query)
+	return q
 }
