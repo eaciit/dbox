@@ -11,6 +11,7 @@ type IConnection interface {
 	Close()
 
 	NewQuery() IQuery
+	Fb() IFilterBuilder
 }
 
 type Connection struct {
@@ -20,11 +21,21 @@ type Connection struct {
 	Database string
 
 	Settings toolkit.M
+
+	fb IFilterBuilder
 }
 
 func (c *Connection) Connect() error {
 	return errorlib.Error(packageName, modConnection,
 		"Connect", errorlib.NotYetImplemented)
+}
+
+func (c *Connection) Fb() IFilterBuilder {
+	if c.fb == nil {
+		c.fb = new(FilterBuilder)
+	}
+
+	return c.fb
 }
 
 func (c *Connection) Close() {

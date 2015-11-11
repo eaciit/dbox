@@ -14,6 +14,8 @@ type IFilterBuilder interface {
 	Build() interface{}
 	BuildFilter(*Filter) interface{}
 	CombineFilter([]toolkit.M) interface{}
+
+	Eq(string, interface{}) *Filter
 }
 
 type FilterBuilder struct {
