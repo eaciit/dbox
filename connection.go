@@ -30,6 +30,6 @@ func (c *Connection) Connect() error {
 func (c *Connection) Close() {
 }
 
-func (c *Connection) Query() IQuery {
+func (c *Connection) NewQuery() IQuery {
 	return nil
 }
