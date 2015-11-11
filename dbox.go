@@ -5,18 +5,18 @@ const (
 	modConnection = "Connection"
 )
 
-type DB_OP string
+type DBOP string
 
 const (
-	DB_INSERT  DB_OP = "insert"
-	DB_UPDATE  DB_OP = "update"
-	DB_DELETE  DB_OP = "delete"
-	DB_SELECT  DB_OP = "select"
-	DB_SAVE    DB_OP = "save"
-	DB_COMMAND DB_OP = "command"
-	DB_UKNOWN  DB_OP = "unknown"
+	DBINSERT  DBOP = "insert"
+	DBUPDATE  DBOP = "update"
+	DBDELETE  DBOP = "delete"
+	DBSELECT  DBOP = "select"
+	DBSAVE    DBOP = "save"
+	DBCOMMAND DBOP = "command"
+	DBUKNOWN  DBOP = "unknown"
 )
 
-func (d *DB_OP) String() string {
+func (d *DBOP) String() string {
 	return string(*d)
 }

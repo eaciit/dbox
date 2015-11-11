@@ -3,25 +3,27 @@ package dbox
 type QueryPartType string
 
 const (
-	QueryPart_Select  = "SELECT"
-	QueryPart_From    = "FROM"
-	QueryPart_Where   = "WHERE"
-	QueryPart_Group   = "GROUP BY"
-	QueryPart_Order   = "ORDER BY"
-	QueryPart_Insert  = "INSERT"
-	QueryPart_Update  = "UPDATE"
-	QueryPart_Delete  = "DELETE"
-	QueryPart_Save    = "SAVE"
-	QueryPart_Command = "COMMAND"
+	QueryPartSelect  = "SELECT"
+	QueryPartFrom    = "FROM"
+	QueryPartWhere   = "WHERE"
+	QueryPartGroup   = "GROUP BY"
+	QueryPartOrder   = "ORDER BY"
+	QueryPartInsert  = "INSERT"
+	QueryPartUpdate  = "UPDATE"
+	QueryPartDelete  = "DELETE"
+	QueryPartSave    = "SAVE"
+	QueryPartCommand = "COMMAND"
 
-	QueryPart_Join      = "JOIN"
-	QueryPart_LeftJoin  = "LEFT JOIN"
-	QueryPart_RightJoin = "RIGHT JOIN"
+	QueryPartJoin      = "JOIN"
+	QueryPartLeftJoin  = "LEFT JOIN"
+	QueryPartRightJoin = "RIGHT JOIN"
 )
 
 type IQuery interface {
 	Cursor() (*Cursor, error)
+	Connection() IConnection
 
+	SetConnection(IConnection) IQuery
 	SetThis(IQuery) IQuery
 
 	Select(...string) IQuery
@@ -36,6 +38,7 @@ type QueryPart struct {
 
 type Query struct {
 	thisQuery IQuery
+	conn      IConnection
 
 	Parts []*QueryPart
 }
@@ -56,9 +59,18 @@ func (q *Query) addPart(qp *QueryPart) IQuery {
 	return q.this()
 }
 
+func (q *Query) SetConnection(c IConnection) IQuery {
+	q.conn = c
+	return q.this()
+}
+
 func (q *Query) SetThis(t IQuery) IQuery {
 	q.thisQuery = t
-	return q
+	return t
+}
+
+func (q *Query) Connection() IConnection {
+	return q.conn
 }
 
 func (q *Query) Cursor() (*Cursor, error) {
@@ -66,13 +78,21 @@ func (q *Query) Cursor() (*Cursor, error) {
 }
 
 func (q *Query) Select(ss ...string) IQuery {
-	return q
+	q.addPart(&QueryPart{QueryPartSelect, ss})
+	return q.this()
 }
 
 func (q *Query) From(objname string) IQuery {
-	return q
+	q.addPart(&QueryPart{QueryPartFrom, objname})
+	return q.this()
 }
 
 func (q *Query) Where(fs ...*Filter) IQuery {
-	return q
+	q.addPart(&QueryPart{QueryPartWhere, fs})
+	return q.this()
+}
+
+func (q *Query) OrderBy(ords ...string) IQuery {
+	q.addPart(&QueryPart{QueryPartOrder, ords})
+	return q.this()
 }
