@@ -1,0 +1,921 @@
+<!--
+	Copyright 2009 The Go Authors. All rights reserved.
+	Use of this source code is governed by a BSD-style
+	license that can be found in the LICENSE file.
+-->
+<!--
+	Note: Static (i.e., not template-generated) href and id
+	attributes start with "pkg-" to make it impossible for
+	them to conflict with generated attributes (some of which
+	correspond to Go identifiers).
+-->
+
+	<script type='text/javascript'>
+	document.ANALYSIS_DATA = ;
+	document.CALLGRAPH = ;
+	</script>
+
+	
+		
+		<div id="short-nav">
+			<dl>
+			<dd><code>import "github.com/eaciit/dbox"</code></dd>
+			</dl>
+			<dl>
+			<dd><a href="#pkg-overview" class="overviewLink">Overview</a></dd>
+			<dd><a href="#pkg-index" class="indexLink">Index</a></dd>
+			
+			
+				<dd><a href="#pkg-subdirectories">Subdirectories</a></dd>
+			
+			</dl>
+		</div>
+		<!-- The package's Name is printed as title by the top-level template -->
+		<div id="pkg-overview" class="toggleVisible">
+			<div class="collapsed">
+				<h2 class="toggleButton" title="Click to show Overview section">Overview ▹</h2>
+			</div>
+			<div class="expanded">
+				<h2 class="toggleButton" title="Click to hide Overview section">Overview ▾</h2>
+				
+			</div>
+		</div>
+		
+
+		<div id="pkg-index" class="toggleVisible">
+		<div class="collapsed">
+			<h2 class="toggleButton" title="Click to show Index section">Index ▹</h2>
+		</div>
+		<div class="expanded">
+			<h2 class="toggleButton" title="Click to hide Index section">Index ▾</h2>
+
+		<!-- Table of contents for API; must be named manual-nav to turn off auto nav. -->
+			<div id="manual-nav">
+			<dl>
+			
+				<dd><a href="#pkg-constants">Constants</a></dd>
+			
+			
+			
+				
+				<dd><a href="#RegisterConnector">func RegisterConnector(connector string, fn FnNewConnection)</a></dd>
+			
+			
+				
+				<dd><a href="#Connection">type Connection</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Connection.Close">func (c *Connection) Close()</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Connection.Connect">func (c *Connection) Connect() error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Connection.Fb">func (c *Connection) Fb() IFilterBuilder</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Connection.NewQuery">func (c *Connection) NewQuery() IQuery</a></dd>
+				
+			
+				
+				<dd><a href="#ConnectionInfo">type ConnectionInfo</a></dd>
+				
+				
+			
+				
+				<dd><a href="#Cursor">type Cursor</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Cursor.Close">func (c *Cursor) Close()</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Cursor.Count">func (c *Cursor) Count() int</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Cursor.Execute">func (c *Cursor) Execute() error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Cursor.Fetch">func (c *Cursor) Fetch(o interface{}, n int, closeWhenDone bool) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Cursor.ResetFetch">func (c *Cursor) ResetFetch() error</a></dd>
+				
+			
+				
+				<dd><a href="#DBOP">type DBOP</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#DBOP.String">func (d *DBOP) String() string</a></dd>
+				
+			
+				
+				<dd><a href="#Filter">type Filter</a></dd>
+				
+				
+			
+				
+				<dd><a href="#FilterBuilder">type FilterBuilder</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#FilterBuilder.And">func (fb *FilterBuilder) And(fs ...*Filter) *Filter</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#FilterBuilder.Build">func (fb *FilterBuilder) Build() (interface{}, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#FilterBuilder.BuildFilter">func (fb *FilterBuilder) BuildFilter(f *Filter) (interface{}, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#FilterBuilder.CombineFilter">func (fb *FilterBuilder) CombineFilter(mfs []toolkit.M) (interface{}, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#FilterBuilder.Eq">func (fb *FilterBuilder) Eq(field string, value interface{}) *Filter</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#FilterBuilder.Or">func (fb *FilterBuilder) Or(fs ...*Filter) *Filter</a></dd>
+				
+			
+				
+				<dd><a href="#FilterOp">type FilterOp</a></dd>
+				
+				
+			
+				
+				<dd><a href="#FnNewConnection">type FnNewConnection</a></dd>
+				
+				
+			
+				
+				<dd><a href="#IConnection">type IConnection</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#NewConnection">func NewConnection(connector string, ci *ConnectionInfo) (IConnection, error)</a></dd>
+				
+				
+			
+				
+				<dd><a href="#ICursor">type ICursor</a></dd>
+				
+				
+			
+				
+				<dd><a href="#IFilterBuilder">type IFilterBuilder</a></dd>
+				
+				
+			
+				
+				<dd><a href="#IQuery">type IQuery</a></dd>
+				
+				
+			
+				
+				<dd><a href="#Query">type Query</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.Connection">func (q *Query) Connection() IConnection</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.Cursor">func (q *Query) Cursor(in toolkit.M) (*Cursor, error)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.Execute">func (q *Query) Execute(result interface{}, in toolkit.M) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.From">func (q *Query) From(objname string) IQuery</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.OrderBy">func (q *Query) OrderBy(ords ...string) IQuery</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.Select">func (q *Query) Select(ss ...string) IQuery</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.SetConnection">func (q *Query) SetConnection(c IConnection) IQuery</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.SetThis">func (q *Query) SetThis(t IQuery) IQuery</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Query.Where">func (q *Query) Where(fs ...*Filter) IQuery</a></dd>
+				
+			
+				
+				<dd><a href="#QueryPart">type QueryPart</a></dd>
+				
+				
+			
+				
+				<dd><a href="#QueryPartType">type QueryPartType</a></dd>
+				
+				
+			
+			
+			</dl>
+			</div><!-- #manual-nav -->
+
+		
+
+		
+			<h4>Package files</h4>
+			<p>
+			<span style="font-size:90%">
+			
+				<a href="/src/github.com/eaciit/dbox/connection.go">connection.go</a>
+			
+				<a href="/src/github.com/eaciit/dbox/cursor.go">cursor.go</a>
+			
+				<a href="/src/github.com/eaciit/dbox/dbox.go">dbox.go</a>
+			
+				<a href="/src/github.com/eaciit/dbox/filter.go">filter.go</a>
+			
+				<a href="/src/github.com/eaciit/dbox/query.go">query.go</a>
+			
+			</span>
+			</p>
+		
+		</div><!-- .expanded -->
+		</div><!-- #pkg-index -->
+
+		<div id="pkg-callgraph" class="toggle" style="display: none">
+		<div class="collapsed">
+			<h2 class="toggleButton" title="Click to show Internal Call Graph section">Internal call graph ▹</h2>
+		</div> <!-- .expanded -->
+		<div class="expanded">
+			<h2 class="toggleButton" title="Click to hide Internal Call Graph section">Internal call graph ▾</h2>
+			<p>
+			  In the call graph viewer below, each node
+			  is a function belonging to this package
+			  and its children are the functions it
+			  calls&mdash;perhaps dynamically.
+			</p>
+			<p>
+			  The root nodes are the entry points of the
+			  package: functions that may be called from
+			  outside the package.
+			  There may be non-exported or anonymous
+			  functions among them if they are called
+			  dynamically from another package.
+			</p>
+			<p>
+			  Click a node to visit that function's source code.
+			  From there you can visit its callers by
+			  clicking its declaring <code>func</code>
+			  token.
+			</p>
+			<p>
+			  Functions may be omitted if they were
+			  determined to be unreachable in the
+			  particular programs or tests that were
+			  analyzed.
+			</p>
+			<!-- Zero means show all package entry points. -->
+			<ul style="margin-left: 0.5in" id="callgraph-0" class="treeview"></ul>
+		</div>
+		</div> <!-- #pkg-callgraph -->
+
+		
+			<h2 id="pkg-constants">Constants</h2>
+			
+				<pre>const (
+    <span id="FilterOpAnd">FilterOpAnd</span> = &#34;$and&#34;
+    <span id="FilterOpOr">FilterOpOr</span>  = &#34;$or&#34;
+
+    <span id="FilterOpEqual">FilterOpEqual</span>       = &#34;$eq&#34;
+    <span id="FilterOpNoEqual">FilterOpNoEqual</span>     = &#34;$ne&#34;
+    <span id="FilterOpContains">FilterOpContains</span>    = &#34;$contains&#34;
+    <span id="FilterOpNotContains">FilterOpNotContains</span> = &#34;$notcontains&#34;
+)</pre>
+				
+			
+				<pre>const (
+    <span id="QueryPartSelect">QueryPartSelect</span>  = &#34;SELECT&#34;
+    <span id="QueryPartFrom">QueryPartFrom</span>    = &#34;FROM&#34;
+    <span id="QueryPartWhere">QueryPartWhere</span>   = &#34;WHERE&#34;
+    <span id="QueryPartGroup">QueryPartGroup</span>   = &#34;GROUP BY&#34;
+    <span id="QueryPartOrder">QueryPartOrder</span>   = &#34;ORDER BY&#34;
+    <span id="QueryPartInsert">QueryPartInsert</span>  = &#34;INSERT&#34;
+    <span id="QueryPartUpdate">QueryPartUpdate</span>  = &#34;UPDATE&#34;
+    <span id="QueryPartDelete">QueryPartDelete</span>  = &#34;DELETE&#34;
+    <span id="QueryPartSave">QueryPartSave</span>    = &#34;SAVE&#34;
+    <span id="QueryPartCommand">QueryPartCommand</span> = &#34;COMMAND&#34;
+
+    <span id="QueryPartJoin">QueryPartJoin</span>      = &#34;JOIN&#34;
+    <span id="QueryPartLeftJoin">QueryPartLeftJoin</span>  = &#34;LEFT JOIN&#34;
+    <span id="QueryPartRightJoin">QueryPartRightJoin</span> = &#34;RIGHT JOIN&#34;
+)</pre>
+				
+			
+		
+		
+		
+			
+			
+			<h2 id="RegisterConnector">func <a href="/src/target/connection.go?s=292:352#L10">RegisterConnector</a></h2>
+			<pre>func RegisterConnector(connector <a href="/pkg/builtin/#string">string</a>, fn <a href="#FnNewConnection">FnNewConnection</a>)</pre>
+			
+			
+			
+
+		
+		
+			
+			
+			<h2 id="Connection">type <a href="/src/target/connection.go?s=933:1002#L39">Connection</a></h2>
+			<pre>type Connection struct {
+    Info *<a href="#ConnectionInfo">ConnectionInfo</a>
+    <span class="comment">// contains filtered or unexported fields</span>
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="Connection.Close">func (*Connection) <a href="/src/target/connection.go?s=1247:1275#L57">Close</a></h3>
+				<pre>func (c *<a href="#Connection">Connection</a>) Close()</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Connection.Connect">func (*Connection) <a href="/src/target/connection.go?s=1004:1040#L44">Connect</a></h3>
+				<pre>func (c *<a href="#Connection">Connection</a>) Connect() <a href="/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Connection.Fb">func (*Connection) <a href="/src/target/connection.go?s=1138:1178#L49">Fb</a></h3>
+				<pre>func (c *<a href="#Connection">Connection</a>) Fb() <a href="#IFilterBuilder">IFilterBuilder</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Connection.NewQuery">func (*Connection) <a href="/src/target/connection.go?s=1281:1319#L60">NewQuery</a></h3>
+				<pre>func (c *<a href="#Connection">Connection</a>) NewQuery() <a href="#IQuery">IQuery</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ConnectionInfo">type <a href="/src/target/connection.go?s=812:931#L30">ConnectionInfo</a></h2>
+			<pre>type ConnectionInfo struct {
+    Host     <a href="/pkg/builtin/#string">string</a>
+    Database <a href="/pkg/builtin/#string">string</a>
+    UserName <a href="/pkg/builtin/#string">string</a>
+    Password <a href="/pkg/builtin/#string">string</a>
+
+    Settings <a href="/pkg/github.com/eaciit/toolkit/">toolkit</a>.<a href="/pkg/github.com/eaciit/toolkit/#M">M</a>
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="Cursor">type <a href="/src/target/cursor.go?s=138:160#L1">Cursor</a></h2>
+			<pre>type Cursor struct {
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="Cursor.Close">func (*Cursor) <a href="/src/target/cursor.go?s=212:236#L8">Close</a></h3>
+				<pre>func (c *<a href="#Cursor">Cursor</a>) Close()</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Cursor.Count">func (*Cursor) <a href="/src/target/cursor.go?s=242:270#L11">Count</a></h3>
+				<pre>func (c *<a href="#Cursor">Cursor</a>) Count() <a href="/pkg/builtin/#int">int</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Cursor.Execute">func (*Cursor) <a href="/src/target/cursor.go?s=162:194#L4">Execute</a></h3>
+				<pre>func (c *<a href="#Cursor">Cursor</a>) Execute() <a href="/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Cursor.Fetch">func (*Cursor) <a href="/src/target/cursor.go?s=339:410#L19">Fetch</a></h3>
+				<pre>func (c *<a href="#Cursor">Cursor</a>) Fetch(o interface{}, n <a href="/pkg/builtin/#int">int</a>,
+    closeWhenDone <a href="/pkg/builtin/#bool">bool</a>) <a href="/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Cursor.ResetFetch">func (*Cursor) <a href="/src/target/cursor.go?s=286:321#L15">ResetFetch</a></h3>
+				<pre>func (c *<a href="#Cursor">Cursor</a>) ResetFetch() <a href="/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="DBOP">type <a href="/src/target/dbox.go?s=86:102#L1">DBOP</a></h2>
+			<pre>type DBOP <a href="/pkg/builtin/#string">string</a></pre>
+			
+
+			
+				<pre>const (
+    <span id="DBINSERT">DBINSERT</span>  <a href="#DBOP">DBOP</a> = &#34;insert&#34;
+    <span id="DBUPDATE">DBUPDATE</span>  <a href="#DBOP">DBOP</a> = &#34;update&#34;
+    <span id="DBDELETE">DBDELETE</span>  <a href="#DBOP">DBOP</a> = &#34;delete&#34;
+    <span id="DBSELECT">DBSELECT</span>  <a href="#DBOP">DBOP</a> = &#34;select&#34;
+    <span id="DBSAVE">DBSAVE</span>    <a href="#DBOP">DBOP</a> = &#34;save&#34;
+    <span id="DBCOMMAND">DBCOMMAND</span> <a href="#DBOP">DBOP</a> = &#34;command&#34;
+    <span id="DBUKNOWN">DBUKNOWN</span>  <a href="#DBOP">DBOP</a> = &#34;unknown&#34;
+)</pre>
+				
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="DBOP.String">func (*DBOP) <a href="/src/target/dbox.go?s=304:334#L10">String</a></h3>
+				<pre>func (d *<a href="#DBOP">DBOP</a>) String() <a href="/pkg/builtin/#string">string</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="Filter">type <a href="/src/target/filter.go?s=330:399#L13">Filter</a></h2>
+			<pre>type Filter struct {
+    Field <a href="/pkg/builtin/#string">string</a>
+    Op    <a href="/pkg/builtin/#string">string</a>
+    Value interface{}
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="FilterBuilder">type <a href="/src/target/filter.go?s=677:725#L32">FilterBuilder</a></h2>
+			<pre>type FilterBuilder struct {
+    Filters []*<a href="#Filter">Filter</a>
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="FilterBuilder.And">func (*FilterBuilder) <a href="/src/target/filter.go?s=1655:1706#L68">And</a></h3>
+				<pre>func (fb *<a href="#FilterBuilder">FilterBuilder</a>) And(fs ...*<a href="#Filter">Filter</a>) *<a href="#Filter">Filter</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="FilterBuilder.Build">func (*FilterBuilder) <a href="/src/target/filter.go?s=727:780#L36">Build</a></h3>
+				<pre>func (fb *<a href="#FilterBuilder">FilterBuilder</a>) Build() (interface{}, <a href="/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="FilterBuilder.BuildFilter">func (*FilterBuilder) <a href="/src/target/filter.go?s=1143:1211#L52">BuildFilter</a></h3>
+				<pre>func (fb *<a href="#FilterBuilder">FilterBuilder</a>) BuildFilter(f *<a href="#Filter">Filter</a>) (interface{}, <a href="/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="FilterBuilder.CombineFilter">func (*FilterBuilder) <a href="/src/target/filter.go?s=1312:1388#L56">CombineFilter</a></h3>
+				<pre>func (fb *<a href="#FilterBuilder">FilterBuilder</a>) CombineFilter(mfs []<a href="/pkg/github.com/eaciit/toolkit/">toolkit</a>.<a href="/pkg/github.com/eaciit/toolkit/#M">M</a>) (interface{}, <a href="/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="FilterBuilder.Eq">func (*FilterBuilder) <a href="/src/target/filter.go?s=1489:1557#L60">Eq</a></h3>
+				<pre>func (fb *<a href="#FilterBuilder">FilterBuilder</a>) Eq(field <a href="/pkg/builtin/#string">string</a>, value interface{}) *<a href="#Filter">Filter</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="FilterBuilder.Or">func (*FilterBuilder) <a href="/src/target/filter.go?s=1782:1832#L75">Or</a></h3>
+				<pre>func (fb *<a href="#FilterBuilder">FilterBuilder</a>) Or(fs ...*<a href="#Filter">Filter</a>) *<a href="#Filter">Filter</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="FilterOp">type <a href="/src/target/filter.go?s=92:112#L1">FilterOp</a></h2>
+			<pre>type FilterOp <a href="/pkg/builtin/#string">string</a></pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="FnNewConnection">type <a href="/src/target/connection.go?s=184:247#L6">FnNewConnection</a></h2>
+			<pre>type FnNewConnection func(*<a href="#ConnectionInfo">ConnectionInfo</a>) (<a href="#IConnection">IConnection</a>, <a href="/pkg/builtin/#error">error</a>)</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="IConnection">type <a href="/src/target/connection.go?s=85:182#L1">IConnection</a></h2>
+			<pre>type IConnection interface {
+    Connect() <a href="/pkg/builtin/#error">error</a>
+    Close()
+
+    NewQuery() <a href="#IQuery">IQuery</a>
+    Fb() <a href="#IFilterBuilder">IFilterBuilder</a>
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+				
+				<h3 id="NewConnection">func <a href="/src/target/connection.go?s=457:534#L17">NewConnection</a></h3>
+				<pre>func NewConnection(connector <a href="/pkg/builtin/#string">string</a>, ci *<a href="#ConnectionInfo">ConnectionInfo</a>) (<a href="#IConnection">IConnection</a>, <a href="/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+			
+
+			
+		
+			
+			
+			<h2 id="ICursor">type <a href="/src/target/cursor.go?s=14:136#L1">ICursor</a></h2>
+			<pre>type ICursor interface {
+    Execute() <a href="/pkg/builtin/#error">error</a>
+    Close()
+    Count() <a href="/pkg/builtin/#int">int</a>
+    ResetFetch() <a href="/pkg/builtin/#error">error</a>
+    Fetch(interface{}, <a href="/pkg/builtin/#int">int</a>, <a href="/pkg/builtin/#bool">bool</a>) <a href="/pkg/builtin/#error">error</a>
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="IFilterBuilder">type <a href="/src/target/filter.go?s=401:675#L19">IFilterBuilder</a></h2>
+			<pre>type IFilterBuilder interface {
+    Build() (interface{}, <a href="/pkg/builtin/#error">error</a>)
+    BuildFilter(*<a href="#Filter">Filter</a>) (interface{}, <a href="/pkg/builtin/#error">error</a>)
+    CombineFilter([]<a href="/pkg/github.com/eaciit/toolkit/">toolkit</a>.<a href="/pkg/github.com/eaciit/toolkit/#M">M</a>) (interface{}, <a href="/pkg/builtin/#error">error</a>)
+
+    <span class="comment">//-- comparison</span>
+    Eq(<a href="/pkg/builtin/#string">string</a>, interface{}) *<a href="#Filter">Filter</a>
+
+    <span class="comment">//-- conjunction</span>
+    And(...*<a href="#Filter">Filter</a>) *<a href="#Filter">Filter</a>
+    Or(...*<a href="#Filter">Filter</a>) *<a href="#Filter">Filter</a>
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="IQuery">type <a href="/src/target/query.go?s=441:750#L12">IQuery</a></h2>
+			<pre>type IQuery interface {
+    <span class="comment">//-- ouputs</span>
+    Cursor(toolkit.<a href="#M">M</a>) (*<a href="#Cursor">Cursor</a>, <a href="/pkg/builtin/#error">error</a>)
+    Exec(interface{}, toolkit.<a href="#M">M</a>) <a href="/pkg/builtin/#error">error</a>
+
+    <span class="comment">//-- getter</span>
+    Connection() <a href="#IConnection">IConnection</a>
+
+    <span class="comment">//-- settet</span>
+    SetConnection(<a href="#IConnection">IConnection</a>) <a href="#IQuery">IQuery</a>
+    SetThis(<a href="#IQuery">IQuery</a>) <a href="#IQuery">IQuery</a>
+
+    <span class="comment">//-- chain</span>
+    Select(...<a href="/pkg/builtin/#string">string</a>) <a href="#IQuery">IQuery</a>
+    From(<a href="/pkg/builtin/#string">string</a>) <a href="#IQuery">IQuery</a>
+    Where(...*<a href="#Filter">Filter</a>) <a href="#IQuery">IQuery</a>
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="Query">type <a href="/src/target/query.go?s=818:901#L35">Query</a></h2>
+			<pre>type Query struct {
+    Parts []*<a href="#QueryPart">QueryPart</a>
+    <span class="comment">// contains filtered or unexported fields</span>
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+				
+				<h3 id="Query.Connection">func (*Query) <a href="/src/target/query.go?s=1317:1357#L68">Connection</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) Connection() <a href="#IConnection">IConnection</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Query.Cursor">func (*Query) <a href="/src/target/query.go?s=1378:1431#L72">Cursor</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) Cursor(in toolkit.<a href="#M">M</a>) (*<a href="#Cursor">Cursor</a>, <a href="/pkg/builtin/#error">error</a>)</pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Query.Execute">func (*Query) <a href="/src/target/query.go?s=1454:1517#L76">Execute</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) Execute(result interface{}, in toolkit.<a href="#M">M</a>) <a href="/pkg/builtin/#error">error</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Query.From">func (*Query) <a href="/src/target/query.go?s=1645:1688#L85">From</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) From(objname <a href="/pkg/builtin/#string">string</a>) <a href="#IQuery">IQuery</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Query.OrderBy">func (*Query) <a href="/src/target/query.go?s=1867:1913#L95">OrderBy</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) OrderBy(ords ...<a href="/pkg/builtin/#string">string</a>) <a href="#IQuery">IQuery</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Query.Select">func (*Query) <a href="/src/target/query.go?s=1535:1578#L80">Select</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) Select(ss ...<a href="/pkg/builtin/#string">string</a>) <a href="#IQuery">IQuery</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Query.SetConnection">func (*Query) <a href="/src/target/query.go?s=1158:1209#L58">SetConnection</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) SetConnection(c <a href="#IConnection">IConnection</a>) <a href="#IQuery">IQuery</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Query.SetThis">func (*Query) <a href="/src/target/query.go?s=1244:1284#L63">SetThis</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) SetThis(t <a href="#IQuery">IQuery</a>) <a href="#IQuery">IQuery</a></pre>
+				
+				
+				
+				
+			
+				
+				<h3 id="Query.Where">func (*Query) <a href="/src/target/query.go?s=1758:1801#L90">Where</a></h3>
+				<pre>func (q *<a href="#Query">Query</a>) Where(fs ...*<a href="#Filter">Filter</a>) <a href="#IQuery">IQuery</a></pre>
+				
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="QueryPart">type <a href="/src/target/query.go?s=752:816#L30">QueryPart</a></h2>
+			<pre>type QueryPart struct {
+    PartType <a href="/pkg/builtin/#string">string</a>
+    Value    interface{}
+}</pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="QueryPartType">type <a href="/src/target/query.go?s=14:39#L1">QueryPartType</a></h2>
+			<pre>type QueryPartType <a href="/pkg/builtin/#string">string</a></pre>
+			
+
+			
+
+			
+
+			
+			
+			
+
+			
+
+			
+		
+	
+
+	
+
+
+
+
+
+	
+	
+		<h2 id="pkg-subdirectories">Subdirectories</h2>
+	
+	
+	<table class="dir">
+	<tr>
+	<th>Name</th>
+	<th>&nbsp;&nbsp;&nbsp;&nbsp;</th>
+	<th style="text-align: left; width: auto">Synopsis</th>
+	</tr>
+	
+		<tr>
+		<td><a href="..">..</a></td>
+		</tr>
+	
+	
+		
+			<tr>
+			<td class="name"><a href="dbc/">dbc</a></td>
+			<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+			<td style="width: auto"></td>
+			</tr>
+		
+	
+		
+			<tr>
+			<td class="name"><a href="test/">test</a></td>
+			<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+			<td style="width: auto"></td>
+			</tr>
+		
+	
+	</table>
+
+	
+

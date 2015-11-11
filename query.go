@@ -1,5 +1,9 @@
 package dbox
 
+import (
+	"github.com/eaciit/toolkit"
+)
+
 type QueryPartType string
 
 const (
@@ -20,12 +24,18 @@ const (
 )
 
 type IQuery interface {
-	Cursor() (*Cursor, error)
+	//-- ouputs
+	Cursor(toolkit.M) (*Cursor, error)
+	Exec(interface{}, toolkit.M) error
+
+	//-- getter
 	Connection() IConnection
 
+	//-- settet
 	SetConnection(IConnection) IQuery
 	SetThis(IQuery) IQuery
 
+	//-- chain
 	Select(...string) IQuery
 	From(string) IQuery
 	Where(...*Filter) IQuery
@@ -47,7 +57,7 @@ func (q *Query) this() IQuery {
 	if q.thisQuery == nil {
 		return q
 	} else {
-		return q.thisQuery
+		return q.this()
 	}
 }
 
@@ -73,8 +83,12 @@ func (q *Query) Connection() IConnection {
 	return q.conn
 }
 
-func (q *Query) Cursor() (*Cursor, error) {
+func (q *Query) Cursor(in toolkit.M) (*Cursor, error) {
 	return nil, nil
+}
+
+func (q *Query) Exec(result interface{}, in toolkit.M) error {
+	return nil
 }
 
 func (q *Query) Select(ss ...string) IQuery {
