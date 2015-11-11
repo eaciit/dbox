@@ -7,13 +7,18 @@ import (
 	"testing"
 )
 
-var ctx IConnection
+var ctx dbox.Connection
 
 func connect() error {
-	return nil
+	ctx := mongo.NewConnection("localhost:27123", "ectest", "", "", nil)
+	e := ctx.Connect()
+	return e
 }
 
 func close() {
+	if ctx != nil {
+		ctx.Close()
+	}
 }
 
 func TestConnect(t *testing.T) {

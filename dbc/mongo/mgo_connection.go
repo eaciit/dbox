@@ -4,8 +4,14 @@ import (
 	"github.com/eaciit/dbox"
 	"gopkg.in/mgo.v2"
 
+	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	_ "gopkg.in/mgo.v2/bson"
+)
+
+const (
+	packageName   = "eaciit.dbox.dbc.mongo"
+	modConnection = "Connection"
 )
 
 type Connection struct {
@@ -42,13 +48,14 @@ func (c *Connection) Connect() error {
 		c.Settings = toolkit.M{}
 	}
 
-	if c.Settings.Has("poollimit", 0) > 0 {
+	if c.Settings.Get("poollimit", 0).(int) > 0 {
 		info.PoolLimit = 100
 	}
 
 	sess, e := mgo.DialWithInfo(info)
 	if e != nil {
-		return err.Error(packageName, modConnection, "Connect", e.Error())
+		return errorlib.Error(packageName, modConnection,
+			"Connect", e.Error())
 	}
 	sess.SetMode(mgo.Monotonic, true)
 	c.session = sess
