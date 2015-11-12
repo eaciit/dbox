@@ -9,6 +9,8 @@ import (
 type QueryPartType string
 
 const (
+	modQuery = "Query"
+
 	QueryPartSelect  = "SELECT"
 	QueryPartFrom    = "FROM"
 	QueryPartWhere   = "WHERE"
