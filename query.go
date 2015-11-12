@@ -2,6 +2,8 @@ package dbox
 
 import (
 	"github.com/eaciit/toolkit"
+
+	"github.com/eaciit/errorlib"
 )
 
 type QueryPartType string
@@ -17,6 +19,9 @@ const (
 	QueryPartDelete  = "DELETE"
 	QueryPartSave    = "SAVE"
 	QueryPartCommand = "COMMAND"
+
+	QueryPartTake = "TAKE"
+	QueryPartSkip = "SKIP"
 
 	QueryPartJoin      = "JOIN"
 	QueryPartLeftJoin  = "LEFT JOIN"
@@ -37,6 +42,10 @@ type IQuery interface {
 	SetConnection(IConnection) IQuery
 	SetThis(IQuery) IQuery
 
+	//-- pagination
+	Take(int) IQuery
+	Skip(int) IQuery
+
 	//-- chain
 	Select(...string) IQuery
 	From(string) IQuery
@@ -44,6 +53,7 @@ type IQuery interface {
 	Order(...string) IQuery
 	Group(...string) IQuery
 
+	//-- op
 	Insert(interface{}, toolkit.M) IQuery
 	Save(interface{}, toolkit.M) IQuery
 	Update(interface{}, toolkit.M) IQuery
@@ -93,7 +103,9 @@ func (q *Query) Connection() IConnection {
 }
 
 func (q *Query) Cursor(in toolkit.M) (*Cursor, error) {
-	return nil, nil
+	return nil,
+		errorlib.Error(packageName, modQuery, "Cursor",
+			errorlib.NotYetImplemented)
 }
 
 func (q *Query) Exec(result interface{}, in toolkit.M) error {
@@ -125,6 +137,14 @@ func (q *Query) Group(groups ...string) IQuery {
 	return q.this()
 }
 
+func (q *Query) Take(i int) IQuery {
+	q.addPart(&QueryPart{QueryPartTake, i})
+	return q.this()
+}
+func (q *Query) Skip(i int) IQuery {
+	q.addPart(&QueryPart{QueryPartSkip, i})
+	return q.this()
+}
 func (q *Query) Insert(obj interface{}, in toolkit.M) IQuery {
 	q.addPart(&QueryPart{QueryPartData, obj})
 	q.addPart(&QueryPart{QueryPartInsert, in})
