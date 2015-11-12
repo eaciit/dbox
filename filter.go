@@ -3,7 +3,7 @@ package dbox
 import (
 	"fmt"
 	"github.com/eaciit/errorlib"
-	"github.com/eaciit/toolkit"
+	//"github.com/eaciit/toolkit"
 )
 
 type FilterOp string
@@ -14,10 +14,17 @@ const (
 	FilterOpAnd = "$and"
 	FilterOpOr  = "$or"
 
-	FilterOpEqual       = "$eq"
-	FilterOpNoEqual     = "$ne"
-	FilterOpContains    = "$contains"
-	FilterOpNotContains = "$notcontains"
+	FilterOpEqual    = "$eq"
+	FilterOpNoEqual  = "$ne"
+	FilterOpContains = "$contains"
+
+	FilterOpGt  = "$gt"
+	FilterOpLt  = "$lt"
+	FilterOpGte = "$gte"
+	FilterOpLte = "$lte"
+
+	FilterOpIn  = "$in"
+	FilterOpNin = "$nin"
 )
 
 type Filter struct {
@@ -27,9 +34,11 @@ type Filter struct {
 }
 
 type IFilterBuilder interface {
+	SetThis(IFilterBuilder) IFilterBuilder
 	Build() (interface{}, error)
 	BuildFilter(*Filter) (interface{}, error)
-	CombineFilter([]toolkit.M) (interface{}, error)
+	CombineFilters([]interface{}) (interface{}, error)
+	AddFilter(...*Filter)
 
 	//-- comparison
 	Eq(string, interface{}) *Filter
@@ -41,29 +50,59 @@ type IFilterBuilder interface {
 
 type FilterBuilder struct {
 	Filters []*Filter
+
+	thisFb IFilterBuilder
+}
+
+func NewFilterBuilder(i IFilterBuilder) IFilterBuilder {
+	i.SetThis(i)
+	return i
+}
+
+func (fb *FilterBuilder) SetThis(i IFilterBuilder) IFilterBuilder {
+	fb.thisFb = i
+	return i
+}
+
+func (fb *FilterBuilder) this() IFilterBuilder {
+	if fb.thisFb == nil {
+		return fb
+	} else {
+		return fb.thisFb
+	}
+}
+
+func (fb *FilterBuilder) AddFilter(fs ...*Filter) {
+	if fb.Filters == nil {
+		fb.Filters = []*Filter{}
+	}
+
+	for _, f := range fs {
+		fb.Filters = append(fb.Filters, f)
+	}
 }
 
 func (fb *FilterBuilder) Build() (interface{}, error) {
 	if fb.Filters == nil {
 		fb.Filters = []*Filter{}
 	}
-	mfilters := []toolkit.M{}
+	mfilters := []interface{}{}
 	for _, f := range fb.Filters {
-		fbout, e := fb.BuildFilter(f)
+		fbout, e := fb.this().BuildFilter(f)
 		if e != nil {
 			return nil, errorlib.Error(packageName, modFilter, "Build",
 				fmt.Sprintf("%v - %s", f, e.Error()))
 		}
-		mfilters = append(mfilters, fbout.(toolkit.M))
+		mfilters = append(mfilters, fbout)
 	}
-	return fb.CombineFilter(mfilters)
+	return fb.this().CombineFilters(mfilters)
 }
 
 func (fb *FilterBuilder) BuildFilter(f *Filter) (interface{}, error) {
 	return nil, errorlib.Error(packageName, modFilter, "BuildFilter", errorlib.NotYetImplemented)
 }
 
-func (fb *FilterBuilder) CombineFilter(mfs []toolkit.M) (interface{}, error) {
+func (fb *FilterBuilder) CombineFilters(mfs []interface{}) (interface{}, error) {
 	return nil, errorlib.Error(packageName, modFilter, "BuildFilter", errorlib.NotYetImplemented)
 }
 
