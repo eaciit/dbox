@@ -21,6 +21,8 @@ const (
 	QueryPartJoin      = "JOIN"
 	QueryPartLeftJoin  = "LEFT JOIN"
 	QueryPartRightJoin = "RIGHT JOIN"
+	QueryPartData      = "DATA"
+	QueryPartParm      = "PARM"
 )
 
 type IQuery interface {
@@ -39,6 +41,13 @@ type IQuery interface {
 	Select(...string) IQuery
 	From(string) IQuery
 	Where(...*Filter) IQuery
+	Order(...string) IQuery
+	Group(...string) IQuery
+
+	Insert(interface{}, toolkit.M) IQuery
+	Save(interface{}, toolkit.M) IQuery
+	Update(interface{}, toolkit.M) IQuery
+	Delete(toolkit.M) IQuery
 }
 
 type QueryPart struct {
@@ -106,7 +115,34 @@ func (q *Query) Where(fs ...*Filter) IQuery {
 	return q.this()
 }
 
-func (q *Query) OrderBy(ords ...string) IQuery {
+func (q *Query) Order(ords ...string) IQuery {
 	q.addPart(&QueryPart{QueryPartOrder, ords})
+	return q.this()
+}
+
+func (q *Query) Group(groups ...string) IQuery {
+	q.addPart(&QueryPart{QueryPartGroup, groups})
+	return q.this()
+}
+
+func (q *Query) Insert(obj interface{}, in toolkit.M) IQuery {
+	q.addPart(&QueryPart{QueryPartData, obj})
+	q.addPart(&QueryPart{QueryPartInsert, in})
+	return q.this()
+}
+func (q *Query) Save(obj interface{}, in toolkit.M) IQuery {
+	q.addPart(&QueryPart{QueryPartData, obj})
+	q.addPart(&QueryPart{QueryPartSave, in})
+	return q.this()
+}
+
+func (q *Query) Update(obj interface{}, in toolkit.M) IQuery {
+	q.addPart(&QueryPart{QueryPartData, obj})
+	q.addPart(&QueryPart{QueryPartUpdate, in})
+	return q.this()
+}
+
+func (q *Query) Delete(in toolkit.M) IQuery {
+	q.addPart(&QueryPart{QueryPartParm, in})
 	return q.this()
 }

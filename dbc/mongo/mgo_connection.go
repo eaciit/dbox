@@ -7,6 +7,7 @@ import (
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	_ "gopkg.in/mgo.v2/bson"
+	"time"
 )
 
 const (
@@ -48,8 +49,14 @@ func (c *Connection) Connect() error {
 		ci.Settings = toolkit.M{}
 	}
 
-	if ci.Settings.Get("poollimit", 0).(int) > 0 {
-		info.PoolLimit = 100
+	poollimit := ci.Settings.GetInt("poollimit")
+	if poollimit > 0 {
+		info.PoolLimit = poollimit
+	}
+
+	timeout := ci.Settings.GetInt("timeout")
+	if timeout > 0 {
+		info.Timeout = time.Duration(timeout) * time.Second
 	}
 
 	sess, e := mgo.DialWithInfo(info)

@@ -51,7 +51,7 @@ func TestQuery(t *testing.T) {
 	fb := ctx.Fb()
 	cursor, e := ctx.NewQuery().Select("_id", "title").From("testtable").
 		Where(fb.Or(fb.Eq("_id", 20), fb.Eq("title", "default"))).
-		Cursor()
+		Cursor(nil)
 	if e != nil {
 		t.Errorf("Unable to generate cursor. %s", e.Error())
 	}
