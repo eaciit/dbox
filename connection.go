@@ -9,6 +9,9 @@ type IConnection interface {
 	Connect() error
 	Close()
 
+	Info() *ConnectionInfo
+	SetInfo(*ConnectionInfo)
+
 	NewQuery() IQuery
 	Fb() IFilterBuilder
 }
@@ -33,7 +36,6 @@ func NewConnection(connector string, ci *ConnectionInfo) (IConnection, error) {
 	if found == false {
 		return nil, errorlib.Error(packageName, "", "NewConnection", "Invalid connector")
 	}
-
 	return fn(ci)
 }
 
@@ -47,7 +49,7 @@ type ConnectionInfo struct {
 }
 
 type Connection struct {
-	Info *ConnectionInfo
+	info *ConnectionInfo
 	fb   IFilterBuilder
 }
 
@@ -56,11 +58,18 @@ func (c *Connection) Connect() error {
 		"Connect", errorlib.NotYetImplemented)
 }
 
+func (c *Connection) Info() *ConnectionInfo {
+	return c.info
+}
+
+func (c *Connection) SetInfo(i *ConnectionInfo) {
+	c.info = i
+}
+
 func (c *Connection) Fb() IFilterBuilder {
 	if c.fb == nil {
 		c.fb = new(FilterBuilder)
 	}
-
 	return c.fb
 }
 

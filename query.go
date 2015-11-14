@@ -30,19 +30,23 @@ const (
 	QueryPartRightJoin = "RIGHT JOIN"
 	QueryPartData      = "DATA"
 	QueryPartParm      = "PARM"
+
+	QueryConfigPooling = "pooling"
 )
 
 type IQuery interface {
 	//-- ouputs
-	Cursor(toolkit.M) (*Cursor, error)
+	Cursor(toolkit.M) (ICursor, error)
 	Exec(interface{}, toolkit.M) error
 
 	//-- getter
 	Connection() IConnection
+	Config(string, interface{}) interface{}
 
-	//-- settet
+	//-- setter
 	SetConnection(IConnection) IQuery
 	SetThis(IQuery) IQuery
+	SetConfig(string, interface{}) IQuery
 
 	//-- pagination
 	Take(int) IQuery
@@ -60,6 +64,9 @@ type IQuery interface {
 	Save(interface{}, toolkit.M) IQuery
 	Update(interface{}, toolkit.M) IQuery
 	Delete(toolkit.M) IQuery
+
+	//-- other
+	HasConfig(string) bool
 }
 
 type QueryPart struct {
@@ -71,14 +78,15 @@ type Query struct {
 	thisQuery IQuery
 	conn      IConnection
 
-	Parts []*QueryPart
+	Parts  []*QueryPart
+	config toolkit.M
 }
 
 func (q *Query) this() IQuery {
 	if q.thisQuery == nil {
 		return q
 	} else {
-		return q.this()
+		return q.thisQuery
 	}
 }
 
@@ -99,12 +107,30 @@ func (q *Query) SetThis(t IQuery) IQuery {
 	q.thisQuery = t
 	return t
 }
-
 func (q *Query) Connection() IConnection {
 	return q.conn
 }
+func (q *Query) Config(k string, def interface{}) interface{} {
+	if q.config == nil {
+		return def
+	}
+	return q.config.Get(k, def)
+}
+func (q *Query) HasConfig(k string) bool {
+	if q.config == nil {
+		return false
+	}
+	return q.config.Has(k)
+}
+func (q *Query) SetConfig(k string, v interface{}) IQuery {
+	if q.config == nil {
+		q.config = toolkit.M{}
+	}
+	q.config.Set(k, v)
+	return q.this()
+}
 
-func (q *Query) Cursor(in toolkit.M) (*Cursor, error) {
+func (q *Query) Cursor(in toolkit.M) (ICursor, error) {
 	return nil,
 		errorlib.Error(packageName, modQuery, "Cursor",
 			errorlib.NotYetImplemented)

@@ -53,6 +53,11 @@ func TestSelect(t *testing.T) {
 	csr, e := c.NewQuery().Select("_id", "email").From("appusers").Take(5).Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
 	}
 
 	rets := []toolkit.M{}

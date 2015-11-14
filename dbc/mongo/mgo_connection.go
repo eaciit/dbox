@@ -30,13 +30,16 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 		ci.Settings = toolkit.M{}
 	}
 	c := new(Connection)
-	c.Info = ci
+	c.SetInfo(ci)
 	return c, nil
 }
 
 func (c *Connection) Connect() error {
 	info := new(mgo.DialInfo)
-	ci := c.Info
+	ci := c.Info()
+	if ci == nil {
+		return errorlib.Error(packageName, modConnection, "Connect", "ConnectionInfo is not initialized")
+	}
 	if ci.UserName != "" {
 		info.Username = ci.UserName
 		info.Password = ci.Password
@@ -67,6 +70,13 @@ func (c *Connection) Connect() error {
 	sess.SetMode(mgo.Monotonic, true)
 	c.session = sess
 	return nil
+}
+
+func (c *Connection) NewQuery() dbox.IQuery {
+	q := new(Query)
+	q.SetConnection(c)
+	q.SetThis(q)
+	return q
 }
 
 func (c *Connection) Close() {
