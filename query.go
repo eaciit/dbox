@@ -67,6 +67,8 @@ type IQuery interface {
 
 	//-- other
 	HasConfig(string) bool
+	Parts() []*QueryPart
+	AddPart(*QueryPart) IQuery
 }
 
 type QueryPart struct {
@@ -78,7 +80,7 @@ type Query struct {
 	thisQuery IQuery
 	conn      IConnection
 
-	Parts  []*QueryPart
+	parts  []*QueryPart
 	config toolkit.M
 }
 
@@ -90,11 +92,18 @@ func (q *Query) this() IQuery {
 	}
 }
 
-func (q *Query) addPart(qp *QueryPart) IQuery {
-	if q.Parts == nil {
-		q.Parts = []*QueryPart{}
+func (q *Query) Parts() []*QueryPart {
+	if q.parts == nil {
+		q.parts = []*QueryPart{}
 	}
-	q.Parts = append(q.Parts, qp)
+	return q.parts
+}
+
+func (q *Query) AddPart(qp *QueryPart) IQuery {
+	if q.parts == nil {
+		q.parts = []*QueryPart{}
+	}
+	q.parts = append(q.parts, qp)
 	return q.this()
 }
 
@@ -141,56 +150,56 @@ func (q *Query) Exec(result interface{}, in toolkit.M) error {
 }
 
 func (q *Query) Select(ss ...string) IQuery {
-	q.addPart(&QueryPart{QueryPartSelect, ss})
+	q.AddPart(&QueryPart{QueryPartSelect, ss})
 	return q.this()
 }
 
 func (q *Query) From(objname string) IQuery {
-	q.addPart(&QueryPart{QueryPartFrom, objname})
+	q.AddPart(&QueryPart{QueryPartFrom, objname})
 	return q.this()
 }
 
 func (q *Query) Where(fs ...*Filter) IQuery {
-	q.addPart(&QueryPart{QueryPartWhere, fs})
+	q.AddPart(&QueryPart{QueryPartWhere, fs})
 	return q.this()
 }
 
 func (q *Query) Order(ords ...string) IQuery {
-	q.addPart(&QueryPart{QueryPartOrder, ords})
+	q.AddPart(&QueryPart{QueryPartOrder, ords})
 	return q.this()
 }
 
 func (q *Query) Group(groups ...string) IQuery {
-	q.addPart(&QueryPart{QueryPartGroup, groups})
+	q.AddPart(&QueryPart{QueryPartGroup, groups})
 	return q.this()
 }
 
 func (q *Query) Take(i int) IQuery {
-	q.addPart(&QueryPart{QueryPartTake, i})
+	q.AddPart(&QueryPart{QueryPartTake, i})
 	return q.this()
 }
 func (q *Query) Skip(i int) IQuery {
-	q.addPart(&QueryPart{QueryPartSkip, i})
+	q.AddPart(&QueryPart{QueryPartSkip, i})
 	return q.this()
 }
 func (q *Query) Insert(obj interface{}, in toolkit.M) IQuery {
-	q.addPart(&QueryPart{QueryPartData, obj})
-	q.addPart(&QueryPart{QueryPartInsert, in})
+	q.AddPart(&QueryPart{QueryPartData, obj})
+	q.AddPart(&QueryPart{QueryPartInsert, in})
 	return q.this()
 }
 func (q *Query) Save(obj interface{}, in toolkit.M) IQuery {
-	q.addPart(&QueryPart{QueryPartData, obj})
-	q.addPart(&QueryPart{QueryPartSave, in})
+	q.AddPart(&QueryPart{QueryPartData, obj})
+	q.AddPart(&QueryPart{QueryPartSave, in})
 	return q.this()
 }
 
 func (q *Query) Update(obj interface{}, in toolkit.M) IQuery {
-	q.addPart(&QueryPart{QueryPartData, obj})
-	q.addPart(&QueryPart{QueryPartUpdate, in})
+	q.AddPart(&QueryPart{QueryPartData, obj})
+	q.AddPart(&QueryPart{QueryPartUpdate, in})
 	return q.this()
 }
 
 func (q *Query) Delete(in toolkit.M) IQuery {
-	q.addPart(&QueryPart{QueryPartParm, in})
+	q.AddPart(&QueryPart{QueryPartParm, in})
 	return q.this()
 }

@@ -5,12 +5,19 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
+const (
+	QueryResultCursor = "MongoCursor"
+	QueryResultIter   = "MongoIter"
+)
+
 type Cursor struct {
 	dbox.Cursor
 
 	ResultType string
-	mgoCursor  *mgo.Cursor
-	mgoIter    *mgoIter
+	mgoCursor  *mgo.Query
+	mgoIter    *mgo.Iter
+
+	count int
 }
 
 func (c *Cursor) Close() {
@@ -18,13 +25,13 @@ func (c *Cursor) Close() {
 }
 
 func (c *Cursor) Count() int {
-	return 0
+	return c.count
 }
 
 func (c *Cursor) ResetFetch() error {
 	return nil
 }
 
-func (c *Cursor) Fetch(out interface{}, n int, closeWhenDone true) error {
-	return error
+func (c *Cursor) Fetch(out interface{}, n int, closeWhenDone bool) error {
+	return nil
 }
