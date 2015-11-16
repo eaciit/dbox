@@ -31,6 +31,7 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 	}
 	c := new(Connection)
 	c.SetInfo(ci)
+	c.SetFb(dbox.NewFilterBuilder(new(FilterBuilder)))
 	return c, nil
 }
 

@@ -13,7 +13,9 @@ type IConnection interface {
 	SetInfo(*ConnectionInfo)
 
 	NewQuery() IQuery
+
 	Fb() IFilterBuilder
+	SetFb(IFilterBuilder)
 }
 
 type FnNewConnection func(*ConnectionInfo) (IConnection, error)
@@ -64,6 +66,10 @@ func (c *Connection) Info() *ConnectionInfo {
 
 func (c *Connection) SetInfo(i *ConnectionInfo) {
 	c.info = i
+}
+
+func (c *Connection) SetFb(fb IFilterBuilder) {
+	c.fb = fb
 }
 
 func (c *Connection) Fb() IFilterBuilder {

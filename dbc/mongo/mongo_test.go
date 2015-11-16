@@ -51,7 +51,7 @@ func TestSelect(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().Select("_id", "email").From("appusers").
-		Take(5).Cursor(nil)
+		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -84,3 +84,76 @@ func TestSelect(t *testing.T) {
 			ds.Data)
 	}
 }
+
+func TestSelectFilter(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().
+		//Select("_id", "email").
+		Where(c.Fb().Eq("email", "arief@eaciit.com")).
+		From("appusers").Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	//rets := []toolkit.M{}
+
+	ds, e := csr.Fetch(nil, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch OK. Result: %v \n",
+			toolkit.JsonString(ds.Data[0]))
+
+	}
+}
+
+/*
+func TestSelectAggregate(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	fb := c.Fb()
+	csr, e := c.NewQuery().
+		//Select("_id", "email").
+		//Where(c.Fb().Eq("email", "arief@eaciit.com")).
+		Aggr(dbox.AggSum, 1, "Count").
+		Aggr(dbox.AggSum, 1, "Avg").
+		From("appusers").
+		Group("").
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	//rets := []toolkit.M{}
+
+	ds, e := csr.Fetch(nil, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch OK. Result: %v \n",
+			toolkit.JsonString(ds.Data[0]))
+
+	}
+}
+*/
