@@ -46,7 +46,7 @@ const (
 type IQuery interface {
 	//-- ouputs
 	Cursor(toolkit.M) (ICursor, error)
-	Exec(interface{}, toolkit.M) error
+	Exec(toolkit.M) error
 
 	//-- getter
 	Connection() IConnection
@@ -162,8 +162,8 @@ func (q *Query) Cursor(in toolkit.M) (ICursor, error) {
 			errorlib.NotYetImplemented)
 }
 
-func (q *Query) Exec(result interface{}, in toolkit.M) error {
-	return nil
+func (q *Query) Exec(parm toolkit.M) error {
+	return errorlib.Error(packageName, modQuery, "Exec", errorlib.NotYetImplemented)
 }
 
 func (q *Query) Select(ss ...string) IQuery {

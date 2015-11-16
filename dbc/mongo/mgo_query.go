@@ -69,6 +69,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		_, hasInsert := parts[dbox.QueryPartInsert]
 		_, hasDelete := parts[dbox.QueryPartDelete]
 		_, hasSave := parts[dbox.QueryPartSave]
+
 		if hasUpdate || hasInsert || hasDelete || hasSave {
 			return nil, errorlib.Error(packageName, modQuery, "Cursor",
 				"Valid operation for a cursor is select only")
@@ -150,7 +151,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	return cursor, nil
 }
 
-func (q *Query) Exec(result interface{}, in toolkit.M) error {
+func (q *Query) Exec(parm toolkit.M) error {
 	var e error
 	if q.Parts == nil {
 		return errorlib.Error(packageName, modQuery,
@@ -171,32 +172,60 @@ func (q *Query) Exec(result interface{}, in toolkit.M) error {
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	if hasFrom == false {
-		return errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
+		return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
 	}
 	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
 
-	var data interface{}
-	var find interface{}
+	var where interface{}
 	commandType := ""
 	multi := false
+
+	_, hasDelete := parts[dbox.QueryPartDelete]
+	_, hasInsert := parts[dbox.QueryPartInsert]
+	_, hasUpdate := parts[dbox.QueryPartUpdate]
+	_, hasSave := parts[dbox.QueryPartSave]
+
+	if hasDelete {
+		commandType = dbox.QueryPartDelete
+	} else if hasInsert {
+		commandType = dbox.QueryPartInsert
+	} else if hasUpdate {
+		commandType = dbox.QueryPartUpdate
+	} else if hasSave {
+		commandType = dbox.QueryPartSave
+	}
+
+	if parm == nil {
+		return errorlib.Error(packageName, "Query", modQuery,
+			"Invalid input parm")
+	}
+	data := parm.Get("data", nil)
+	if data == nil {
+
+	} else {
+		id := toolkit.Id(data)
+		if id != nil {
+			where = (toolkit.M{}).Set("_id", id)
+		}
+	}
 
 	mgoColl := q.Connection().(*Connection).session.DB(dbname).C(tablename)
 	if commandType == dbox.QueryPartInsert {
 		e = mgoColl.Insert(data)
 	} else if commandType == dbox.QueryPartUpdate {
 		if multi {
-			_, e = mgoColl.UpdateAll(find, data)
+			_, e = mgoColl.UpdateAll(where, data)
 		} else {
-			e = mgoColl.Update(find, data)
+			e = mgoColl.Update(where, data)
 		}
 	} else if commandType == dbox.QueryPartDelete {
 		if multi {
-			_, e = mgoColl.RemoveAll(find)
+			_, e = mgoColl.RemoveAll(where)
 		} else {
-			e = mgoColl.Remove(find)
+			e = mgoColl.Remove(where)
 		}
 	} else if commandType == dbox.QueryPartSave {
-		_, e = mgoColl.Upsert(find, data)
+		_, e = mgoColl.Upsert(where, data)
 	}
 	if e != nil {
 		return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())

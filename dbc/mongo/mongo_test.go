@@ -89,6 +89,7 @@ func TestSelectFilter(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
+		return
 	}
 	defer c.Close()
 
@@ -157,3 +158,35 @@ func TestSelectAggregate(t *testing.T) {
 	}
 }
 */
+
+func TestInsert(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	q := c.NewQuery().From("testtables").Save(nil, nil)
+	type user struct {
+		Id    string `bson:"_id"`
+		Title string
+		Email string
+	}
+	for i := 1; i <= 50; i++ {
+		data := user{}
+		data.Id = fmt.Sprintf("User-%d", i)
+		data.Title = fmt.Sprintf("User-%d's name", i)
+		data.Email = fmt.Sprintf("User-%d@myco.com", i)
+		if i == 10 || i == 20 || i == 30 {
+			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
+		}
+		e = q.Exec(toolkit.M{
+			"data": data,
+		})
+		if e != nil {
+			t.Errorf("Unable to save: %s \n", e.Error())
+			return
+		}
+	}
+}
