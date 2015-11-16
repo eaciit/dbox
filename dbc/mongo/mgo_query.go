@@ -1,7 +1,7 @@
 package mongo
 
 import (
-	_ "fmt"
+	"fmt"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -19,7 +19,7 @@ type Query struct {
 func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	if q.Parts == nil {
 		return nil, errorlib.Error(packageName, modQuery,
-			"Cursor", "No Query Parts")
+			"Cursor", fmt.Sprintf("No Query Parts"))
 	}
 
 	aggregate := false
@@ -36,7 +36,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		return qp.PartType
 	}, nil).Data
 
+	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
+
+	if hasFrom == false {
+		return nil, errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
+	}
+	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
 
 	var fields toolkit.M
 	if hasSelect {
@@ -49,26 +55,35 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 	}
 	//fmt.Printf("Result: %s \n", toolkit.JsonString(fields))
+	//fmt.Printf("Database:%s table:%s \n", dbname, tablename)
 
 	c := q.Connection()
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.SetConnection(q.Connection())
 	if !aggregate {
-		mgoCursor := c.(*Connection).session.DB(dbname).C(tablename).Find(f)
+		mgoColl := c.(*Connection).session.DB(dbname).C(tablename)
+		mgoCursor := mgoColl.Find(f)
+		count, e := mgoCursor.Count()
+		if e != nil {
+			//fmt.Println("Error: " + e.Error())
+			return nil, errorlib.Error(packageName,
+				modQuery, "Cursor", e.Error())
+		}
 		if fields != nil {
 			mgoCursor = mgoCursor.Select(fields)
 		}
 		cursor.(*Cursor).ResultType = QueryResultCursor
 		cursor.(*Cursor).mgoCursor = mgoCursor
-		cursor.(*Cursor).count, _ = mgoCursor.Count()
-		//cursor.(*Cursor).mgoIter = mgoCursor.Iter()
+		cursor.(*Cursor).count = count
+		cursor.(*Cursor).mgoIter = mgoCursor.Iter()
 	} else {
 		pipes := toolkit.M{}
 		mgoPipe := c.(*Connection).session.DB(dbname).C(tablename).
 			Pipe(pipes).AllowDiskUse()
 		iter := mgoPipe.Iter()
 
-		cursor.(*Cursor).ResultType = QueryResultIter
+		cursor.(*Cursor).ResultType = QueryResultPipe
+		cursor.(*Cursor).mgoPipe = mgoPipe
 		cursor.(*Cursor).mgoIter = iter
 	}
 	return cursor, nil

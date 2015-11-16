@@ -9,7 +9,7 @@ import (
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	c, e := dbox.NewConnection("mongo", &dbox.ConnectionInfo{"localhost:27123", "ectest", "", "", nil})
+	c, e := dbox.NewConnection("mongo", &dbox.ConnectionInfo{"localhost:27123", "eccolony", "", "", nil})
 	if e != nil {
 		return nil, e
 	}
@@ -46,11 +46,12 @@ func TestFilter(t *testing.T) {
 func TestSelect(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
-		t.Errorf("Unable to connet %s \n", e.Error())
+		t.Errorf("Unable to connect %s \n", e.Error())
 	}
 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("_id", "email").From("appusers").Take(5).Cursor(nil)
+	csr, e := c.NewQuery().Select("_id", "email").From("appusers").
+		Take(5).Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -59,12 +60,27 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Cursor not initialized")
 		return
 	}
+	defer csr.Close()
 
-	rets := []toolkit.M{}
-	e = csr.Fetch(rets, 0, false)
+	//rets := []toolkit.M{}
+
+	ds, e := csr.Fetch(nil, 0, false)
 	if e != nil {
-		t.Errorf("Unable to fetch: %s \n", e.Error())
+		t.Errorf("Unable to fetch all: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch all OK. Result: %d \n", len(ds.Data))
 	}
 
-	fmt.Printf("Result:\n%s\n", toolkit.JsonString(rets))
+	e = csr.ResetFetch()
+	if e != nil {
+		t.Errorf("Unable to reset fetch: %s \n", e.Error())
+	}
+
+	ds, e = csr.Fetch(nil, 3, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N OK. Result: %v \n",
+			ds.Data)
+	}
 }
