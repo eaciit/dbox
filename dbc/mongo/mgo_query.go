@@ -112,8 +112,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	c := q.Connection()
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.SetConnection(q.Connection())
+	mgoColl := c.(*Connection).session.DB(dbname).C(tablename)
 	if !aggregate {
-		mgoColl := c.(*Connection).session.DB(dbname).C(tablename)
 		mgoCursor := mgoColl.Find(where)
 		count, e := mgoCursor.Count()
 		if e != nil {
@@ -151,5 +151,55 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 }
 
 func (q *Query) Exec(result interface{}, in toolkit.M) error {
+	var e error
+	if q.Parts == nil {
+		return errorlib.Error(packageName, modQuery,
+			"Cursor", fmt.Sprintf("No Query Parts"))
+	}
+
+	dbname := q.Connection().Info().Database
+	tablename := ""
+
+	/*
+		p arts will return E - map{interface{}}interface{}
+		where each interface{} returned is slice of interfaces --> []interface{}
+	*/
+	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
+		qp := x.(*dbox.QueryPart)
+		return qp.PartType
+	}, nil).Data
+
+	fromParts, hasFrom := parts[dbox.QueryPartFrom]
+	if hasFrom == false {
+		return errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
+	}
+	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+
+	var data interface{}
+	var find interface{}
+	commandType := ""
+	multi := false
+
+	mgoColl := q.Connection().(*Connection).session.DB(dbname).C(tablename)
+	if commandType == dbox.QueryPartInsert {
+		e = mgoColl.Insert(data)
+	} else if commandType == dbox.QueryPartUpdate {
+		if multi {
+			_, e = mgoColl.UpdateAll(find, data)
+		} else {
+			e = mgoColl.Update(find, data)
+		}
+	} else if commandType == dbox.QueryPartDelete {
+		if multi {
+			_, e = mgoColl.RemoveAll(find)
+		} else {
+			e = mgoColl.Remove(find)
+		}
+	} else if commandType == dbox.QueryPartSave {
+		_, e = mgoColl.Upsert(find, data)
+	}
+	if e != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+	}
 	return nil
 }

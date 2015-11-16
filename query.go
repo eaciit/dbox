@@ -21,6 +21,8 @@ const (
 	QueryPartDelete  = "DELETE"
 	QueryPartSave    = "SAVE"
 	QueryPartCommand = "COMMAND"
+	QueryPartAggr    = "AGGR"
+	QueryPartCustom  = "CUSTOM"
 
 	QueryPartTake = "TAKE"
 	QueryPartSkip = "SKIP"
@@ -32,6 +34,13 @@ const (
 	QueryPartParm      = "PARM"
 
 	QueryConfigPooling = "pooling"
+
+	AggrSum  = "$sum"
+	AggrAvr  = "$avg"
+	AggrMin  = "$min"
+	AggrMax  = "$max"
+	AggrMean = "$mean"
+	AggrMed  = "$med"
 )
 
 type IQuery interface {
@@ -59,6 +68,8 @@ type IQuery interface {
 	Order(...string) IQuery
 	Group(...string) IQuery
 
+	Aggr(string, interface{}, string) IQuery
+
 	//-- op
 	Insert(interface{}, toolkit.M) IQuery
 	Save(interface{}, toolkit.M) IQuery
@@ -69,6 +80,12 @@ type IQuery interface {
 	HasConfig(string) bool
 	Parts() []*QueryPart
 	AddPart(*QueryPart) IQuery
+}
+
+type AggrInfo struct {
+	Op    string
+	Field interface{}
+	Alias string
 }
 
 type QueryPart struct {
@@ -161,6 +178,11 @@ func (q *Query) From(objname string) IQuery {
 
 func (q *Query) Where(fs ...*Filter) IQuery {
 	q.AddPart(&QueryPart{QueryPartWhere, fs})
+	return q.this()
+}
+
+func (q *Query) Aggr(op string, field interface{}, alias string) IQuery {
+	q.AddPart(&QueryPart{QueryPartAggr, AggrInfo{op, field, alias}})
 	return q.this()
 }
 
