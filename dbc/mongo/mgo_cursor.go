@@ -27,12 +27,17 @@ type Cursor struct {
 
 	count int
 
-	conn dbox.IConnection
+	session          *mgo.Session
+	isPoolingSession bool
 }
 
 func (c *Cursor) Close() {
 	if c.mgoIter != nil {
 		c.mgoIter.Close()
+	}
+
+	if c.session != nil && !c.isPoolingSession {
+		c.session.Close()
 	}
 }
 
@@ -81,12 +86,7 @@ func (c *Cursor) ResetFetch() error {
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 	*dbox.DataSet, error) {
 	if closeWhenDone {
-		defer func() {
-			c.mgoIter.Close()
-			if c.conn != nil {
-				c.conn.Close()
-			}
-		}()
+		defer c.Close()
 	}
 
 	e := c.prepIter()

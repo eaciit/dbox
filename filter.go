@@ -39,13 +39,6 @@ type IFilterBuilder interface {
 	BuildFilter(*Filter) (interface{}, error)
 	CombineFilters([]interface{}) (interface{}, error)
 	AddFilter(...*Filter)
-
-	//-- comparison
-	Eq(string, interface{}) *Filter
-
-	//-- conjunction
-	And(...*Filter) *Filter
-	Or(...*Filter) *Filter
 }
 
 type FilterBuilder struct {
@@ -106,7 +99,7 @@ func (fb *FilterBuilder) CombineFilters(mfs []interface{}) (interface{}, error) 
 	return nil, errorlib.Error(packageName, modFilter, "BuildFilter", errorlib.NotYetImplemented)
 }
 
-func (fb *FilterBuilder) Eq(field string, value interface{}) *Filter {
+func Eq(field string, value interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpEqual)
@@ -114,14 +107,14 @@ func (fb *FilterBuilder) Eq(field string, value interface{}) *Filter {
 	return f
 }
 
-func (fb *FilterBuilder) And(fs ...*Filter) *Filter {
+func And(fs ...*Filter) *Filter {
 	f := new(Filter)
 	f.Op = string(FilterOpAnd)
 	f.Value = fs
 	return f
 }
 
-func (fb *FilterBuilder) Or(fs ...*Filter) *Filter {
+func Or(fs ...*Filter) *Filter {
 	f := new(Filter)
 	f.Op = string(FilterOpOr)
 	f.Value = fs

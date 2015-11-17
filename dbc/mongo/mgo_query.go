@@ -6,6 +6,7 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	"gopkg.in/mgo.v2"
 )
 
 const (
@@ -14,6 +15,31 @@ const (
 
 type Query struct {
 	dbox.Query
+
+	session    *mgo.Session
+	usePooling bool
+}
+
+func (q *Query) prepareSession() *mgo.Session {
+	q.usePooling = q.Config("pooling", false).(bool)
+	if q.session == nil {
+		if q.usePooling {
+			q.session = q.Connection().(*Connection).session
+		} else {
+			q.session = q.Connection().(*Connection).session.Clone()
+		}
+	}
+	return q.session
+}
+
+func (q *Query) Close() {
+	if q.session != nil && q.usePooling == false {
+		q.session.Close()
+	}
+}
+
+func (q *Query) Prepare() error {
+	return nil
 }
 
 func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
@@ -110,10 +136,12 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		//where = iwhere.(toolkit.M)
 	}
 
-	c := q.Connection()
+	session := q.prepareSession()
+	mgoColl := session.DB(dbname).C(tablename)
 	cursor := dbox.NewCursor(new(Cursor))
-	cursor.SetConnection(q.Connection())
-	mgoColl := c.(*Connection).session.DB(dbname).C(tablename)
+	cursor.(*Cursor).session = session
+	cursor.(*Cursor).isPoolingSession = q.usePooling
+
 	if !aggregate {
 		mgoCursor := mgoColl.Find(where)
 		count, e := mgoCursor.Count()
@@ -140,7 +168,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		//cursor.(*Cursor).mgoIter = mgoCursor.Iter()
 	} else {
 		pipes := toolkit.M{}
-		mgoPipe := c.(*Connection).session.DB(dbname).C(tablename).
+		mgoPipe := session.DB(dbname).C(tablename).
 			Pipe(pipes).AllowDiskUse()
 		//iter := mgoPipe.Iter()
 
@@ -153,6 +181,9 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 func (q *Query) Exec(parm toolkit.M) error {
 	var e error
+	if parm == nil {
+		parm = toolkit.M{}
+	}
 	if q.Parts == nil {
 		return errorlib.Error(packageName, modQuery,
 			"Cursor", fmt.Sprintf("No Query Parts"))
@@ -161,17 +192,33 @@ func (q *Query) Exec(parm toolkit.M) error {
 	dbname := q.Connection().Info().Database
 	tablename := ""
 
+	if parm == nil {
+		parm = toolkit.M{}
+	}
+	data := parm.Get("data", nil)
+
 	/*
 		p arts will return E - map{interface{}}interface{}
 		where each interface{} returned is slice of interfaces --> []interface{}
 	*/
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
+		/*
+			fmt.Printf("[%s] QP = %s \n",
+				toolkit.Id(data),
+				toolkit.JsonString(qp))
+		*/
 		return qp.PartType
 	}, nil).Data
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
-	if hasFrom == false {
+	if !hasFrom {
+		/*
+			fmt.Printf("Data:\n%s\nParts:\n%s\nGrouped:\n%s\n",
+				toolkit.JsonString(data),
+				toolkit.JsonString(q.Parts()),
+				toolkit.JsonString(parts))
+		*/
 		return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
 	}
 	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
@@ -195,13 +242,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 		commandType = dbox.QueryPartSave
 	}
 
-	if parm == nil {
-		return errorlib.Error(packageName, "Query", modQuery,
-			"Invalid input parm")
-	}
-	data := parm.Get("data", nil)
 	if data == nil {
-
+		//---
 	} else {
 		id := toolkit.Id(data)
 		if id != nil {
@@ -209,7 +251,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	}
 
-	mgoColl := q.Connection().(*Connection).session.DB(dbname).C(tablename)
+	session := q.prepareSession()
+	multiExec := q.Config("multiexec", false).(bool)
+	if !multiExec && !q.usePooling && session != nil {
+		defer session.Close()
+	}
+	mgoColl := session.DB(dbname).C(tablename)
 	if commandType == dbox.QueryPartInsert {
 		e = mgoColl.Insert(data)
 	} else if commandType == dbox.QueryPartUpdate {
@@ -219,6 +266,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 			e = mgoColl.Update(where, data)
 		}
 	} else if commandType == dbox.QueryPartDelete {
+		if where == nil || len(where.(toolkit.M)) == 0 {
+			multi = true
+		}
 		if multi {
 			_, e = mgoColl.RemoveAll(where)
 		} else {

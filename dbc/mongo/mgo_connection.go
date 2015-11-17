@@ -68,7 +68,7 @@ func (c *Connection) Connect() error {
 		return errorlib.Error(packageName, modConnection,
 			"Connect", e.Error())
 	}
-	sess.SetMode(mgo.Monotonic, true)
+	//sess.SetMode(mgo.Monotonic, true)
 	c.session = sess
 	return nil
 }

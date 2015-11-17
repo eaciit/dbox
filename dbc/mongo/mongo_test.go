@@ -32,9 +32,9 @@ func TestConnect(t *testing.T) {
 
 func TestFilter(t *testing.T) {
 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
-	fb.AddFilter(fb.Or(
-		fb.Eq("_id", 1),
-		fb.Eq("group", "administrators")))
+	fb.AddFilter(dbox.Or(
+		dbox.Eq("_id", 1),
+		dbox.Eq("group", "administrators")))
 	b, e := fb.Build()
 	if e != nil {
 		t.Errorf("Error %s", e.Error())
@@ -95,7 +95,7 @@ func TestSelectFilter(t *testing.T) {
 
 	csr, e := c.NewQuery().
 		//Select("_id", "email").
-		Where(c.Fb().Eq("email", "arief@eaciit.com")).
+		Where(dbox.Eq("email", "arief@eaciit.com")).
 		From("appusers").Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -159,21 +159,28 @@ func TestSelectAggregate(t *testing.T) {
 }
 */
 
-func TestInsert(t *testing.T) {
+func TestCRUD(t *testing.T) {
+	//t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 		return
 	}
 	defer c.Close()
+	e = c.NewQuery().From("testtables").Delete(nil).Exec(nil)
+	if e != nil {
+		t.Errorf("Unablet to clear table %s\n", e.Error())
+		return
+	}
 
-	q := c.NewQuery().From("testtables").Save(nil, nil)
+	q := c.NewQuery().SetConfig("multiexec", true).From("testtables").Save(nil, nil)
 	type user struct {
 		Id    string `bson:"_id"`
 		Title string
 		Email string
 	}
-	for i := 1; i <= 50; i++ {
+	for i := 1; i <= 10000; i++ {
+		//go func(q dbox.IQuery, i int) {
 		data := user{}
 		data.Id = fmt.Sprintf("User-%d", i)
 		data.Title = fmt.Sprintf("User-%d's name", i)
@@ -186,7 +193,16 @@ func TestInsert(t *testing.T) {
 		})
 		if e != nil {
 			t.Errorf("Unable to save: %s \n", e.Error())
-			return
 		}
+	}
+	q.Close()
+
+	data := user{}
+	data.Id = fmt.Sprintf("Userx15")
+	data.Title = fmt.Sprintf("User Lima Belas")
+	data.Email = fmt.Sprintf("user15@yahoo.com")
+	e = c.NewQuery().From("testtables").Update(nil, nil).Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
 	}
 }

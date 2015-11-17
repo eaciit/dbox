@@ -80,6 +80,8 @@ type IQuery interface {
 	HasConfig(string) bool
 	Parts() []*QueryPart
 	AddPart(*QueryPart) IQuery
+	Prepare() error
+	Close()
 }
 
 type AggrInfo struct {
@@ -162,8 +164,16 @@ func (q *Query) Cursor(in toolkit.M) (ICursor, error) {
 			errorlib.NotYetImplemented)
 }
 
+func (q *Query) Prepare() error {
+	return errorlib.Error(packageName, modQuery, "Cursor",
+		errorlib.NotYetImplemented)
+}
+
 func (q *Query) Exec(parm toolkit.M) error {
 	return errorlib.Error(packageName, modQuery, "Exec", errorlib.NotYetImplemented)
+}
+
+func (q *Query) Close() {
 }
 
 func (q *Query) Select(ss ...string) IQuery {
@@ -222,6 +232,7 @@ func (q *Query) Update(obj interface{}, in toolkit.M) IQuery {
 }
 
 func (q *Query) Delete(in toolkit.M) IQuery {
+	q.AddPart(&QueryPart{QueryPartDelete, nil})
 	q.AddPart(&QueryPart{QueryPartParm, in})
 	return q.this()
 }
