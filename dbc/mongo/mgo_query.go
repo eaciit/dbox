@@ -264,6 +264,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 			_, e = mgoColl.UpdateAll(where, data)
 		} else {
 			e = mgoColl.Update(where, data)
+			if e != nil {
+				e = fmt.Errorf("%s [%v]", e.Error(), where)
+			}
 		}
 	} else if commandType == dbox.QueryPartDelete {
 		if where == nil || len(where.(toolkit.M)) == 0 {
@@ -273,6 +276,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 			_, e = mgoColl.RemoveAll(where)
 		} else {
 			e = mgoColl.Remove(where)
+			if e != nil {
+				e = fmt.Errorf("%s [%v]", e.Error(), where)
+			}
 		}
 	} else if commandType == dbox.QueryPartSave {
 		_, e = mgoColl.Upsert(where, data)

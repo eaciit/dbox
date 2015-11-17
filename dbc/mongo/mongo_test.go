@@ -198,7 +198,7 @@ func TestCRUD(t *testing.T) {
 	q.Close()
 
 	data := user{}
-	data.Id = fmt.Sprintf("Userx15")
+	data.Id = fmt.Sprintf("User-15")
 	data.Title = fmt.Sprintf("User Lima Belas")
 	data.Email = fmt.Sprintf("user15@yahoo.com")
 	e = c.NewQuery().From("testtables").Update(nil, nil).Exec(toolkit.M{"data": data})
