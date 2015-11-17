@@ -20,7 +20,7 @@ type Query struct {
 	usePooling bool
 }
 
-func (q *Query) prepareSession() *mgo.Session {
+func (q *Query) Session() *mgo.Session {
 	q.usePooling = q.Config("pooling", false).(bool)
 	if q.session == nil {
 		if q.usePooling {
@@ -136,7 +136,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		//where = iwhere.(toolkit.M)
 	}
 
-	session := q.prepareSession()
+	session := q.Session()
 	mgoColl := session.DB(dbname).C(tablename)
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.(*Cursor).session = session
@@ -251,7 +251,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	}
 
-	session := q.prepareSession()
+	session := q.Session()
 	multiExec := q.Config("multiexec", false).(bool)
 	if !multiExec && !q.usePooling && session != nil {
 		defer session.Close()
