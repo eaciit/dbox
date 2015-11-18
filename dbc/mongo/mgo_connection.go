@@ -6,7 +6,6 @@ import (
 
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
-	_ "gopkg.in/mgo.v2/bson"
 	"time"
 )
 

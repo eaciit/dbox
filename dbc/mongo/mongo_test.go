@@ -2,14 +2,14 @@ package mongo
 
 import (
 	"fmt"
-
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
 	"testing"
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	c, e := dbox.NewConnection("mongo", &dbox.ConnectionInfo{"localhost:27123", "eccolony", "", "", nil})
+	ci := &dbox.ConnectionInfo{"localhost:27123", "eccolony", "", "", nil}
+	c, e := dbox.NewConnection("mongo", ci)
 	if e != nil {
 		return nil, e
 	}

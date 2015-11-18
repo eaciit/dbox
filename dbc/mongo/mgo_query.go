@@ -44,10 +44,12 @@ func (q *Query) Prepare() error {
 
 func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	var e error
-	if q.Parts == nil {
-		return nil, errorlib.Error(packageName, modQuery,
-			"Cursor", fmt.Sprintf("No Query Parts"))
-	}
+	/*
+		if q.Parts == nil {
+			return nil, errorlib.Error(packageName, modQuery,
+				"Cursor", fmt.Sprintf("No Query Parts"))
+		}
+	*/
 
 	aggregate := false
 	dbname := q.Connection().Info().Database
@@ -184,10 +186,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 	if parm == nil {
 		parm = toolkit.M{}
 	}
-	if q.Parts == nil {
-		return errorlib.Error(packageName, modQuery,
-			"Cursor", fmt.Sprintf("No Query Parts"))
-	}
+	/*
+		if q.Parts == nil {
+			return errorlib.Error(packageName, modQuery,
+				"Cursor", fmt.Sprintf("No Query Parts"))
+		}
+	*/
 
 	dbname := q.Connection().Info().Database
 	tablename := ""
