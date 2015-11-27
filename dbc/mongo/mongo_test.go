@@ -167,13 +167,13 @@ func TestCRUD(t *testing.T) {
 		return
 	}
 	defer c.Close()
-	e = c.NewQuery().From("testtables").Delete(nil).Exec(nil)
+	e = c.NewQuery().From("testtables").Delete().Exec(nil)
 	if e != nil {
 		t.Errorf("Unablet to clear table %s\n", e.Error())
 		return
 	}
 
-	q := c.NewQuery().SetConfig("multiexec", true).From("testtables").Save(nil, nil)
+	q := c.NewQuery().SetConfig("multiexec", true).From("testtables").Save()
 	type user struct {
 		Id    string `bson:"_id"`
 		Title string
@@ -201,7 +201,7 @@ func TestCRUD(t *testing.T) {
 	data.Id = fmt.Sprintf("User-15")
 	data.Title = fmt.Sprintf("User Lima Belas")
 	data.Email = fmt.Sprintf("user15@yahoo.com")
-	e = c.NewQuery().From("testtables").Update(nil, nil).Exec(toolkit.M{"data": data})
+	e = c.NewQuery().From("testtables").Update().Exec(toolkit.M{"data": data})
 	if e != nil {
 		t.Errorf("Unable to update: %s \n", e.Error())
 	}
