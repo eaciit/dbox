@@ -157,13 +157,15 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 	//=============================
 	for {
 		isAppend := true
-		var dataHolder []string
+		// var dataHolder []string
+		appendData := make(map[interface{}]interface{})
 
 		dataTemp, e := c.reader.Read()
 		for i, val := range dataTemp {
 
 			if condSelect[i] == 1 {
-				dataHolder = append(dataHolder, val)
+				appendData[c.headerColumn[i]] = val
+				// dataHolder = append(dataHolder, val)
 			}
 
 			condVal, found := condFind[i]
@@ -177,8 +179,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		}
 
 		if e == io.EOF {
-			if isAppend && dataHolder != nil {
-				ds.Data = append(ds.Data, dataHolder)
+			if isAppend && appendData != nil {
+				ds.Data = append(ds.Data, appendData)
 				lineCount += 1
 			}
 			break
@@ -186,8 +188,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			return ds, errorlib.Error(packageName, modCursor,
 				"Fetch", e.Error())
 		}
-		if isAppend && dataHolder != nil {
-			ds.Data = append(ds.Data, dataHolder)
+		if isAppend && appendData != nil {
+			ds.Data = append(ds.Data, appendData)
 			lineCount += 1
 		}
 
