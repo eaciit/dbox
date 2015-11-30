@@ -25,6 +25,8 @@ type ConditionAttr struct {
 	Find   interface{}
 	Select interface{}
 	Sort   []string
+	skip   int
+	limit  int
 }
 
 type Cursor struct {
@@ -157,6 +159,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 	//=============================
 	for {
 		isAppend := true
+		c.count += 1
 		// var dataHolder []string
 		appendData := make(map[interface{}]interface{})
 
@@ -173,13 +176,18 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 				if condVal.operator == "EQ" {
 					if condVal.condition != val {
 						isAppend = false
+						c.count -= 1
 					}
 				}
 			}
 		}
 
+		if c.count < c.ConditionVal.skip || (c.count > (c.ConditionVal.skip+c.ConditionVal.limit) && c.ConditionVal.limit > 0) {
+			isAppend = false
+		}
+
 		if e == io.EOF {
-			if isAppend && appendData != nil {
+			if isAppend && len(appendData) > 0 {
 				ds.Data = append(ds.Data, appendData)
 				lineCount += 1
 			}
@@ -188,7 +196,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			return ds, errorlib.Error(packageName, modCursor,
 				"Fetch", e.Error())
 		}
-		if isAppend && appendData != nil {
+		if isAppend && len(appendData) > 0 {
 			ds.Data = append(ds.Data, appendData)
 			lineCount += 1
 		}
