@@ -65,19 +65,19 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			return nil, errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
 		}
 		tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)*/
-	/*
-		skip := 0
-		if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-			skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
-				Value.(int)
-		}
 
-		take := 0
-		if takeParts, has := parts[dbox.QueryPartTake]; has {
-			take = takeParts.([]interface{})[0].(*dbox.QueryPart).
-				Value.(int)
-		}
-	*/
+	skip := 0
+	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
+		skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
+			Value.(int)
+	}
+
+	take := 0
+	if takeParts, has := parts[dbox.QueryPartTake]; has {
+		take = takeParts.([]interface{})[0].(*dbox.QueryPart).
+			Value.(int)
+	}
+
 	var fields toolkit.M
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
 	if hasSelect {
@@ -138,7 +138,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	cursor.(*Cursor).file = q.File()
 	cursor.(*Cursor).reader = q.Reader()
 	cursor.(*Cursor).headerColumn = q.Connection().(*Connection).headerColumn
-
+	cursor.(*Cursor).count = 0
+	fmt.Println(cursor.(*Cursor).headerColumn)
 	if e != nil {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", e.Error())
 	}
@@ -153,6 +154,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		if hasSort {
 			cursor.(*Cursor).ConditionVal.Sort = sort
 		}
+		cursor.(*Cursor).ConditionVal.skip = skip
+		cursor.(*Cursor).ConditionVal.limit = take
 
 		// if fields != nil {
 		// 	mgoCursor = mgoCursor.Select(fields)
@@ -188,6 +191,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 func (q *Query) Exec(parm toolkit.M) error {
 	var e error
 
+	// useHeader := q.Connection().Info().Settings.Get("useheader", false).(bool)
 	if parm == nil {
 		parm = toolkit.M{}
 	}
@@ -285,7 +289,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 		val := reflect.ValueOf(data)
 		for _, v := range q.Connection().(*Connection).headerColumn {
 			for i := 0; i < val.NumField(); i++ {
-				if v == val.Type().Field(i).Name {
+				if v.name == val.Type().Field(i).Name {
 					dataTemp = append(dataTemp, fmt.Sprintf("%s", val.Field(i)))
 					break
 				}
@@ -295,20 +299,25 @@ func (q *Query) Exec(parm toolkit.M) error {
 		writer.Write(dataTemp)
 		writer.Flush()
 	case dbox.QueryPartDelete:
+		var tempHeader []string
 		condFind := make(map[int]WhereCond)
 		for _, key := range reflect.ValueOf(where).MapKeys() {
 			temp := reflect.ValueOf(reflect.ValueOf(where).MapIndex(key).Interface())
 			// fmt.Println(temp.String())
 			for n, val := range q.Connection().(*Connection).headerColumn {
-				if val == key.String() {
+				tempHeader = append(tempHeader, val.name)
+				if val.name == key.String() {
 					condFind[n] = WhereCond{"EQ", temp.String()}
 				}
 			}
 			break
 		}
 
-		writer.Write(q.Connection().(*Connection).headerColumn)
-		writer.Flush()
+		// if useHeader {
+		// 	fmt.Println("EXEC 316", tempHeader)
+		// 	writer.Write(tempHeader)
+		// 	writer.Flush()
+		// }
 
 		for {
 			isAppend := true
@@ -340,6 +349,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 		}
 	case dbox.QueryPartUpdate:
+		var tempHeader []string
+
 		if data == nil {
 			break
 		}
@@ -361,15 +372,19 @@ func (q *Query) Exec(parm toolkit.M) error {
 		for _, key := range reflect.ValueOf(where).MapKeys() {
 			temp := reflect.ValueOf(reflect.ValueOf(where).MapIndex(key).Interface())
 			for n, val := range q.Connection().(*Connection).headerColumn {
-				if val == key.String() {
+				tempHeader = append(tempHeader, val.name)
+				if val.name == key.String() {
 					condFind[n] = WhereCond{"EQ", temp.String()}
 				}
 			}
 			break
 		}
 
-		writer.Write(q.Connection().(*Connection).headerColumn)
-		writer.Flush()
+		// if useHeader {
+		// 	fmt.Println("EXEC 384", tempHeader)
+		// 	writer.Write(tempHeader)
+		// 	writer.Flush()
+		// }
 
 		for {
 			foundChange := false
@@ -389,7 +404,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			if foundChange {
 				for i := 0; i < valChange.NumField(); i++ {
 					for n, v := range q.Connection().(*Connection).headerColumn {
-						if v == valChange.Type().Field(i).Name && valChange.Field(i).String() != "" {
+						if v.name == valChange.Type().Field(i).Name && valChange.Field(i).String() != "" {
 							dataTemp[n] = fmt.Sprintf("%s", valChange.Field(i))
 							break
 						}

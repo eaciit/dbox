@@ -38,7 +38,7 @@ type Cursor struct {
 	reader       *csv.Reader
 	ConditionVal ConditionAttr
 
-	headerColumn []string
+	headerColumn []headerstruct
 }
 
 func (c *Cursor) Close() {
@@ -127,7 +127,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 				break
 			} else {
 				for n, val := range c.headerColumn {
-					if val == key.String() {
+					if val.name == key.String() {
 						if temp.Int() == 1 {
 							condSelect[n] = 1
 						} else {
@@ -149,7 +149,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			temp := reflect.ValueOf(reflect.ValueOf(c.ConditionVal.Find).MapIndex(key).Interface())
 			// fmt.Println(temp.String())
 			for n, val := range c.headerColumn {
-				if val == key.String() {
+				if val.name == key.String() {
 					condFind[n] = WhereCond{"EQ", temp.String()}
 				}
 			}
@@ -167,7 +167,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		for i, val := range dataTemp {
 
 			if condSelect[i] == 1 {
-				appendData[c.headerColumn[i]] = val
+				appendData[c.headerColumn[i].name] = val
 				// dataHolder = append(dataHolder, val)
 			}
 
