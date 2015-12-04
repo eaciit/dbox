@@ -7,9 +7,9 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
-	"io"
+	// "io"
 	"os"
-	"reflect"
+	// "reflect"
 )
 
 const (
@@ -52,8 +52,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	var e error
 
 	aggregate := false
-	//	dbname := q.Connection().Info().Host
-	//	tablename := ""
 
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
@@ -145,7 +143,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 
 	if !aggregate {
-		cursor.(*Cursor).ConditionVal.Find = where
+		fmt.Println(where)
+		cursor.(*Cursor).ConditionVal.Find, _ = toolkit.ToM(where)
 
 		if fields != nil {
 			cursor.(*Cursor).ConditionVal.Select = fields
@@ -157,23 +156,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		cursor.(*Cursor).ConditionVal.skip = skip
 		cursor.(*Cursor).ConditionVal.limit = take
 
-		// if fields != nil {
-		// 	mgoCursor = mgoCursor.Select(fields)
-		// }
-		// if hasSort {
-		// 	mgoCursor = mgoCursor.Sort(sort...)
-		// }
-		// if skip > 0 {
-		// 	mgoCursor = mgoCursor.Skip(skip)
-		// }
-		// if take > 0 {
-		// 	mgoCursor = mgoCursor.Limit(take)
-		// }
-		// cursor.(*Cursor).ResultType = QueryResultCursor
-		// cursor.(*Cursor).mgoCursor = mgoCursor
-		// cursor.(*Cursor).count = count
-
-		//cursor.(*Cursor).mgoIter = mgoCursor.Iter()
 	} else {
 		/*		pipes := toolkit.M{}
 				mgoPipe := session.DB(dbname).C(tablename).
@@ -286,24 +268,21 @@ func (q *Query) Exec(parm toolkit.M) error {
 	switch commandType {
 	case dbox.QueryPartInsert:
 		var dataTemp []string
-		val := reflect.ValueOf(data)
+		dataMformat, _ := toolkit.ToM(data)
 		for _, v := range q.Connection().(*Connection).headerColumn {
-			for i := 0; i < val.NumField(); i++ {
-				if v.name == val.Type().Field(i).Name {
-					dataTemp = append(dataTemp, fmt.Sprintf("%s", val.Field(i)))
-					break
-				}
-			}
+			valAppend := dataMformat.Get(v.name, "").(string)
+			dataTemp = append(dataTemp, valAppend)
 		}
 
-		writer.Write(dataTemp)
-		writer.Flush()
+		if len(dataTemp) > 0 {
+			writer.Write(dataTemp)
+			writer.Flush()
+		}
 	case dbox.QueryPartDelete:
 		var tempHeader []string
 		condFind := make(map[int]WhereCond)
 		for _, key := range reflect.ValueOf(where).MapKeys() {
 			temp := reflect.ValueOf(reflect.ValueOf(where).MapIndex(key).Interface())
-			// fmt.Println(temp.String())
 			for n, val := range q.Connection().(*Connection).headerColumn {
 				tempHeader = append(tempHeader, val.name)
 				if val.name == key.String() {
@@ -312,12 +291,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 			break
 		}
-
-		// if useHeader {
-		// 	fmt.Println("EXEC 316", tempHeader)
-		// 	writer.Write(tempHeader)
-		// 	writer.Flush()
-		// }
 
 		for {
 			isAppend := true
@@ -355,19 +328,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 			break
 		}
 
-		// valChange := make(map[int]string)
 		condFind := make(map[int]WhereCond)
 
-		valChange := reflect.ValueOf(data)
-
-		// for i := 0; i < val.NumField(); i++ {
-		// 	for n, v := range q.Connection().(*Connection).headerColumn {
-		// 		if v == val.Type().Field(i).Name {
-		// 			valChange[n] = fmt.Sprintf("%s", val.Field(i))
-		// 			break
-		// 		}
-		// 	}
-		// }
+		dataMformat, _ := toolkit.ToM(data)
 
 		for _, key := range reflect.ValueOf(where).MapKeys() {
 			temp := reflect.ValueOf(reflect.ValueOf(where).MapIndex(key).Interface())
@@ -379,12 +342,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 			break
 		}
-
-		// if useHeader {
-		// 	fmt.Println("EXEC 384", tempHeader)
-		// 	writer.Write(tempHeader)
-		// 	writer.Flush()
-		// }
 
 		for {
 			foundChange := false
@@ -402,15 +359,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 
 			if foundChange {
-				for i := 0; i < valChange.NumField(); i++ {
-					for n, v := range q.Connection().(*Connection).headerColumn {
-						if v.name == valChange.Type().Field(i).Name && valChange.Field(i).String() != "" {
-							dataTemp[n] = fmt.Sprintf("%s", valChange.Field(i))
-							break
-						}
+				// for i := 0; i < valChange.NumField(); i++ {
+				// 	for n, v := range q.Connection().(*Connection).headerColumn {
+				// 		if v.name == valChange.Type().Field(i).Name && valChange.Field(i).String() != "" {
+				// 			dataTemp[n] = fmt.Sprintf("%s", valChange.Field(i))
+				// 			break
+				// 		}
+				// 	}
+				// }
+				for n, v := range q.Connection().(*Connection).headerColumn {
+					valChange := dataMformat.Get(v.name, "").(string)
+					if valChange != "" {
+						dataTemp[n] = valChange
 					}
 				}
-				//				fmt.Println(dataTemp)
 			}
 
 			if e == io.EOF {

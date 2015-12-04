@@ -1,6 +1,7 @@
 package csv
 
 import (
+	// "encoding/json"
 	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
@@ -8,7 +9,7 @@ import (
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	var config = map[string]interface{}{"useheader": true, "delimiter": ","}
+	var config = map[string]interface{}{"useheader": true, "delimiter": ",", "dateformat": "MM-dd-YYYY"}
 	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\Data_Comma.csv", "", "", "", config}
 	c, e := dbox.NewConnection("csv", ci)
 	if e != nil {
@@ -44,51 +45,51 @@ func TestFilter(t *testing.T) {
 	}
 }
 
-func TestSelect(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("Unable to connect %s \n", e.Error())
-	}
-	defer c.Close()
+// func TestSelect(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("Unable to connect %s \n", e.Error())
+// 	}
+// 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("EmployeeId", "FirstName", "LastName").
-		Cursor(nil)
-	if e != nil {
-		t.Errorf("Cursor pre error: %s \n", e.Error())
-		return
-	}
-	if csr == nil {
-		t.Errorf("Cursor not initialized")
-		return
-	}
-	defer csr.Close()
+// 	csr, e := c.NewQuery().Select("EmployeeId", "FirstName", "LastName").
+// 		Cursor(nil)
+// 	if e != nil {
+// 		t.Errorf("Cursor pre error: %s \n", e.Error())
+// 		return
+// 	}
+// 	if csr == nil {
+// 		t.Errorf("Cursor not initialized")
+// 		return
+// 	}
+// 	defer csr.Close()
 
-	ds, e := csr.Fetch(nil, 2, false)
-	if e != nil {
-		t.Errorf("Unable to fetch N1: %s \n", e.Error())
-	} else {
-		fmt.Printf("Fetch N1 OK. Result: %v \n", ds.Data)
-	}
+// 	ds, e := csr.Fetch(nil, 2, false)
+// 	if e != nil {
+// 		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+// 	} else {
+// 		fmt.Printf("Fetch N1 OK. Result: %v \n", ds.Data)
+// 	}
 
-	ds, e = csr.Fetch(nil, 3, false)
-	if e != nil {
-		t.Errorf("Unable to fetch N2: %s \n", e.Error())
-	} else {
-		fmt.Printf("Fetch N2 OK. Result: %v \n", ds.Data)
-	}
+// 	ds, e = csr.Fetch(nil, 3, false)
+// 	if e != nil {
+// 		t.Errorf("Unable to fetch N2: %s \n", e.Error())
+// 	} else {
+// 		fmt.Printf("Fetch N2 OK. Result: %v \n", ds.Data)
+// 	}
 
-	e = csr.ResetFetch()
-	if e != nil {
-		t.Errorf("Unable to reset fetch: %s \n", e.Error())
-	}
+// 	e = csr.ResetFetch()
+// 	if e != nil {
+// 		t.Errorf("Unable to reset fetch: %s \n", e.Error())
+// 	}
 
-	ds, e = csr.Fetch(nil, 5, false)
-	if e != nil {
-		t.Errorf("Unable to fetch N3: %s \n", e.Error())
-	} else {
-		fmt.Printf("Fetch N3 OK. Result: %v \n", ds.Data)
-	}
-}
+// 	ds, e = csr.Fetch(nil, 5, false)
+// 	if e != nil {
+// 		t.Errorf("Unable to fetch N3: %s \n", e.Error())
+// 	} else {
+// 		fmt.Printf("Fetch N3 OK. Result: %v \n", ds.Data)
+// 	}
+// }
 
 func TestSelectFilter(t *testing.T) {
 	c, e := prepareConnection()
@@ -99,8 +100,10 @@ func TestSelectFilter(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().
-		Select("EmployeeId", "FirstName", "LastName").
-		Where(dbox.Eq("EmployeeId", "101-102-4")).Cursor(nil)
+		Select("EmployeeId", "FirstName", "LastName", "Age").
+		// Where(dbox.Eq("EmployeeId", "101-102-4")).Cursor(nil)
+		// Where(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4"))).Cursor(nil)
+		Where(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30"))).Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -111,7 +114,7 @@ func TestSelectFilter(t *testing.T) {
 	}
 	defer csr.Close()
 
-	ds, e := csr.Fetch(nil, 0, false)
+	ds, e := csr.Fetch(nil, 5, false)
 	if e != nil {
 		t.Errorf("Unable to fetch: %s \n", e.Error())
 	} else {
@@ -161,7 +164,6 @@ func TestSelectAggregate(t *testing.T) {
 */
 
 func TestCRUD(t *testing.T) {
-	//t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -192,16 +194,35 @@ func TestCRUD(t *testing.T) {
 		t.Errorf("Unable to Insert: %s \n", e.Error())
 	}
 
+	dataStr := []string{"90013012", "AABBCC", "DDEEFF", "10", "2015-11-01", "AABB@CC.com"}
+	e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataStr})
+	if e != nil {
+		t.Errorf("Unable to Insert: %s \n", e.Error())
+	}
+
+	dataJson := `{
+		"EmployeeId": "901-999-1",
+		"FirstName": "Quail",
+		"LastName": "Boyd",
+		"Email": "adipiscing.lacus@diamdictum.ca"
+	}`
+	dataJsonByte :=
+
+	e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataJson})
+	if e != nil {
+		t.Errorf("Unable to Insert: %s \n", e.Error())
+	}
+
 	data = employee{}
 	data.Age = fmt.Sprintf("Prayitno$$$$")
 	data.JoinDate = fmt.Sprintf("1990-11-01")
 	data.Email = fmt.Sprintf("user15@gmail.com")
 	data.Phone = fmt.Sprintf("085-0000-0000")
 
-	e = c.NewQuery().Where(dbox.Eq("EmployeeId", "90012019")).Update().Exec(toolkit.M{"data": data})
-	if e != nil {
-		t.Errorf("Unable to update: %s \n", e.Error())
-	}
+	// e = c.NewQuery().Where(dbox.Eq("EmployeeId", "90012019")).Update().Exec(toolkit.M{"data": data})
+	// if e != nil {
+	// 	t.Errorf("Unable to update: %s \n", e.Error())
+	// }
 
 	// e = c.NewQuery().
 	// 	Delete().

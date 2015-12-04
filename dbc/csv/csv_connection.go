@@ -2,6 +2,7 @@ package csv
 
 import (
 	"encoding/csv"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
 	//	"io"
 	// "fmt"
@@ -10,7 +11,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	//	"time"
+	// "time"
+	// "reflect"
 )
 
 type TypeOpenFile_Enum int
@@ -129,6 +131,8 @@ func (c *Connection) SetReaderParam() {
 
 func (c *Connection) SetHeaderData(useHeader bool) {
 	ci := c.Info()
+	dateformat := ci.Settings.Get("dateformat", "").(string)
+
 	var tempstruct []headerstruct
 
 	tempData, _ := c.reader.Read()
@@ -155,20 +159,26 @@ func (c *Connection) SetHeaderData(useHeader bool) {
 				matchNumber := false
 				matchFloat := false
 				matchDate := false
-				x := strings.Index(v, ".")
-				// fmt.Println("CONN-159 :", v, "-", x)
-				if x > 0 {
-					matchFloat = true
-					v = strings.Replace(v, ".", "", 1)
-					// fmt.Println("CONN-163 :", v)
-				}
 
-				matchNumber, _ = regexp.MatchString("^\\d+$", v)
 				//dd.mm.yyyy dd/mm/yyyy dd-mm-yyyy
 				//yyyy.mm.dd yyyy/mm/dd yyyy-mm-dd
 				formatDate := "((^(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)[\\d]{4}$)|(^[\\d]{4}(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])$))"
-
 				matchDate, _ = regexp.MatchString(formatDate, v)
+				if !matchDate && dateformat != "" {
+					d := cast.String2Date(v, dateformat)
+					if d.Year() > 1 {
+						matchDate = true
+					}
+				}
+
+				x := strings.Index(v, ".")
+
+				if x > 0 {
+					matchFloat = true
+					v = strings.Replace(v, ".", "", 1)
+				}
+
+				matchNumber, _ = regexp.MatchString("^\\d+$", v)
 
 				tempstruct[i].dataType = "string"
 				if matchNumber {
