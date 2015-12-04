@@ -184,7 +184,8 @@ func TestCRUD(t *testing.T) {
 	data := employee{}
 	data.EmployeeId = fmt.Sprintf("90012019")
 	data.FirstName = fmt.Sprintf("Alip Sidik")
-	data.Age = fmt.Sprintf("Prayitno")
+	data.LastName = fmt.Sprintf("Prayitno")
+	data.Age = fmt.Sprintf("2C")
 	data.JoinDate = fmt.Sprintf("2015-11-01")
 	data.Email = fmt.Sprintf("user15@yahoo.com")
 	data.Phone = fmt.Sprintf("085-XXX-XXX-XX")
@@ -194,35 +195,36 @@ func TestCRUD(t *testing.T) {
 		t.Errorf("Unable to Insert: %s \n", e.Error())
 	}
 
-	dataStr := []string{"90013012", "AABBCC", "DDEEFF", "10", "2015-11-01", "AABB@CC.com"}
-	e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataStr})
-	if e != nil {
-		t.Errorf("Unable to Insert: %s \n", e.Error())
-	}
+	// dataStr := []string{"90013012", "AABBCC", "DDEEFF", "10", "2015-11-01", "AABB@CC.com"}
+	// e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataStr})
+	// if e != nil {
+	// 	t.Errorf("Unable to Insert: %s \n", e.Error())
+	// }
 
-	dataJson := `{
-		"EmployeeId": "901-999-1",
-		"FirstName": "Quail",
-		"LastName": "Boyd",
-		"Email": "adipiscing.lacus@diamdictum.ca"
-	}`
-	dataJsonByte :=
+	// dataJson := `{
+	// 	"EmployeeId": "901-999-1",
+	// 	"FirstName": "Quail",
+	// 	"LastName": "Boyd",
+	// 	"Email": "adipiscing.lacus@diamdictum.ca"
+	// }`
 
-	e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataJson})
-	if e != nil {
-		t.Errorf("Unable to Insert: %s \n", e.Error())
-	}
+	// e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataJson})
+	// if e != nil {
+	// 	t.Errorf("Unable to Insert: %s \n", e.Error())
+	// }
 
 	data = employee{}
-	data.Age = fmt.Sprintf("Prayitno$$$$")
+	data.FirstName = fmt.Sprintf("Alip")
+	data.LastName = fmt.Sprintf("Sidik")
+	data.Age = fmt.Sprintf("2X")
 	data.JoinDate = fmt.Sprintf("1990-11-01")
 	data.Email = fmt.Sprintf("user15@gmail.com")
 	data.Phone = fmt.Sprintf("085-0000-0000")
 
-	// e = c.NewQuery().Where(dbox.Eq("EmployeeId", "90012019")).Update().Exec(toolkit.M{"data": data})
-	// if e != nil {
-	// 	t.Errorf("Unable to update: %s \n", e.Error())
-	// }
+	e = c.NewQuery().Where(dbox.Eq("EmployeeId", "90012019")).Update().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	}
 
 	// e = c.NewQuery().
 	// 	Delete().

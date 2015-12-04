@@ -7,7 +7,7 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
-	// "io"
+	"io"
 	"os"
 	// "reflect"
 )
@@ -22,6 +22,55 @@ type Query struct {
 	file     *os.File
 	tempFile *os.File
 	reader   *csv.Reader
+}
+
+type QueryCondition struct {
+	Select toolkit.M
+	Find   toolkit.M
+	Sort   []string
+	skip   int
+	limit  int
+}
+
+func (w *QueryCondition) getCondition(dataCheck toolkit.M) bool {
+	resBool := true
+
+	if len(w.Find) > 0 {
+		resBool = foundCondition(dataCheck, w.Find)
+	}
+
+	return resBool
+}
+
+func foundCondition(dataCheck toolkit.M, cond toolkit.M) bool {
+	resBool := true
+
+	for key, val := range cond {
+		if key == "$and" || key == "$or" {
+			for i, sVal := range val.([]interface{}) {
+				rVal := sVal.(map[string]interface{})
+				mVal := toolkit.M{}
+				for rKey, mapVal := range rVal {
+					mVal.Set(rKey, mapVal)
+				}
+
+				xResBool := foundCondition(dataCheck, mVal)
+				if key == "$and" {
+					resBool = resBool && xResBool
+				} else {
+					if i == 0 {
+						resBool = xResBool
+					} else {
+						resBool = resBool || xResBool
+					}
+				}
+			}
+		} else if val != dataCheck.Get(key, "").(string) {
+			resBool = false
+		}
+	}
+
+	return resBool
 }
 
 func (q *Query) File() *os.File {
@@ -39,9 +88,7 @@ func (q *Query) Reader() *csv.Reader {
 }
 
 func (q *Query) Close() {
-	// if q.file != nil {
-	// 	q.file.Close()
-	// }
+
 }
 
 func (q *Query) Prepare() error {
@@ -57,12 +104,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		qp := x.(*dbox.QueryPart)
 		return qp.PartType
 	}, nil).Data
-
-	/*	fromParts, hasFrom := parts[dbox.QueryPartFrom]
-		if hasFrom == false {
-			return nil, errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
-		}
-		tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)*/
 
 	skip := 0
 	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
@@ -143,7 +184,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 
 	if !aggregate {
-		fmt.Println(where)
+		fmt.Println("Query 173 : ", where)
 		cursor.(*Cursor).ConditionVal.Find, _ = toolkit.ToM(where)
 
 		if fields != nil {
@@ -216,19 +257,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 		commandType = dbox.QueryPartSave
 	}
 
-	// if data == nil {
-	// 	multi = true
-	// } else {
-	// 	if where == nil {
-	// 		id := toolkit.Id(data)
-	// 		if id != nil {
-	// 			where = (toolkit.M{}).Set("_id", id)
-	// 		}
-	// 	} else {
-	// 		multi = true
-	// 	}
-	// }
-
 	var where interface{}
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
@@ -260,10 +288,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 	writer := q.Connection().(*Connection).writer
 	reader := q.Connection().(*Connection).reader
 
-	// multiExec := q.Config("multiexec", false).(bool)
-	// if !multiExec && !q.usePooling && session != nil {
-	// 	defer Connection().(*Connection).Close()
-	// }
+	var execCond QueryCondition
+	execCond.Find, _ = toolkit.ToM(where)
 
 	switch commandType {
 	case dbox.QueryPartInsert:
@@ -280,35 +306,29 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	case dbox.QueryPartDelete:
 		var tempHeader []string
-		condFind := make(map[int]WhereCond)
-		for _, key := range reflect.ValueOf(where).MapKeys() {
-			temp := reflect.ValueOf(reflect.ValueOf(where).MapIndex(key).Interface())
-			for n, val := range q.Connection().(*Connection).headerColumn {
-				tempHeader = append(tempHeader, val.name)
-				if val.name == key.String() {
-					condFind[n] = WhereCond{"EQ", temp.String()}
-				}
-			}
-			break
+
+		for _, val := range q.Connection().(*Connection).headerColumn {
+			tempHeader = append(tempHeader, val.name)
 		}
 
+		// if q.Connection().Info().Settings.Get("useheader", false).(bool) {
+		// 	writer.Write(tempHeader)
+		// 	writer.Flush()
+		// }
+
 		for {
-			isAppend := true
+			foundDelete := true
+			recData := toolkit.M{}
 
 			dataTemp, e := reader.Read()
 			for i, val := range dataTemp {
-				condVal, found := condFind[i]
-				if found {
-					if condVal.operator == "EQ" {
-						if condVal.condition == val {
-							isAppend = false
-						}
-					}
-				}
+				recData.Set(tempHeader[i], val)
 			}
 
+			foundDelete = execCond.getCondition(recData)
+
 			if e == io.EOF {
-				if isAppend && dataTemp != nil {
+				if !foundDelete && dataTemp != nil {
 					writer.Write(dataTemp)
 					writer.Flush()
 				}
@@ -316,7 +336,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			} else if e != nil {
 				return errorlib.Error(packageName, modQuery, "Delete", e.Error())
 			}
-			if isAppend && dataTemp != nil {
+			if !foundDelete && dataTemp != nil {
 				writer.Write(dataTemp)
 				writer.Flush()
 			}
@@ -328,47 +348,32 @@ func (q *Query) Exec(parm toolkit.M) error {
 			break
 		}
 
-		condFind := make(map[int]WhereCond)
-
 		dataMformat, _ := toolkit.ToM(data)
 
-		for _, key := range reflect.ValueOf(where).MapKeys() {
-			temp := reflect.ValueOf(reflect.ValueOf(where).MapIndex(key).Interface())
-			for n, val := range q.Connection().(*Connection).headerColumn {
-				tempHeader = append(tempHeader, val.name)
-				if val.name == key.String() {
-					condFind[n] = WhereCond{"EQ", temp.String()}
-				}
-			}
-			break
+		for _, val := range q.Connection().(*Connection).headerColumn {
+			tempHeader = append(tempHeader, val.name)
 		}
 
+		// if q.Connection().Info().Settings.Get("useheader", false).(bool) {
+		// 	writer.Write(tempHeader)
+		// 	writer.Flush()
+		// }
+		// fmt.Println(execCond.Find)
 		for {
 			foundChange := false
 
+			recData := toolkit.M{}
 			dataTemp, e := reader.Read()
 			for i, val := range dataTemp {
-				condVal, found := condFind[i]
-				if found {
-					if condVal.operator == "EQ" {
-						if condVal.condition == val {
-							foundChange = true
-						}
-					}
-				}
+				recData.Set(tempHeader[i], val)
 			}
 
-			if foundChange {
-				// for i := 0; i < valChange.NumField(); i++ {
-				// 	for n, v := range q.Connection().(*Connection).headerColumn {
-				// 		if v.name == valChange.Type().Field(i).Name && valChange.Field(i).String() != "" {
-				// 			dataTemp[n] = fmt.Sprintf("%s", valChange.Field(i))
-				// 			break
-				// 		}
-				// 	}
-				// }
-				for n, v := range q.Connection().(*Connection).headerColumn {
-					valChange := dataMformat.Get(v.name, "").(string)
+			// foundChange = execCond.getCondition(recData)
+			foundChange = foundCondition(recData, execCond.Find)
+			// fmt.Println(foundChange, " Data :", recData["EmployeeId"])
+			if foundChange && len(dataTemp) > 0 {
+				for n, v := range tempHeader {
+					valChange := dataMformat.Get(v, "").(string)
 					if valChange != "" {
 						dataTemp[n] = valChange
 					}
@@ -393,33 +398,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 	q.Connection().(*Connection).ExecOpr = true
 	e = q.Connection().(*Connection).EndSessionWrite()
-
-	// if commandType == dbox.QueryPartInsert {
-	// 	e = mgoColl.Insert(data)
-	// } else if commandType == dbox.QueryPartUpdate {
-	// 	if multi {
-	// 		_, e = mgoColl.UpdateAll(where, data)
-	// 	} else {
-	// 		e = mgoColl.Update(where, data)
-	// 		if e != nil {
-	// 			e = fmt.Errorf("%s [%v]", e.Error(), where)
-	// 		}
-	// 	}
-	// } else if commandType == dbox.QueryPartDelete {
-	// 	if multi {
-	// 		_, e = mgoColl.RemoveAll(where)
-	// 	} else {
-	// 		e = mgoColl.Remove(where)
-	// 		if e != nil {
-	// 			e = fmt.Errorf("%s [%v]", e.Error(), where)
-	// 		}
-	// 	}
-	// } else if commandType == dbox.QueryPartSave {
-	// 	_, e = mgoColl.Upsert(where, data)
-	// }
-	// if e != nil {
-	// 	return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-	// }
 
 	return nil
 }
