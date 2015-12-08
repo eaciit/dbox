@@ -89,7 +89,6 @@ func TestSelect(t *testing.T) {
 	}
 }
 
-/*
 func TestSelectFilter(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
@@ -100,7 +99,7 @@ func TestSelectFilter(t *testing.T) {
 
 	csr, e := c.NewQuery().
 		//Select("_id", "email").
-		Where(dbox.Eq("email", "arief@eaciit.com")).
+		Where(dbox.Eq("email", "User-4@myco.com")).
 		From("appusers").Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -163,7 +162,7 @@ func TestSelectAggregate(t *testing.T) {
 	}
 }
 */
-/*
+
 func TestCRUD(t *testing.T) {
 	//t.Skip()
 	c, e := prepareConnection()
@@ -211,4 +210,3 @@ func TestCRUD(t *testing.T) {
 		t.Errorf("Unable to update: %s \n", e.Error())
 	}
 }
-*/

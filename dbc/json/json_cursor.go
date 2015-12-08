@@ -3,7 +3,7 @@ package json
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	// "fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
@@ -25,17 +25,21 @@ type Cursor struct {
 
 	count      int
 	jsonCursor interface{}
-	tempFile   []byte
+	readFile   []byte
 	session    *os.File
+	isWhere    bool
 }
 
 func (c *Cursor) Close() {
-	c.session.Close()
+	if c.session != nil {
+		c.session.Close()
+	}
 }
 
 func (c *Cursor) validate() error {
 	if c.ResultType == QueryResultCursor {
-		if c.jsonCursor == nil {
+
+		if c.readFile == nil {
 			return errors.New("Query cursor is nil")
 		}
 	}
@@ -45,14 +49,9 @@ func (c *Cursor) validate() error {
 
 func (c *Cursor) prepIter() error {
 	e := c.validate()
-	fmt.Printf("c.jsonCursor:%v\n", c.jsonCursor)
+
 	if e != nil {
 		return e
-	}
-	if c.jsonCursor == nil {
-		if c.ResultType == QueryResultCursor {
-			c.jsonCursor = 0
-		}
 	}
 	return nil
 }
@@ -62,8 +61,9 @@ func (c *Cursor) Count() int {
 }
 
 func (c *Cursor) ResetFetch() error {
-	c.jsonCursor = c.validate()
-	e := c.prepIter()
+	c.Close()
+
+	_, e := prepareConnection()
 	if e != nil {
 		return errorlib.Error(packageName, modCursor, "ResetFetch", e.Error())
 	}
@@ -73,7 +73,7 @@ func (c *Cursor) ResetFetch() error {
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 	*dbox.DataSet, error) {
 	if closeWhenDone {
-		defer c.Close()
+		c.Close()
 	}
 
 	e := c.prepIter()
@@ -86,17 +86,31 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 	}
 
 	datas := []interface{}{}
-	dec := json.NewDecoder(strings.NewReader(string(c.tempFile)))
+	dec := json.NewDecoder(strings.NewReader(string(c.readFile)))
 	dec.Decode(&datas)
 	ds := dbox.NewDataSet(m)
 	if n == 0 {
+		if c.isWhere {
 
-		ds.Data = datas
+			for _, v := range datas {
+				for _, v2 := range v.(map[string]interface{}) {
+					for _, vWhere := range c.jsonCursor.(toolkit.M) {
+						if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
+							ds.Data = append(ds.Data, v)
+						}
+					}
+				}
+			}
+		} else {
+			ds.Data = datas
+		}
 	} else if n > 0 {
 		fetched := 0
 		fetching := true
+
 		for fetching {
 			var dataM = toolkit.M{}
+
 			for i := 0; i < len(c.jsonCursor.([]string)); i++ {
 				dataM[c.jsonCursor.([]string)[i]] = datas[fetched].(map[string]interface{})[c.jsonCursor.([]string)[i]]
 
@@ -110,7 +124,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 				fetching = false
 			}
 		}
-	}
 
+	}
+	c.Close()
 	return ds, nil
 }

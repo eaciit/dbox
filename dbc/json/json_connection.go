@@ -6,6 +6,8 @@ import (
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"os"
+	"runtime"
+	"strings"
 )
 
 const (
@@ -15,7 +17,9 @@ const (
 
 type Connection struct {
 	dbox.Connection
-	session *os.File
+	// session *os.File
+	filePath, basePath, baseFileName, separator string
+	openFile                                    *os.File
 }
 
 func init() {
@@ -43,8 +47,21 @@ func (c *Connection) Connect() error {
 		return errorlib.Error(packageName, modConnection, "Connect", "Read file is not initialized")
 	}
 
-	sess, _ := os.Open(ci.Host)
-	c.session = sess
+	c.filePath = ci.Host
+
+	if c.openFile == nil {
+		t, e := os.OpenFile(ci.Host, os.O_RDWR, 0)
+		if e != nil {
+			return errorlib.Error(packageName, modConnection, "Read File", "Cannot open file")
+		}
+		c.openFile = t
+	}
+
+	defaultPath, fileName, sep := c.GetBaseFilepath()
+	c.basePath = defaultPath
+	c.baseFileName = fileName
+	c.separator = sep
+
 	return nil
 }
 
@@ -56,5 +73,23 @@ func (c *Connection) NewQuery() dbox.IQuery {
 }
 
 func (c *Connection) Close() {
-	c.session.Close()
+	if c.openFile != nil {
+		c.openFile.Close()
+	}
+}
+
+func (c *Connection) GetBaseFilepath() (string, string, string) {
+	getOS := runtime.GOOS
+	var separator string
+
+	if getOS == "windows" {
+		separator = "\\"
+	} else if getOS == "linux" || getOS == "darwin" {
+		separator = "/"
+	}
+
+	splitString := strings.Split(c.filePath, separator)
+	removeLastSlice := splitString[:len(splitString)-1]
+
+	return strings.Join(removeLastSlice, separator), splitString[len(splitString)-1], separator
 }
