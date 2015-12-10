@@ -22,6 +22,7 @@ type Query struct {
 	file     *os.File
 	tempFile *os.File
 	reader   *csv.Reader
+	save     bool
 }
 
 type QueryCondition struct {
@@ -88,7 +89,9 @@ func (q *Query) Reader() *csv.Reader {
 }
 
 func (q *Query) Close() {
-
+	if q.save {
+		_ = q.Connection().(*Connection).EndSessionWrite()
+	}
 }
 
 func (q *Query) Prepare() error {
@@ -184,7 +187,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 
 	if !aggregate {
-		fmt.Println("Query 173 : ", where)
+		// fmt.Println("Query 173 : ", where)
 		cursor.(*Cursor).ConditionVal.Find, _ = toolkit.ToM(where)
 
 		if fields != nil {
@@ -213,18 +216,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 func (q *Query) Exec(parm toolkit.M) error {
 	var e error
+	q.save = false
 
 	// useHeader := q.Connection().Info().Settings.Get("useheader", false).(bool)
 	if parm == nil {
 		parm = toolkit.M{}
 	}
 
-	// dbname := q.Connection().Info().Database
-	// tablename := ""
-
-	if parm == nil {
-		parm = toolkit.M{}
-	}
 	data := parm.Get("data", nil)
 
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
@@ -255,6 +253,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 		commandType = dbox.QueryPartUpdate
 	} else if hasSave {
 		commandType = dbox.QueryPartSave
+		q.save = true
 	}
 
 	var where interface{}
@@ -279,7 +278,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 
 	q.Connection().(*Connection).ExecOpr = false
-	e = q.Connection().(*Connection).StartSessionWrite()
+	if commandType != dbox.QueryPartSave || (commandType == dbox.QueryPartSave && q.Connection().(*Connection).writer == nil) {
+		e = q.Connection().(*Connection).StartSessionWrite()
+	}
 
 	if e != nil {
 		return errorlib.Error(packageName, "Query", modQuery, e.Error())
@@ -292,7 +293,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	execCond.Find, _ = toolkit.ToM(where)
 
 	switch commandType {
-	case dbox.QueryPartInsert:
+	case dbox.QueryPartInsert, dbox.QueryPartSave:
 		var dataTemp []string
 		dataMformat, _ := toolkit.ToM(data)
 		for _, v := range q.Connection().(*Connection).headerColumn {
@@ -304,6 +305,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			writer.Write(dataTemp)
 			writer.Flush()
 		}
+		// fmt.Println("LINE 308 - ", dataTemp)
 	case dbox.QueryPartDelete:
 		var tempHeader []string
 
@@ -354,11 +356,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 			tempHeader = append(tempHeader, val.name)
 		}
 
-		// if q.Connection().Info().Settings.Get("useheader", false).(bool) {
-		// 	writer.Write(tempHeader)
-		// 	writer.Flush()
-		// }
-		// fmt.Println(execCond.Find)
 		for {
 			foundChange := false
 
@@ -370,7 +367,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 			// foundChange = execCond.getCondition(recData)
 			foundChange = foundCondition(recData, execCond.Find)
-			// fmt.Println(foundChange, " Data :", recData["EmployeeId"])
 			if foundChange && len(dataTemp) > 0 {
 				for n, v := range tempHeader {
 					valChange := dataMformat.Get(v, "").(string)
@@ -387,7 +383,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 				}
 				break
 			} else if e != nil {
-				return errorlib.Error(packageName, modQuery, "Delete", e.Error())
+				return errorlib.Error(packageName, modQuery, "Update", e.Error())
 			}
 			if dataTemp != nil {
 				writer.Write(dataTemp)
@@ -397,7 +393,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 
 	q.Connection().(*Connection).ExecOpr = true
-	e = q.Connection().(*Connection).EndSessionWrite()
+	if commandType != dbox.QueryPartSave {
+		e = q.Connection().(*Connection).EndSessionWrite()
+	}
 
 	return nil
 }
