@@ -1,7 +1,7 @@
 package json
 
 import (
-	// "fmt"
+	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
@@ -39,6 +39,8 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 }
 
 func (c *Connection) Connect() error {
+	c.Close()
+
 	ci := c.Info()
 
 	if ci == nil {
@@ -49,13 +51,9 @@ func (c *Connection) Connect() error {
 
 	c.filePath = ci.Host
 
-	if c.openFile == nil {
-		t, e := os.OpenFile(ci.Host, os.O_RDWR, 0)
-		if e != nil {
-			return errorlib.Error(packageName, modConnection, "Read File", "Cannot open file")
-		}
-		c.openFile = t
-	}
+	// if c.openFile == nil {
+	// 	c.OpenSession()
+	// }
 
 	defaultPath, fileName, sep := c.GetBaseFilepath()
 	c.basePath = defaultPath
@@ -72,8 +70,20 @@ func (c *Connection) NewQuery() dbox.IQuery {
 	return q
 }
 
+func (c *Connection) OpenSession() error {
+	c.Close()
+
+	t, e := os.OpenFile(c.Info().Host, os.O_RDWR, 0)
+	if e != nil {
+		return errorlib.Error(packageName, modConnection, "Read File", "Cannot open file")
+	}
+	c.openFile = t
+	return nil
+}
+
 func (c *Connection) Close() {
 	if c.openFile != nil {
+		// fmt.Println("close nil")
 		c.openFile.Close()
 	}
 }

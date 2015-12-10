@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
-
+	// "io"
 	"testing"
 )
 
 func prepareConnection() (dbox.IConnection, error) {
 	ci := &dbox.ConnectionInfo{"E:\\WORKS\\data test\\testtables.json", "", "", "", nil}
 
-	c, e := dbox.NewConnection("json", ci)
+	c, e := dbox.NewConnection("jsn", ci)
 	if e != nil {
 		return nil, e
 	}
@@ -100,7 +100,7 @@ func TestSelectFilter(t *testing.T) {
 	csr, e := c.NewQuery().
 		//Select("_id", "email").
 		Where(dbox.Eq("email", "User-4@myco.com")).
-		From("appusers").Cursor(nil)
+		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -170,20 +170,48 @@ func TestCRUD(t *testing.T) {
 		t.Errorf("Unable to connect %s \n", e.Error())
 		return
 	}
-	defer c.Close()
-	e = c.NewQuery().From("testtables").Delete().Exec(nil)
+	// defer c.Close()
+	e = c.NewQuery().Delete().Exec(nil)
 	if e != nil {
 		t.Errorf("Unablet to clear table %s\n", e.Error())
 		return
 	}
 
-	q := c.NewQuery().SetConfig("multiexec", true).From("testtables").Save()
+	q := c.NewQuery().SetConfig("multiexec", true).Save()
 	type user struct {
-		Id    string `bson:"_id"`
-		Title string
-		Email string
+		Id    string `json:"id"`
+		Title string `json:"title"`
+		Email string `json:"email"`
 	}
-	for i := 1; i <= 10000; i++ {
+
+	// io.WriteString(c.NewQuery().Connection().(*Connection).openFile, "[")
+	// for i := 1; i <= 10; i++ {
+	// 	//go func(q dbox.IQuery, i int) {
+	// 	data := user{}
+	// 	data.Id = fmt.Sprintf("User-%d", i)
+	// 	data.Title = fmt.Sprintf("User-%d's name", i)
+	// 	data.Email = fmt.Sprintf("User-%d@myco.com", i)
+	// 	if i == 10 || i == 20 || i == 30 {
+	// 		data.Email = fmt.Sprintf("User-%d@myholding.com", i)
+	// 	}
+
+	// 	// if i > 1 {
+	// 	// 	io.WriteString(c.NewQuery().Connection().(*Connection).openFile, ",")
+	// 	// }
+	// 	e = q.Exec(toolkit.M{
+	// 		"data": data,
+	// 	})
+	// 	if e != nil {
+	// 		t.Errorf("Unable to save: %s \n", e.Error())
+	// 	}
+
+	// }
+	// io.WriteString(c.NewQuery().Connection().(*Connection).openFile, "]")
+	// q.Close()
+
+	/// slice json
+	var dataArray []user
+	for i := 1; i <= 10; i++ {
 		//go func(q dbox.IQuery, i int) {
 		data := user{}
 		data.Id = fmt.Sprintf("User-%d", i)
@@ -192,21 +220,42 @@ func TestCRUD(t *testing.T) {
 		if i == 10 || i == 20 || i == 30 {
 			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
 		}
-		e = q.Exec(toolkit.M{
-			"data": data,
-		})
-		if e != nil {
-			t.Errorf("Unable to save: %s \n", e.Error())
-		}
+		dataArray = append(dataArray, data)
+	}
+
+	e = q.Exec(toolkit.M{
+		"data": dataArray,
+	})
+	if e != nil {
+		t.Errorf("Unable to save: %s \n", e.Error())
 	}
 	q.Close()
 
+	///insert
+	dataInsert := user{}
+	dataInsert.Id = fmt.Sprintf("User-15")
+	dataInsert.Title = fmt.Sprintf("User Lima Belas")
+	dataInsert.Email = fmt.Sprintf("user15@yahoo.com")
+	e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataInsert})
+	if e != nil {
+		t.Errorf("Unable to insert: %s \n", e.Error())
+	}
+
 	data := user{}
-	data.Id = fmt.Sprintf("User-15")
-	data.Title = fmt.Sprintf("User Lima Belas")
-	data.Email = fmt.Sprintf("user15@yahoo.com")
-	e = c.NewQuery().From("testtables").Update().Exec(toolkit.M{"data": data})
+	data.Id = fmt.Sprintf("User-10")
+	data.Title = fmt.Sprintf("User sepoloh")
+	data.Email = fmt.Sprintf("user10@yahoo.com")
+	e = c.NewQuery().Update().Exec(toolkit.M{"data": data})
 	if e != nil {
 		t.Errorf("Unable to update: %s \n", e.Error())
+	}
+
+	///delete with multiexec
+	dataDelete := user{}
+	dataDelete.Id = fmt.Sprintf("User-10000")
+	e = c.NewQuery().Delete().Exec(toolkit.M{"data": dataDelete})
+	if e != nil {
+		t.Errorf("Unablet to delete table %s\n", e.Error())
+		return
 	}
 }
