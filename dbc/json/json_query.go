@@ -21,16 +21,16 @@ const (
 
 type Query struct {
 	dbox.Query
-	filePath          string
-	session, openFile *os.File
+	filePath string
+	session  *os.File
 }
 
-func (q *Query) Session() *os.File {
-	if q.session == nil {
-		q.session, _ = os.Open(q.Connection().(*Connection).filePath)
-	}
-	return q.session
-}
+// func (q *Query) Session() *os.File {
+// 	if q.session == nil {
+// 		q.session, _ = os.Open(q.Connection().(*Connection).filePath)
+// 	}
+// 	return q.session
+// }
 
 func (q *Query) Prepare() error {
 	return nil
@@ -147,6 +147,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 		p arts will return E - map{interface{}}interface{}
 		where each interface{} returned is slice of interfaces --> []interface{}
 	*/
+	// parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
+	// 	qp := x.(*dbox.QueryPart)
+	// 	return qp.PartType
+	// }, nil).Data
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
 		/*
@@ -179,6 +183,26 @@ func (q *Query) Exec(parm toolkit.M) error {
 	if data == nil {
 		//---
 		multi = true
+
+		//
+		whereParts, hasWhere := parts[dbox.QueryPartWhere]
+		if hasWhere {
+
+			fb := q.Connection().Fb()
+			for _, p := range whereParts.([]interface{}) {
+				fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+				for _, f := range fs {
+					fb.AddFilter(f)
+				}
+			}
+			where, e = fb.Build()
+			if e != nil {
+				return errorlib.Error(packageName, modQuery, "Cursor",
+					e.Error())
+			} else {
+				//fmt.Printf("Where: %s", toolkit.JsonString(where))
+			}
+		}
 	} else {
 		if where == nil {
 			id := toolkit.Id(data)
@@ -207,7 +231,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
 
-		i, e := created.Write(jsonUpdatedValue) //t.WriteString(string(j))
+		q.Connection().(*Connection).WriteSession()
+		i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue) //t.WriteString(string(j))
 		if i == 0 || e != nil {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
@@ -245,7 +270,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
 
-			i, e := created.Write(jsonUpdatedValue) //t.WriteString(string(j))
+			q.Connection().(*Connection).WriteSession()
+			i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue) //t.WriteString(string(j))
 			if i == 0 || e != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
@@ -264,53 +290,72 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	} else if commandType == dbox.QueryPartDelete {
 		if multi {
-			q.Connection().(*Connection).Close()
+			if where != nil {
+				fmt.Sprintf("%v\n", where)
+				created, _ := os.Create(tempFile)
 
-			e := os.Remove(filePath)
-			if e != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-			}
+				readF, _ := ioutil.ReadFile(filePath)
 
-			_, err := os.Stat(filePath)
-			if os.IsNotExist(err) {
-				_, _ = os.Create(filePath)
+				var dataMap []map[string]interface{}
+				e := json.Unmarshal(readF, &dataMap)
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+				a, _ := toolkit.ToM(where)
+
+				updatedValue, _ := finUpdateObj(dataMap, a, "deleteMulti")
+
+				jsonUpdatedValue, err := json.MarshalIndent(updatedValue, "", "  ")
+				if err != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+
+				q.Connection().(*Connection).WriteSession()
+				i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue) //t.WriteString(string(j))
+				if i == 0 || e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+
+				q.Connection().(*Connection).Close()
+				created.Close()
+				eRem := os.Remove(filePath)
+				if eRem != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, eRem.Error())
+				}
+
+				eRen := os.Rename(tempFile, filePath)
+				if eRen != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, eRen.Error())
+				}
+			} else {
+				e := os.Remove(filePath)
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+
+				_, err := os.Stat(filePath)
+				if os.IsNotExist(err) {
+					cf, _ := os.Create(filePath)
+					defer cf.Close()
+				}
+
+				///createempty slice for empty json array
+				var emptyArray []string
+				emptyArray = append(emptyArray, "")
+				jsonUpdatedValue, err := json.MarshalIndent(emptyArray, "", "  ")
+				if err != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+
+				q.Connection().(*Connection).OpenSession()
+				i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue)
+				if i == 0 || e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+				q.Connection().(*Connection).Close()
 			}
-			// q.Connection().(*Connection).OpenSession()
 		} else {
-			created, _ := os.Create(tempFile)
 
-			readF, _ := ioutil.ReadFile(filePath)
-
-			var dataMap []map[string]interface{}
-			e := json.Unmarshal(readF, &dataMap)
-			if e != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-			}
-			a, _ := toolkit.ToM(data)
-
-			updatedValue, _ := finUpdateObj(dataMap, a, "deleteMulti")
-
-			jsonUpdatedValue, err := json.MarshalIndent(updatedValue, "", "  ")
-			if err != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-			}
-
-			i, e := created.Write(jsonUpdatedValue) //t.WriteString(string(j))
-			if i == 0 || e != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-			}
-
-			q.Connection().(*Connection).Close()
-			created.Close()
-			eRem := os.Remove(filePath)
-			if eRem != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, eRem.Error())
-			}
-
-			eRen := os.Rename(tempFile, filePath)
-			if eRen != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, eRen.Error())
-			}
 		}
 	} else if commandType == dbox.QueryPartSave {
 
@@ -321,7 +366,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
 
-			if q.Connection().(*Connection).openFile == nil {
+			if q.Connection().(*Connection).openFile == nil ||
+				q.Connection().(*Connection).filePath == filePath {
 				q.Connection().(*Connection).OpenSession()
 			}
 
@@ -334,8 +380,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 			// i, e := q.Connection().(*Connection).openFile.WriteString(toolkit.JsonString(data))
 
 		} else if reflect.Struct == dataType {
-			if q.Connection().(*Connection).openFile == nil {
-				fmt.Println("open file")
+			if q.Connection().(*Connection).openFile == nil ||
+				q.Connection().(*Connection).filePath == filePath {
 				q.Connection().(*Connection).OpenSession()
 			}
 			writer := json.NewEncoder(q.Connection().(*Connection).openFile)
@@ -409,19 +455,15 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 				}
 			}
 
-			var newData map[string]interface{}
-			newData = map[string]interface{}{}
-
-			for i, newSubV := range v {
-				fmt.Sprintf("%v\n", newSubV)
-				if newSubV != "" {
+			if len(v) != 0 {
+				var newData = make(map[string]interface{})
+				for i, newSubV := range v {
 					newData[i] = newSubV
 				}
-
+				mapVal = append(mapVal, newData)
 			}
-			mapVal = append(mapVal, newData)
-		}
 
+		}
 		return mapVal, nil
 	}
 	return nil, nil
@@ -430,7 +472,6 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 
 func (q *Query) Close() {
 	if q.Connection().(*Connection).openFile != nil {
-		// fmt.Println("query close nil")
 		q.Connection().(*Connection).Close()
 	}
 }

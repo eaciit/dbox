@@ -1,7 +1,7 @@
 package json
 
 import (
-	"fmt"
+	// "fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
@@ -39,7 +39,7 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 }
 
 func (c *Connection) Connect() error {
-	c.Close()
+	// c.Close()
 
 	ci := c.Info()
 
@@ -71,9 +71,9 @@ func (c *Connection) NewQuery() dbox.IQuery {
 }
 
 func (c *Connection) OpenSession() error {
-	c.Close()
+	// c.Close()
 
-	t, e := os.OpenFile(c.Info().Host, os.O_RDWR, 0)
+	t, e := os.OpenFile(c.filePath, os.O_RDWR|os.O_APPEND, 0)
 	if e != nil {
 		return errorlib.Error(packageName, modConnection, "Read File", "Cannot open file")
 	}
@@ -81,11 +81,22 @@ func (c *Connection) OpenSession() error {
 	return nil
 }
 
+func (c *Connection) WriteSession() error {
+	// c.Close()
+
+	t, e := os.OpenFile(c.basePath+c.separator+"temp_"+c.baseFileName, os.O_RDWR, 0)
+	if e != nil {
+		return errorlib.Error(packageName, modConnection, "Read and write File", "Cannot read and write file")
+	}
+	c.openFile = t
+	return nil
+}
+
 func (c *Connection) Close() {
 	if c.openFile != nil {
-		// fmt.Println("close nil")
 		c.openFile.Close()
 	}
+	// c.openFile.Close()
 }
 
 func (c *Connection) GetBaseFilepath() (string, string, string) {
