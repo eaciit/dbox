@@ -75,10 +75,10 @@ func TestSelect(t *testing.T) {
 		fmt.Printf("Fetch all OK. Result: %d \n", len(ds.Data))
 	}
 
-	// e = csr.ResetFetch()
-	// if e != nil {
-	// 	t.Errorf("Unable to reset fetch: %s \n", e.Error())
-	// }
+	e = csr.ResetFetch()
+	if e != nil {
+		t.Errorf("Unable to reset fetch: %s \n", e.Error())
+	}
 
 	ds, e = csr.Fetch(nil, 3, false)
 	if e != nil {
@@ -185,7 +185,7 @@ func TestCRUD(t *testing.T) {
 	}
 
 	q := c.NewQuery().SetConfig("multiexec", true).Save()
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 10000; i++ {
 		//go func(q dbox.IQuery, i int) {
 		data := user{}
 		data.Id = fmt.Sprintf("User-%d", i)
@@ -195,9 +195,6 @@ func TestCRUD(t *testing.T) {
 			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
 		}
 
-		// if i > 1 {
-		// 	io.WriteString(c.NewQuery().Connection().(*Connection).openFile, ",")
-		// }
 		e = q.Exec(toolkit.M{
 			"data": data,
 		})

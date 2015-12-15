@@ -1,10 +1,13 @@
 package json
 
 import (
+	"encoding/json"
 	// "fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	"io"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -18,8 +21,11 @@ const (
 type Connection struct {
 	dbox.Connection
 	// session *os.File
-	filePath, basePath, baseFileName, separator string
-	openFile                                    *os.File
+	filePath, basePath, baseFileName,
+	separator, tempPathFile, dataType string
+	openFile  *os.File
+	writer    *json.Encoder
+	isNewSave bool
 }
 
 func init() {
@@ -39,7 +45,7 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 }
 
 func (c *Connection) Connect() error {
-	// c.Close()
+	c.Close()
 
 	ci := c.Info()
 
@@ -71,18 +77,35 @@ func (c *Connection) NewQuery() dbox.IQuery {
 }
 
 func (c *Connection) OpenSession() error {
-	// c.Close()
+	c.Close()
 
-	t, e := os.OpenFile(c.filePath, os.O_RDWR|os.O_APPEND, 0)
+	t, e := os.OpenFile(c.filePath, os.O_RDWR, 0)
 	if e != nil {
 		return errorlib.Error(packageName, modConnection, "Read File", "Cannot open file")
 	}
 	c.openFile = t
+
+	i, e := ioutil.ReadFile(c.filePath)
+	if e != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", "Read file", e.Error())
+	}
+
+	if string(i) == "" {
+		c.isNewSave = true
+	} else {
+		/// create temp file
+	}
+
 	return nil
 }
 
 func (c *Connection) WriteSession() error {
-	// c.Close()
+	c.Close()
+
+	///create temp json file
+	tempPathFile := c.basePath + c.separator + "temp_" + c.baseFileName
+	create, _ := os.Create(tempPathFile)
+	create.Close()
 
 	t, e := os.OpenFile(c.basePath+c.separator+"temp_"+c.baseFileName, os.O_RDWR, 0)
 	if e != nil {
@@ -92,11 +115,68 @@ func (c *Connection) WriteSession() error {
 	return nil
 }
 
+func (c *Connection) CloseWriteSession() error {
+	c.Close()
+
+	eRem := os.Remove(c.filePath)
+	if eRem != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", "Close Write Session", eRem.Error())
+	}
+
+	eRen := os.Rename(c.basePath+c.separator+"temp_"+c.baseFileName, c.filePath)
+	if eRen != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", "Close Write Session", eRen.Error())
+	}
+	return nil
+}
+
+func (c *Connection) OpenSaveSession() error {
+	c.Close()
+
+	///create temp text file
+	basePath, baseFile, sep := c.GetBaseFilepath()
+	splitBaseFile := strings.Split(baseFile, ".")
+	tempPathFile := basePath + sep + splitBaseFile[0] + ".temp"
+	create, _ := os.Create(tempPathFile)
+	create.Close()
+
+	t, e := os.OpenFile(tempPathFile, os.O_WRONLY|os.O_APPEND, 0)
+	if e != nil {
+		return errorlib.Error(packageName, modConnection, "Open File", "Cannot open file")
+	}
+	c.openFile = t
+	c.writer = json.NewEncoder(t)
+	c.tempPathFile = tempPathFile
+	c.dataType = "struct"
+
+	i, e := ioutil.ReadFile(c.filePath)
+	if e != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", "Read file", e.Error())
+	}
+
+	if string(i) == "" {
+		c.isNewSave = true
+	} else {
+		///do backup to temp file
+		src, e := os.OpenFile(c.filePath, os.O_RDONLY|os.O_SYNC, 0)
+		defer src.Close()
+		if _, e = io.Copy(t, src); e != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", "Copy file", e.Error())
+		}
+
+		s := c.RemLastLine(tempPathFile, "hasSave")
+		e = ioutil.WriteFile(tempPathFile, []byte(s), 0666)
+		if e != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", "Write file", e.Error())
+		}
+	}
+	return nil
+}
+
 func (c *Connection) Close() {
 	if c.openFile != nil {
 		c.openFile.Close()
 	}
-	// c.openFile.Close()
 }
 
 func (c *Connection) GetBaseFilepath() (string, string, string) {
@@ -113,4 +193,25 @@ func (c *Connection) GetBaseFilepath() (string, string, string) {
 	removeLastSlice := splitString[:len(splitString)-1]
 
 	return strings.Join(removeLastSlice, separator), splitString[len(splitString)-1], separator
+}
+
+func (c *Connection) RemLastLine(filename, methodType string) string {
+	var (
+		s         string
+		delimiter byte
+	)
+	i, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+	s = string(i)
+	if methodType == "hasNewSave" {
+		delimiter = ','
+	} else if methodType == "hasSave" {
+		delimiter = ']'
+	}
+	if last := len(s) - 1; last >= 0 && s[last] == delimiter {
+		s = s[:last]
+	}
+	return s
 }

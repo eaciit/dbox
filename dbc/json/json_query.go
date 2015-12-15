@@ -8,7 +8,7 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
-	// "io"
+	"io"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -21,16 +21,10 @@ const (
 
 type Query struct {
 	dbox.Query
-	filePath string
-	session  *os.File
+	filePath            string
+	session             *os.File
+	hasNewSave, hasSave bool
 }
-
-// func (q *Query) Session() *os.File {
-// 	if q.session == nil {
-// 		q.session, _ = os.Open(q.Connection().(*Connection).filePath)
-// 	}
-// 	return q.session
-// }
 
 func (q *Query) Prepare() error {
 	return nil
@@ -48,6 +42,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	aggregate := false
 	t, _ := ioutil.ReadFile(q.Connection().(*Connection).filePath)
 	cursor := dbox.NewCursor(new(Cursor))
+	cursor = cursor.SetConnection(q.Connection())
 	cursor.(*Cursor).readFile = t
 
 	/*
@@ -139,18 +134,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 	data := parm.Get("data", nil)
 	filePath := q.Connection().(*Connection).filePath
-	tempFile := q.Connection().(*Connection).basePath +
-		q.Connection().(*Connection).separator +
-		"temp_" + q.Connection().(*Connection).baseFileName
-
 	/*
 		p arts will return E - map{interface{}}interface{}
 		where each interface{} returned is slice of interfaces --> []interface{}
 	*/
-	// parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
-	// 	qp := x.(*dbox.QueryPart)
-	// 	return qp.PartType
-	// }, nil).Data
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
 		/*
@@ -215,7 +202,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 
 	if commandType == dbox.QueryPartInsert {
-		created, _ := os.Create(tempFile)
 		readF, _ := ioutil.ReadFile(filePath)
 
 		var dataMap []map[string]interface{}
@@ -223,9 +209,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 		if e != nil {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
-		a, _ := toolkit.ToM(data)
+		dataToMap, _ := toolkit.ToM(data)
 
-		_, updatedValue := finUpdateObj(dataMap, a, "insert")
+		_, updatedValue := finUpdateObj(dataMap, dataToMap, "insert")
 		jsonUpdatedValue, err := json.MarshalIndent(updatedValue, "", "  ")
 		if err != nil {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
@@ -237,23 +223,11 @@ func (q *Query) Exec(parm toolkit.M) error {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
 
-		q.Connection().(*Connection).Close()
-		created.Close()
-		eRem := os.Remove(filePath)
-		if eRem != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType, eRem.Error())
-		}
-
-		eRen := os.Rename(tempFile, filePath)
-		if eRen != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType, eRen.Error())
-		}
+		q.Connection().(*Connection).CloseWriteSession()
 	} else if commandType == dbox.QueryPartUpdate {
 		if multi {
 			// 		_, e = mgoColl.UpdateAll(where, data)
 		} else {
-			created, _ := os.Create(tempFile)
-
 			readF, _ := ioutil.ReadFile(filePath)
 
 			var dataMap []map[string]interface{}
@@ -276,24 +250,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
 
-			q.Connection().(*Connection).Close()
-			created.Close()
-			eRem := os.Remove(filePath)
-			if eRem != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, eRem.Error())
-			}
-
-			eRen := os.Rename(tempFile, filePath)
-			if eRen != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, eRen.Error())
-			}
+			q.Connection().(*Connection).CloseWriteSession()
 		}
 	} else if commandType == dbox.QueryPartDelete {
 		if multi {
 			if where != nil {
 				fmt.Sprintf("%v\n", where)
-				created, _ := os.Create(tempFile)
-
 				readF, _ := ioutil.ReadFile(filePath)
 
 				var dataMap []map[string]interface{}
@@ -316,17 +278,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 
-				q.Connection().(*Connection).Close()
-				created.Close()
-				eRem := os.Remove(filePath)
-				if eRem != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType, eRem.Error())
-				}
-
-				eRen := os.Rename(tempFile, filePath)
-				if eRen != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType, eRen.Error())
-				}
+				q.Connection().(*Connection).CloseWriteSession()
 			} else {
 				e := os.Remove(filePath)
 				if e != nil {
@@ -336,58 +288,54 @@ func (q *Query) Exec(parm toolkit.M) error {
 				_, err := os.Stat(filePath)
 				if os.IsNotExist(err) {
 					cf, _ := os.Create(filePath)
-					defer cf.Close()
+					cf.Close()
 				}
-
-				///createempty slice for empty json array
-				var emptyArray []string
-				emptyArray = append(emptyArray, "")
-				jsonUpdatedValue, err := json.MarshalIndent(emptyArray, "", "  ")
-				if err != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-				}
-
-				q.Connection().(*Connection).OpenSession()
-				i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue)
-				if i == 0 || e != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-				}
-				q.Connection().(*Connection).Close()
 			}
 		} else {
 
 		}
 	} else if commandType == dbox.QueryPartSave {
-
 		dataType := reflect.ValueOf(data).Kind()
+
 		if reflect.Slice == dataType {
 			j, err := json.MarshalIndent(data, "", "  ")
 			if err != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
 
-			if q.Connection().(*Connection).openFile == nil ||
-				q.Connection().(*Connection).filePath == filePath {
+			if q.Connection().(*Connection).openFile == nil {
 				q.Connection().(*Connection).OpenSession()
 			}
 
-			i, e := q.Connection().(*Connection).openFile.Write(j) //t.WriteString(string(j))
-			if i == 0 || e != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-			}
+			if q.Connection().(*Connection).isNewSave {
+				i, e := q.Connection().(*Connection).openFile.Write(j) //t.WriteString(string(j))
+				if i == 0 || e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+			} else {
 
-			// q.Connection().(*Connection).openFile, _ = os.OpenFile(filePath, os.O_APPEND|os.O_CREATE, 0)
-			// i, e := q.Connection().(*Connection).openFile.WriteString(toolkit.JsonString(data))
+			}
 
 		} else if reflect.Struct == dataType {
-			if q.Connection().(*Connection).openFile == nil ||
-				q.Connection().(*Connection).filePath == filePath {
-				q.Connection().(*Connection).OpenSession()
+			if q.Connection().(*Connection).writer == nil {
+				q.Connection().(*Connection).OpenSaveSession()
 			}
-			writer := json.NewEncoder(q.Connection().(*Connection).openFile)
-			e := writer.Encode(data)
-			if e != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+
+			j, _ := json.Marshal(data)
+			if q.Connection().(*Connection).isNewSave {
+				q.hasNewSave = hasSave
+				_, e = q.Connection().(*Connection).openFile.Write(j)
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+				io.WriteString(q.Connection().(*Connection).openFile, ",")
+			} else {
+				q.hasSave = hasSave
+				io.WriteString(q.Connection().(*Connection).openFile, ",")
+				_, e = q.Connection().(*Connection).openFile.Write(j)
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
 			}
 		}
 	}
@@ -470,8 +418,38 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 
 }
 
+func (q *Query) HasPartExec() error {
+	if q.hasNewSave {
+		s := q.Connection().(*Connection).RemLastLine(q.Connection().(*Connection).tempPathFile, "hasNewSave")
+
+		ioutil.WriteFile(q.Connection().(*Connection).tempPathFile, []byte("[\n"+s+"]"), 0666)
+	} else if q.hasSave {
+		i, e := io.WriteString(q.Connection().(*Connection).openFile, "]")
+		if i == 0 || e != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", "Has save part exec", e.Error())
+		}
+	}
+
+	q.Connection().(*Connection).Close()
+	eRem := os.Remove(q.Connection().(*Connection).filePath)
+	if eRem != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", "Has part exec", eRem.Error())
+	}
+
+	eRen := os.Rename(q.Connection().(*Connection).tempPathFile, q.Connection().(*Connection).filePath)
+	if eRen != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", "Has part exec", eRen.Error())
+	}
+	return nil
+}
+
 func (q *Query) Close() {
+	if q.Connection().(*Connection).dataType == "struct" {
+		q.HasPartExec()
+	}
+
 	if q.Connection().(*Connection).openFile != nil {
 		q.Connection().(*Connection).Close()
 	}
+
 }

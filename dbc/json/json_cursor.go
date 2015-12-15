@@ -2,7 +2,7 @@ package json
 
 import (
 	"encoding/json"
-	"errors"
+	// "errors"
 	// "fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -32,16 +32,15 @@ type Cursor struct {
 
 func (c *Cursor) Close() {
 	if c.session != nil {
-		c.session.Close()
+		c.Connection().(*Connection).Close()
 	}
 }
 
 func (c *Cursor) validate() error {
-	if c.ResultType == QueryResultCursor {
-
-		if c.readFile == nil {
-			return errors.New("Query cursor is nil")
-		}
+	c.Close()
+	if c.session == nil {
+		c.Connection().(*Connection).OpenSession()
+		c.session = c.Connection().(*Connection).openFile
 	}
 
 	return nil
@@ -63,7 +62,9 @@ func (c *Cursor) Count() int {
 func (c *Cursor) ResetFetch() error {
 	c.Close()
 
-	_, e := prepareConnection()
+	c.Connection().(*Connection).Connect()
+
+	e := c.prepIter()
 	if e != nil {
 		return errorlib.Error(packageName, modCursor, "ResetFetch", e.Error())
 	}
