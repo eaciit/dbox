@@ -296,6 +296,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	case dbox.QueryPartInsert, dbox.QueryPartSave:
 		var dataTemp []string
 		dataMformat, _ := toolkit.ToM(data)
+
 		for _, v := range q.Connection().(*Connection).headerColumn {
 			valAppend := dataMformat.Get(v.name, "").(string)
 			dataTemp = append(dataTemp, valAppend)
@@ -305,7 +306,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 			writer.Write(dataTemp)
 			writer.Flush()
 		}
-		// fmt.Println("LINE 308 - ", dataTemp)
 	case dbox.QueryPartDelete:
 		var tempHeader []string
 
@@ -365,8 +365,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 				recData.Set(tempHeader[i], val)
 			}
 
-			// foundChange = execCond.getCondition(recData)
-			foundChange = foundCondition(recData, execCond.Find)
+			foundChange = execCond.getCondition(recData)
 			if foundChange && len(dataTemp) > 0 {
 				for n, v := range tempHeader {
 					valChange := dataMformat.Get(v, "").(string)

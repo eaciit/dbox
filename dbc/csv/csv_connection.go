@@ -2,12 +2,12 @@ package csv
 
 import (
 	"encoding/csv"
+	// "fmt"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
-	//	"io"
-	// "fmt"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -79,10 +79,6 @@ func (c *Connection) Connect() error {
 
 	useHeader := ci.Settings.Get("useheader", false).(bool)
 
-	// if useHeader {
-	// 	return errorlib.Error(packageName, modConnection, "Connect", "Header is not set")
-	// }
-
 	if filePath := ci.Host; filePath != "" {
 		var err error
 		c.file, err = os.Open(filePath)
@@ -97,6 +93,7 @@ func (c *Connection) Connect() error {
 	c.SetReaderParam()
 	c.SetHeaderData(useHeader)
 
+	// fmt.Println(c.headerColumn)
 	return nil
 }
 
@@ -135,22 +132,23 @@ func (c *Connection) SetHeaderData(useHeader bool) {
 
 	var tempstruct []headerstruct
 
-	tempData, _ := c.reader.Read()
+	tempData, e := c.reader.Read()
 	for i, v := range tempData {
 		ts := headerstruct{}
 		ts.name = string(i)
+		ts.dataType = "string"
 		if useHeader {
 			ts.name = v
 		}
 		tempstruct = append(tempstruct, ts)
 	}
 	if useHeader {
-		tempData, _ = c.reader.Read()
+		tempData, e = c.reader.Read()
 	}
 
 	isCheckType := true
 	ix := 0
-	for isCheckType {
+	for isCheckType && e != io.EOF {
 		ix += 1
 		isCheckType = false
 
@@ -271,6 +269,7 @@ func (c *Connection) StartSessionWrite() error {
 
 func (c *Connection) EndSessionWrite() error {
 	c.Close()
+	c.writer = nil
 	if c.TypeOpenFile == TypeOpenFile_Create {
 		c.tempfile.Close()
 		if c.ExecOpr {
