@@ -6,28 +6,23 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
-	_ "github.com/eaciit/toolkit"
+	"github.com/eaciit/toolkit"
 	"io"
 	"os"
-	"reflect"
+	// "reflect"
 )
 
 const (
 	modCursor = "Cursor"
 )
 
-type WhereCond struct {
-	operator  string
-	condition string
-}
-
-type ConditionAttr struct {
-	Find   interface{}
-	Select interface{}
-	Sort   []string
-	skip   int
-	limit  int
-}
+// type ConditionAttr struct {
+// 	Find   toolkit.M
+// 	Select toolkit.M
+// 	Sort   []string
+// 	skip   int
+// 	limit  int
+// }
 
 type Cursor struct {
 	dbox.Cursor
@@ -36,9 +31,9 @@ type Cursor struct {
 	count        int
 	file         *os.File
 	reader       *csv.Reader
-	ConditionVal ConditionAttr
+	ConditionVal QueryCondition
 
-	headerColumn []string
+	headerColumn []headerstruct
 }
 
 func (c *Cursor) Close() {
@@ -102,8 +97,6 @@ func (c *Cursor) ResetFetch() error {
 
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 	*dbox.DataSet, error) {
-	condSelect := make(map[int]int)
-	condFind := make(map[int]WhereCond)
 
 	if closeWhenDone {
 		defer c.Close()
@@ -117,70 +110,28 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 	ds := dbox.NewDataSet(m)
 	lineCount := 0
 
-	if c.ConditionVal.Select != nil {
-		for i, key := range reflect.ValueOf(c.ConditionVal.Select).MapKeys() {
-			temp := reflect.ValueOf(reflect.ValueOf(c.ConditionVal.Select).MapIndex(key).Interface())
-			if i == 0 && key.String() == "*" {
-				for n, _ := range c.headerColumn {
-					condSelect[n] = 1
-				}
-				break
-			} else {
-				for n, val := range c.headerColumn {
-					if val == key.String() {
-						if temp.Int() == 1 {
-							condSelect[n] = 1
-						} else {
-							condSelect[n] = 0
-						}
-					}
-				}
-			}
-		}
-	} else {
-		for n, _ := range c.headerColumn {
-			condSelect[n] = 1
-		}
-	}
-
-	if c.ConditionVal.Find != nil {
-		// fmt.Println("LINE 148 Ok")
-		for _, key := range reflect.ValueOf(c.ConditionVal.Find).MapKeys() {
-			temp := reflect.ValueOf(reflect.ValueOf(c.ConditionVal.Find).MapIndex(key).Interface())
-			// fmt.Println(temp.String())
-			for n, val := range c.headerColumn {
-				if val == key.String() {
-					condFind[n] = WhereCond{"EQ", temp.String()}
-				}
-			}
-			break
-		}
-	}
 	//=============================
 	for {
 		isAppend := true
 		c.count += 1
-		// var dataHolder []string
-		appendData := make(map[interface{}]interface{})
+		recData := toolkit.M{}
+		appendData := toolkit.M{}
 
 		dataTemp, e := c.reader.Read()
+
 		for i, val := range dataTemp {
+			recData[c.headerColumn[i].name] = val
 
-			if condSelect[i] == 1 {
-				appendData[c.headerColumn[i]] = val
-				// dataHolder = append(dataHolder, val)
-			}
-
-			condVal, found := condFind[i]
-			if found {
-				if condVal.operator == "EQ" {
-					if condVal.condition != val {
-						isAppend = false
-						c.count -= 1
-					}
+			if c.ConditionVal.Select == nil || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
+				appendData[c.headerColumn[i].name] = val
+			} else {
+				if c.ConditionVal.Select.Get(c.headerColumn[i].name, 0).(int) == 1 {
+					appendData[c.headerColumn[i].name] = val
 				}
 			}
 		}
+
+		isAppend = c.ConditionVal.getCondition(recData)
 
 		if c.count < c.ConditionVal.skip || (c.count > (c.ConditionVal.skip+c.ConditionVal.limit) && c.ConditionVal.limit > 0) {
 			isAppend = false
@@ -207,37 +158,5 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			}
 		}
 	}
-
-	// if n == 0 {
-	// 	datas := []interface{}{}
-	// 	//		e = c.mgoIter.All(&datas)
-	// 	if e != nil {
-	// 		return ds, errorlib.Error(packageName, modCursor,
-	// 			"Fetch", e.Error())
-	// 	}
-	// 	ds.Data = datas
-	// } else if n > 0 {
-	// 	fetched := 0
-	// 	fetching := true
-	// 	for fetching {
-	// 		dataHolder := m
-
-	// 		fetched++
-	// 		if fetched == n {
-	// 			fetching = false
-	// 		}
-	// 		ds.Data = append(ds.Data, dataHolder)
-	// 		/*			if bOk := c.mgoIter.Next(&dataHolder); bOk {
-	// 						ds.Data = append(ds.Data, dataHolder)
-	// 						fetched++
-	// 						if fetched == n {
-	// 							fetching = false
-	// 						}
-	// 					} else {
-	// 						fetching = false
-	// 					}*/
-	// 	}
-	// }
-
 	return ds, nil
 }
