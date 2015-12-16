@@ -3,11 +3,15 @@ package json
 import (
 	"encoding/json"
 	// "errors"
+	"bufio"
 	// "fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	"io"
+	"io/ioutil"
 	"os"
+	// "reflect"
 	"strings"
 )
 
@@ -20,24 +24,23 @@ const (
 
 type Cursor struct {
 	dbox.Cursor
-
-	ResultType string
-
-	count      int
-	jsonCursor interface{}
-	readFile   []byte
-	session    *os.File
-	isWhere    bool
+	count, lines            int
+	whereFields, jsonSelect interface{}
+	readFile                []byte
+	session, fetchSession   *os.File
+	isWhere                 bool
+	tempPathFile            string
 }
 
 func (c *Cursor) Close() {
-	if c.session != nil {
+	if c.session != nil || c.fetchSession != nil {
 		c.Connection().(*Connection).Close()
+		os.Remove(c.tempPathFile)
 	}
 }
 
 func (c *Cursor) validate() error {
-	c.Close()
+	// c.Close()
 	if c.session == nil {
 		c.Connection().(*Connection).OpenSession()
 		c.session = c.Connection().(*Connection).openFile
@@ -60,14 +63,12 @@ func (c *Cursor) Count() int {
 }
 
 func (c *Cursor) ResetFetch() error {
-	c.Close()
+	// c.Close()
 
-	c.Connection().(*Connection).Connect()
-
-	e := c.prepIter()
-	if e != nil {
-		return errorlib.Error(packageName, modCursor, "ResetFetch", e.Error())
+	if c.fetchSession != nil {
+		ioutil.WriteFile(c.tempPathFile, []byte(string("")), 0666)
 	}
+
 	return nil
 }
 
@@ -82,7 +83,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		return nil, errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	if c.jsonCursor == nil {
+	if c.jsonSelect == nil {
 		return nil, errorlib.Error(packageName, modCursor, "Fetch", "Iter object is not yet initialized")
 	}
 
@@ -91,15 +92,82 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 	dec.Decode(&datas)
 	ds := dbox.NewDataSet(m)
 	if n == 0 {
-		if c.isWhere {
+		whereFieldsToMap, _ := toolkit.ToM(c.whereFields)
 
-			for _, v := range datas {
-				for _, v2 := range v.(map[string]interface{}) {
-					for _, vWhere := range c.jsonCursor.(toolkit.M) {
-						if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
-							ds.Data = append(ds.Data, v)
+		b := c.getCondition(whereFieldsToMap)
+		var foundSelected = toolkit.M{}
+		var foundData = []toolkit.M{}
+		if c.isWhere {
+			if b {
+
+				var getSelectedField, getRemField []string
+				for _, v := range datas {
+					for i, subData := range v.(map[string]interface{}) {
+						for _, vWhere := range whereFieldsToMap {
+							for _, subWhere := range vWhere.([]interface{}) {
+								for _, subsubWhere := range subWhere.(map[string]interface{}) {
+									if len(c.jsonSelect.([]string)) == 0 {
+										if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
+											ds.Data = append(ds.Data, v)
+										}
+									} else {
+										getRemField = append(getRemField, i)
+										for _, selected := range c.jsonSelect.([]string) {
+											if selected == i {
+												getSelectedField = append(getSelectedField, selected)
+												if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
+
+													foundData = append(foundData, v.(map[string]interface{}))
+												}
+											}
+										}
+									}
+								}
+							}
 						}
 					}
+				}
+
+				RemoveDuplicates(&getSelectedField)
+				RemoveDuplicates(&getRemField)
+				getItem := append(getSelectedField, getRemField...)
+				itemToRemove := removeDuplicatesUnordered(getItem, getSelectedField)
+
+				if foundData != nil {
+					for _, found := range foundData {
+						for _, remitem := range itemToRemove {
+							found.Unset(remitem)
+						}
+						ds.Data = append(ds.Data, found)
+					}
+				}
+
+			} else {
+				for _, v := range datas {
+					for _, v2 := range v.(map[string]interface{}) {
+						for _, vWhere := range c.whereFields.(toolkit.M) {
+							if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
+								if len(c.jsonSelect.([]string)) == 0 {
+									ds.Data = append(ds.Data, v)
+								} else {
+									foundData = append(foundData, v.(map[string]interface{}))
+								}
+							}
+						}
+					}
+				}
+
+				if foundData != nil {
+					for _, found := range foundData {
+						for i, subData := range found {
+							for _, selected := range c.jsonSelect.([]string) {
+								if strings.ToLower(selected) == strings.ToLower(i) {
+									foundSelected[i] = subData
+								}
+							}
+						}
+					}
+					ds.Data = append(ds.Data, foundSelected)
 				}
 			}
 		} else {
@@ -109,24 +177,90 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		fetched := 0
 		fetching := true
 
+		///read line
+		fetchFile, e := os.OpenFile(c.tempPathFile, os.O_RDWR, 0)
+		defer fetchFile.Close()
+		if e != nil {
+			return nil, errorlib.Error(packageName, modQuery+".Exec", "Fetch file", e.Error())
+		}
+		c.fetchSession = fetchFile
+
+		scanner := bufio.NewScanner(fetchFile)
+		lines := 0
+		for scanner.Scan() {
+			lines++
+		}
+		if lines > 0 {
+			fetched = lines
+			n = n + lines
+		}
 		for fetching {
 			var dataM = toolkit.M{}
 
-			for i := 0; i < len(c.jsonCursor.([]string)); i++ {
-				dataM[c.jsonCursor.([]string)[i]] = datas[fetched].(map[string]interface{})[c.jsonCursor.([]string)[i]]
+			for i := 0; i < len(c.jsonSelect.([]string)); i++ {
+				dataM[c.jsonSelect.([]string)[i]] = datas[fetched].(map[string]interface{})[c.jsonSelect.([]string)[i]]
 
-				if len(dataM) == len(c.jsonCursor.([]string)) {
+				if len(dataM) == len(c.jsonSelect.([]string)) {
 					ds.Data = append(ds.Data, dataM)
 				}
 			}
+			io.WriteString(fetchFile, toolkit.JsonString(dataM)+"\n")
 
 			fetched++
 			if fetched == n {
+
 				fetching = false
 			}
 		}
 
 	}
-	c.Close()
+	// c.Close()
 	return ds, nil
+}
+
+func (c *Cursor) getCondition(condition toolkit.M) bool {
+	var flag bool
+	var dataCheck toolkit.M
+
+	for i, v := range condition {
+		if i == "$and" || i == "$or" {
+			flag = true
+		} else if v != dataCheck.Get(i, "").(string) {
+			flag = false
+		}
+
+	}
+	return flag
+}
+
+func RemoveDuplicates(xs *[]string) {
+	found := make(map[string]bool)
+	j := 0
+	for i, x := range *xs {
+		if !found[x] {
+			found[x] = true
+			(*xs)[j] = (*xs)[i]
+			j++
+		}
+	}
+	*xs = (*xs)[:j]
+}
+
+func removeDuplicatesUnordered(elements, key []string) []string {
+	var encountered = toolkit.M{} //map[string]string{}
+
+	for v := range elements {
+
+		encountered[elements[v]] = elements[v]
+	}
+
+	for _, k := range key {
+		encountered.Unset(k)
+	}
+
+	result := []string{}
+	for key, _ := range encountered {
+		result = append(result, key)
+	}
+	return result
 }

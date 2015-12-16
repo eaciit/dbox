@@ -23,9 +23,10 @@ type Connection struct {
 	// session *os.File
 	filePath, basePath, baseFileName,
 	separator, tempPathFile, dataType string
-	openFile  *os.File
-	writer    *json.Encoder
-	isNewSave bool
+	openFile, fetchSession *os.File
+	writer                 *json.Encoder
+	isNewSave              bool
+	lines                  int
 }
 
 func init() {
@@ -92,8 +93,6 @@ func (c *Connection) OpenSession() error {
 
 	if string(i) == "" {
 		c.isNewSave = true
-	} else {
-		/// create temp file
 	}
 
 	return nil
@@ -158,6 +157,7 @@ func (c *Connection) OpenSaveSession() error {
 		c.isNewSave = true
 	} else {
 		///do backup to temp file
+
 		src, e := os.OpenFile(c.filePath, os.O_RDONLY|os.O_SYNC, 0)
 		defer src.Close()
 		if _, e = io.Copy(t, src); e != nil {
@@ -170,6 +170,19 @@ func (c *Connection) OpenSaveSession() error {
 			return errorlib.Error(packageName, modQuery+".Exec", "Write file", e.Error())
 		}
 	}
+	return nil
+}
+
+func (c *Connection) FetchSession() error {
+	///create temp text file
+	basePath, _, sep := c.GetBaseFilepath()
+	tempPathFile := basePath + sep + "fetch.temp"
+	_, e := os.Stat(tempPathFile)
+	if os.IsNotExist(e) {
+		create, _ := os.Create(tempPathFile)
+		create.Close()
+	}
+	c.tempPathFile = tempPathFile
 	return nil
 }
 
