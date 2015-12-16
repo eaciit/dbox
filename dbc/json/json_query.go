@@ -98,7 +98,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 
 	if !aggregate {
-		var jsonCursor interface{}
+		var whereFields, jsonSelect interface{}
 		var dataInterface interface{}
 		json.Unmarshal(t, &dataInterface)
 		count, ok := dataInterface.([]interface{})
@@ -109,18 +109,22 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 		cursor.(*Cursor).count = len(count)
 		if fields != nil {
-			jsonCursor = fields
+			q.Connection().(*Connection).FetchSession()
+			jsonSelect = fields
 		}
 		if where != nil {
-			jsonCursor = where
+			whereFields = where
+			jsonSelect = fields
 			cursor.(*Cursor).isWhere = true
 		}
-		// }
-		cursor.(*Cursor).ResultType = QueryResultCursor
-		cursor.(*Cursor).jsonCursor = jsonCursor
+		cursor.(*Cursor).tempPathFile = q.Connection().(*Connection).tempPathFile
+
+		// cursor.(*Cursor).ResultType = QueryResultCursor
+		cursor.(*Cursor).whereFields = whereFields
+		cursor.(*Cursor).jsonSelect = jsonSelect
 	} else {
 
-		cursor.(*Cursor).ResultType = QueryResultPipe
+		// cursor.(*Cursor).ResultType = QueryResultPipe
 	}
 	return cursor, nil
 }
@@ -313,7 +317,29 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			} else {
+				readF, _ := ioutil.ReadFile(filePath)
 
+				var dataMap, newData []map[string]interface{}
+				if e := json.Unmarshal(readF, &dataMap); e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+
+				v := toolkit.JsonString(data)
+				if e = json.Unmarshal([]byte(v), &newData); e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+
+				mergeData := append(dataMap, newData...)
+
+				jsonUpdatedValue, err := json.MarshalIndent(mergeData, "", "  ")
+				if err != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+
+				e = ioutil.WriteFile(filePath, jsonUpdatedValue, 0666)
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", "Write file", e.Error())
+				}
 			}
 
 		} else if reflect.Struct == dataType {
