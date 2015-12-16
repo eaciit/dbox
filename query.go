@@ -71,10 +71,10 @@ type IQuery interface {
 	Aggr(string, interface{}, string) IQuery
 
 	//-- op
-	Insert(interface{}, toolkit.M) IQuery
-	Save(interface{}, toolkit.M) IQuery
-	Update(interface{}, toolkit.M) IQuery
-	Delete(toolkit.M) IQuery
+	Insert() IQuery
+	Save() IQuery
+	Update() IQuery
+	Delete() IQuery
 
 	//-- other
 	HasConfig(string) bool
@@ -214,25 +214,25 @@ func (q *Query) Skip(i int) IQuery {
 	q.AddPart(&QueryPart{QueryPartSkip, i})
 	return q.this()
 }
-func (q *Query) Insert(obj interface{}, in toolkit.M) IQuery {
-	q.AddPart(&QueryPart{QueryPartData, obj})
-	q.AddPart(&QueryPart{QueryPartInsert, in})
+func (q *Query) Insert() IQuery {
+	//q.AddPart(&QueryPart{QueryPartData, obj})
+	q.AddPart(&QueryPart{QueryPartInsert, nil})
 	return q.this()
 }
-func (q *Query) Save(obj interface{}, in toolkit.M) IQuery {
-	q.AddPart(&QueryPart{QueryPartData, obj})
-	q.AddPart(&QueryPart{QueryPartSave, in})
-	return q.this()
-}
-
-func (q *Query) Update(obj interface{}, in toolkit.M) IQuery {
-	q.AddPart(&QueryPart{QueryPartData, obj})
-	q.AddPart(&QueryPart{QueryPartUpdate, in})
+func (q *Query) Save() IQuery {
+	//q.AddPart(&QueryPart{QueryPartData, obj})
+	q.AddPart(&QueryPart{QueryPartSave, nil})
 	return q.this()
 }
 
-func (q *Query) Delete(in toolkit.M) IQuery {
+func (q *Query) Update() IQuery {
+	//q.AddPart(&QueryPart{QueryPartData, obj})
+	q.AddPart(&QueryPart{QueryPartUpdate, nil})
+	return q.this()
+}
+
+func (q *Query) Delete() IQuery {
+	//q.AddPart(&QueryPart{QueryPartDelete, nil})
 	q.AddPart(&QueryPart{QueryPartDelete, nil})
-	q.AddPart(&QueryPart{QueryPartParm, in})
 	return q.this()
 }

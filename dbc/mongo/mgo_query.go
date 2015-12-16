@@ -248,14 +248,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 	if data == nil {
 		//---
+		multi = true
 	} else {
-		id := toolkit.Id(data)
-		if id != nil {
-			where = (toolkit.M{}).Set("_id", id)
+		if where == nil {
+			id := toolkit.Id(data)
+			if id != nil {
+				where = (toolkit.M{}).Set("_id", id)
+			}
+		} else {
+			multi = true
 		}
 	}
 
 	session := q.Session()
+
 	multiExec := q.Config("multiexec", false).(bool)
 	if !multiExec && !q.usePooling && session != nil {
 		defer session.Close()
@@ -273,9 +279,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 		}
 	} else if commandType == dbox.QueryPartDelete {
-		if where == nil || len(where.(toolkit.M)) == 0 {
-			multi = true
-		}
 		if multi {
 			_, e = mgoColl.RemoveAll(where)
 		} else {
