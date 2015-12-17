@@ -99,10 +99,11 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		var foundData = []toolkit.M{}
 		if c.isWhere {
 			if b {
-
-				var getSelectedField, getRemField []string
+				var getSelectedField []string
+				var getRemField = toolkit.M{}
 				for _, v := range datas {
 					for i, subData := range v.(map[string]interface{}) {
+						getRemField[i] = i //append(getRemField, i)
 						for _, vWhere := range whereFieldsToMap {
 							for _, subWhere := range vWhere.([]interface{}) {
 								for _, subsubWhere := range subWhere.(map[string]interface{}) {
@@ -111,12 +112,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 											ds.Data = append(ds.Data, v)
 										}
 									} else {
-										getRemField = append(getRemField, i)
 										for _, selected := range c.jsonSelect.([]string) {
 											if selected == i {
 												getSelectedField = append(getSelectedField, selected)
 												if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
-
 													foundData = append(foundData, v.(map[string]interface{}))
 												}
 											}
@@ -129,19 +128,17 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 				}
 
 				RemoveDuplicates(&getSelectedField)
-				RemoveDuplicates(&getRemField)
-				getItem := append(getSelectedField, getRemField...)
-				itemToRemove := removeDuplicatesUnordered(getItem, getSelectedField)
+				itemToRemove := removeDuplicatesUnordered(getRemField, getSelectedField)
 
-				if foundData != nil {
-					for _, found := range foundData {
+				if len(foundData) > 0 {
+					var found toolkit.M
+					for _, found = range foundData {
 						for _, remitem := range itemToRemove {
 							found.Unset(remitem)
 						}
 						ds.Data = append(ds.Data, found)
 					}
 				}
-
 			} else {
 				for _, v := range datas {
 					for _, v2 := range v.(map[string]interface{}) {
@@ -149,7 +146,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 							if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
 								if len(c.jsonSelect.([]string)) == 0 {
 									ds.Data = append(ds.Data, v)
+
 								} else {
+
 									foundData = append(foundData, v.(map[string]interface{}))
 								}
 							}
@@ -157,7 +156,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 					}
 				}
 
-				if foundData != nil {
+				if len(foundData) > 0 {
+
 					for _, found := range foundData {
 						for i, subData := range found {
 							for _, selected := range c.jsonSelect.([]string) {
@@ -197,12 +197,17 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		for fetching {
 			var dataM = toolkit.M{}
 
-			for i := 0; i < len(c.jsonSelect.([]string)); i++ {
-				dataM[c.jsonSelect.([]string)[i]] = datas[fetched].(map[string]interface{})[c.jsonSelect.([]string)[i]]
+			if c.jsonSelect.([]string)[0] != "*" {
+				for i := 0; i < len(c.jsonSelect.([]string)); i++ {
 
-				if len(dataM) == len(c.jsonSelect.([]string)) {
-					ds.Data = append(ds.Data, dataM)
+					dataM[c.jsonSelect.([]string)[i]] = datas[fetched].(map[string]interface{})[c.jsonSelect.([]string)[i]]
+
+					if len(dataM) == len(c.jsonSelect.([]string)) {
+						ds.Data = append(ds.Data, dataM)
+					}
 				}
+			} else {
+				ds.Data = append(ds.Data, datas[fetched])
 			}
 			io.WriteString(fetchFile, toolkit.JsonString(dataM)+"\n")
 
@@ -212,7 +217,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 				fetching = false
 			}
 		}
-
 	}
 	// c.Close()
 	return ds, nil
@@ -246,20 +250,13 @@ func RemoveDuplicates(xs *[]string) {
 	*xs = (*xs)[:j]
 }
 
-func removeDuplicatesUnordered(elements, key []string) []string {
-	var encountered = toolkit.M{} //map[string]string{}
-
-	for v := range elements {
-
-		encountered[elements[v]] = elements[v]
-	}
-
+func removeDuplicatesUnordered(elements toolkit.M, key []string) []string {
 	for _, k := range key {
-		encountered.Unset(k)
+		elements.Unset(k)
 	}
 
 	result := []string{}
-	for key, _ := range encountered {
+	for key, _ := range elements {
 		result = append(result, key)
 	}
 	return result
