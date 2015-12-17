@@ -233,6 +233,6 @@ func (q *Query) Update() IQuery {
 
 func (q *Query) Delete() IQuery {
 	//q.AddPart(&QueryPart{QueryPartDelete, nil})
-	q.AddPart(&QueryPart{QueryPartParm, nil})
+	q.AddPart(&QueryPart{QueryPartDelete, nil})
 	return q.this()
 }
