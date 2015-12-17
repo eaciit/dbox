@@ -3,7 +3,7 @@ package json
 import (
 	// "bufio"
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -259,7 +259,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 	} else if commandType == dbox.QueryPartDelete {
 		if multi {
 			if where != nil {
-				fmt.Sprintf("%v\n", where)
 				readF, _ := ioutil.ReadFile(filePath)
 
 				var dataMap []map[string]interface{}
@@ -341,7 +340,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modQuery+".Exec", "Write file", e.Error())
 				}
 			}
-
 		} else if reflect.Struct == dataType {
 			if q.Connection().(*Connection).writer == nil {
 				q.Connection().(*Connection).OpenSaveSession()
