@@ -50,17 +50,16 @@ func (c *Connection) Connect() error {
 
 	ci := c.Info()
 
-	if ci == nil {
+	if ci == nil || ci.Host == "" {
 		return errorlib.Error(packageName, modConnection, "Connect", "No connection info")
-	} else if ci.Host == "" {
-		return errorlib.Error(packageName, modConnection, "Connect", "Read file is not initialized")
+	}
+
+	_, e := os.Stat(ci.Host)
+	if os.IsNotExist(e) {
+		return errorlib.Error(packageName, modConnection, "Connect", "No json file found")
 	}
 
 	c.filePath = ci.Host
-
-	// if c.openFile == nil {
-	// 	c.OpenSession()
-	// }
 
 	defaultPath, fileName, sep := c.GetBaseFilepath()
 	c.basePath = defaultPath
