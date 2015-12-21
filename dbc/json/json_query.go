@@ -421,8 +421,11 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 
 				for key, remVal := range remMap {
 					delete(v, key)
-					if strings.ToLower(remVal.(string)) == strings.ToLower(subV.(string)) {
-						break
+
+					if reflect.ValueOf(subV).Kind() == reflect.String && reflect.ValueOf(remVal).Kind() == reflect.String {
+						if strings.ToLower(remVal.(string)) == strings.ToLower(subV.(string)) {
+							break
+						}
 					}
 				}
 			}
