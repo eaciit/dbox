@@ -97,9 +97,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		b := c.getCondition(whereFieldsToMap)
 		var foundSelected = toolkit.M{}
 		var foundData = []toolkit.M{}
+		var getRemField = toolkit.M{}
 		if c.isWhere {
 			if b {
-				var getRemField = toolkit.M{}
 				for _, v := range datas {
 					for i, subData := range v.(map[string]interface{}) {
 						getRemField[i] = i //append(getRemField, i)
@@ -166,7 +166,25 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 				}
 			}
 		} else {
-			ds.Data = datas
+			if c.jsonSelect.([]string)[0] != "*" {
+				for _, v := range datas {
+					for i, _ := range v.(map[string]interface{}) {
+						getRemField[i] = i
+					}
+				}
+
+				itemToRemove := removeDuplicatesUnordered(getRemField, c.jsonSelect.([]string))
+				for _, found := range datas {
+					toMap := toolkit.M(found.(map[string]interface{}))
+					for _, remitem := range itemToRemove {
+						toMap.Unset(remitem)
+					}
+
+					ds.Data = append(ds.Data, found)
+				}
+			} else {
+				ds.Data = datas
+			}
 		}
 	} else if n > 0 {
 		fetched := 0
