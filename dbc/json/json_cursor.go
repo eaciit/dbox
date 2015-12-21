@@ -11,7 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	// "reflect"
+	"reflect"
 	"strings"
 )
 
@@ -137,15 +137,16 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 				for _, v := range datas {
 					for _, v2 := range v.(map[string]interface{}) {
 						for _, vWhere := range c.whereFields.(toolkit.M) {
-							if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
-								if len(c.jsonSelect.([]string)) == 0 {
-									ds.Data = append(ds.Data, v)
-
-								} else {
-
-									foundData = append(foundData, v.(map[string]interface{}))
+							if reflect.ValueOf(v2).Kind() == reflect.String {
+								if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
+									if len(c.jsonSelect.([]string)) == 0 {
+										ds.Data = append(ds.Data, v)
+									} else {
+										foundData = append(foundData, v.(map[string]interface{}))
+									}
 								}
 							}
+
 						}
 					}
 				}
