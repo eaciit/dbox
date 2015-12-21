@@ -99,7 +99,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		var foundData = []toolkit.M{}
 		if c.isWhere {
 			if b {
-				var getSelectedField []string
 				var getRemField = toolkit.M{}
 				for _, v := range datas {
 					for i, subData := range v.(map[string]interface{}) {
@@ -112,13 +111,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 											ds.Data = append(ds.Data, v)
 										}
 									} else {
-										for _, selected := range c.jsonSelect.([]string) {
-											if selected == i {
-												getSelectedField = append(getSelectedField, selected)
-												if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
-													foundData = append(foundData, v.(map[string]interface{}))
-												}
-											}
+										if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
+											foundData = append(foundData, v.(map[string]interface{}))
 										}
 									}
 								}
@@ -127,8 +121,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 					}
 				}
 
-				RemoveDuplicates(&getSelectedField)
-				itemToRemove := removeDuplicatesUnordered(getRemField, getSelectedField)
+				itemToRemove := removeDuplicatesUnordered(getRemField, c.jsonSelect.([]string))
 
 				if len(foundData) > 0 {
 					var found toolkit.M
@@ -136,6 +129,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 						for _, remitem := range itemToRemove {
 							found.Unset(remitem)
 						}
+
 						ds.Data = append(ds.Data, found)
 					}
 				}
