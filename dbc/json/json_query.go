@@ -227,7 +227,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
 
-		q.Connection().(*Connection).CloseWriteSession()
+		err = q.Connection().(*Connection).CloseWriteSession()
+		if err != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
+		}
 	} else if commandType == dbox.QueryPartUpdate {
 		if multi {
 			// 		_, e = mgoColl.UpdateAll(where, data)
@@ -248,13 +251,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
 
-			q.Connection().(*Connection).WriteSession()
+			err = q.Connection().(*Connection).WriteSession()
+			if err != nil {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
+			}
+
 			i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue) //t.WriteString(string(j))
 			if i == 0 || e != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
 
-			q.Connection().(*Connection).CloseWriteSession()
+			err = q.Connection().(*Connection).CloseWriteSession()
+			if err != nil {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
+			}
 		}
 	} else if commandType == dbox.QueryPartDelete {
 		if multi {
@@ -275,13 +285,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 
-				q.Connection().(*Connection).WriteSession()
+				err = q.Connection().(*Connection).WriteSession()
+				if err != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
+				}
+
 				i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue) //t.WriteString(string(j))
 				if i == 0 || e != nil {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 
-				q.Connection().(*Connection).CloseWriteSession()
+				err = q.Connection().(*Connection).CloseWriteSession()
+				if err != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
+				}
 			} else {
 				e := os.Remove(filePath)
 				if e != nil {
@@ -421,8 +438,11 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 
 				for key, remVal := range remMap {
 					delete(v, key)
-					if strings.ToLower(remVal.(string)) == strings.ToLower(subV.(string)) {
-						break
+
+					if reflect.ValueOf(subV).Kind() == reflect.String && reflect.ValueOf(remVal).Kind() == reflect.String {
+						if strings.ToLower(remVal.(string)) == strings.ToLower(subV.(string)) {
+							break
+						}
 					}
 				}
 			}
