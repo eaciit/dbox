@@ -105,7 +105,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 		if !ok {
 			return nil, errorlib.Error(packageName,
-				modQuery, "Cursor", e.Error())
+				modQuery, "Cursor", "the file contains invalid json data")
 		}
 		cursor.(*Cursor).count = len(count)
 		if fields != nil {
