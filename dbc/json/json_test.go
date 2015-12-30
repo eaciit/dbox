@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
-
+	// "io"
 	"testing"
 )
 
@@ -75,10 +75,10 @@ func TestSelect(t *testing.T) {
 		fmt.Printf("Fetch all OK. Result: %d \n", len(ds.Data))
 	}
 
-	// e = csr.ResetFetch()
-	// if e != nil {
-	// 	t.Errorf("Unable to reset fetch: %s \n", e.Error())
-	// }
+	e = csr.ResetFetch()
+	if e != nil {
+		t.Errorf("Unable to reset fetch: %s \n", e.Error())
+	}
 
 	ds, e = csr.Fetch(nil, 3, false)
 	if e != nil {
@@ -89,7 +89,6 @@ func TestSelect(t *testing.T) {
 	}
 }
 
-/*
 func TestSelectFilter(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
@@ -100,8 +99,8 @@ func TestSelectFilter(t *testing.T) {
 
 	csr, e := c.NewQuery().
 		//Select("_id", "email").
-		Where(dbox.Eq("email", "arief@eaciit.com")).
-		From("appusers").Cursor(nil)
+		Where(dbox.Eq("email", "User-4@myco.com")).
+		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -163,27 +162,29 @@ func TestSelectAggregate(t *testing.T) {
 	}
 }
 */
-/*
+
 func TestCRUD(t *testing.T) {
 	//t.Skip()
+	type user struct {
+		Id    string `json:"id"`
+		Title string `json:"title"`
+		Email string `json:"email"`
+	}
+
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 		return
 	}
 	defer c.Close()
-	e = c.NewQuery().From("testtables").Delete().Exec(nil)
+
+	e = c.NewQuery().Delete().Exec(nil)
 	if e != nil {
 		t.Errorf("Unablet to clear table %s\n", e.Error())
 		return
 	}
 
-	q := c.NewQuery().SetConfig("multiexec", true).From("testtables").Save()
-	type user struct {
-		Id    string `bson:"_id"`
-		Title string
-		Email string
-	}
+	q := c.NewQuery().SetConfig("multiexec", true).Save()
 	for i := 1; i <= 10000; i++ {
 		//go func(q dbox.IQuery, i int) {
 		data := user{}
@@ -193,22 +194,63 @@ func TestCRUD(t *testing.T) {
 		if i == 10 || i == 20 || i == 30 {
 			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
 		}
+
 		e = q.Exec(toolkit.M{
 			"data": data,
 		})
 		if e != nil {
 			t.Errorf("Unable to save: %s \n", e.Error())
 		}
+
 	}
 	q.Close()
 
+	/// slice json
+	// var dataArray []user
+	// for i := 1; i <= 10; i++ {
+	// 	//go func(q dbox.IQuery, i int) {
+	// 	data := user{}
+	// 	data.Id = fmt.Sprintf("User-%d", i)
+	// 	data.Title = fmt.Sprintf("User-%d's name", i)
+	// 	data.Email = fmt.Sprintf("User-%d@myco.com", i)
+	// 	if i == 10 || i == 20 || i == 30 {
+	// 		data.Email = fmt.Sprintf("User-%d@myholding.com", i)
+	// 	}
+	// 	dataArray = append(dataArray, data)
+	// }
+
+	// e = q.Exec(toolkit.M{
+	// 	"data": dataArray,
+	// })
+	// if e != nil {
+	// 	t.Errorf("Unable to save: %s \n", e.Error())
+	// }
+	// q.Close()
+
+	///insert
+	dataInsert := user{}
+	dataInsert.Id = fmt.Sprintf("User-15")
+	dataInsert.Title = fmt.Sprintf("User Lima Belas")
+	dataInsert.Email = fmt.Sprintf("user15@yahoo.com")
+	e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataInsert})
+	if e != nil {
+		t.Errorf("Unable to insert: %s \n", e.Error())
+	}
+
+	///update
 	data := user{}
-	data.Id = fmt.Sprintf("User-15")
-	data.Title = fmt.Sprintf("User Lima Belas")
-	data.Email = fmt.Sprintf("user15@yahoo.com")
-	e = c.NewQuery().From("testtables").Update().Exec(toolkit.M{"data": data})
+	data.Id = fmt.Sprintf("User-10")
+	data.Title = fmt.Sprintf("User sepoloh")
+	data.Email = fmt.Sprintf("user10@yahoo.com")
+	e = c.NewQuery().Update().Exec(toolkit.M{"data": data})
 	if e != nil {
 		t.Errorf("Unable to update: %s \n", e.Error())
 	}
+
+	///delete with where
+	e = c.NewQuery().Where(dbox.Eq("id", "User-1")).Delete().Exec(nil)
+	if e != nil {
+		t.Errorf("Unablet to delete table %s\n", e.Error())
+		return
+	}
 }
-*/
