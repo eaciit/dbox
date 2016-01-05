@@ -9,8 +9,9 @@ import (
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	var config = map[string]interface{}{"useheader": true, "delimiter": ",", "dateformat": "MM-dd-YYYY"}
-	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\Data_Comma.csv", "", "", "", config}
+	// mapHeader := []toolkit.M{}
+	var config = map[string]interface{}{"useheader": true, "delimiter": ",", "dateformat": "MM-dd-YYYY", "newfile": true}
+	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\Data_Comma01.csv", "", "", "", config}
 	c, e := dbox.NewConnection("csv", ci)
 	if e != nil {
 		return nil, e
@@ -24,26 +25,26 @@ func prepareConnection() (dbox.IConnection, error) {
 	return c, nil
 }
 
-func TestConnect(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("Unable to connect: %s \n", e.Error())
-	}
-	defer c.Close()
-}
+// func TestConnect(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("Unable to connect: %s \n", e.Error())
+// 	}
+// 	c.Close()
+// }
 
-func TestFilter(t *testing.T) {
-	fb := dbox.NewFilterBuilder(new(FilterBuilder))
-	fb.AddFilter(dbox.Or(
-		dbox.Eq("_id", 1),
-		dbox.Eq("group", "administrators")))
-	b, e := fb.Build()
-	if e != nil {
-		t.Errorf("Error %s", e.Error())
-	} else {
-		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
-	}
-}
+// func TestFilter(t *testing.T) {
+// 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
+// 	fb.AddFilter(dbox.Or(
+// 		dbox.Eq("_id", 1),
+// 		dbox.Eq("group", "administrators")))
+// 	b, e := fb.Build()
+// 	if e != nil {
+// 		t.Errorf("Error %s", e.Error())
+// 	} else {
+// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
+// 	}
+// }
 
 // func TestSelect(t *testing.T) {
 // 	c, e := prepareConnection()
@@ -91,37 +92,37 @@ func TestFilter(t *testing.T) {
 // 	}
 // }
 
-func TestSelectFilter(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("Unable to connect %s \n", e.Error())
-		return
-	}
-	defer c.Close()
+// func TestSelectFilter(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("Unable to connect %s \n", e.Error())
+// 		return
+// 	}
+// 	defer c.Close()
 
-	csr, e := c.NewQuery().
-		Select("EmployeeId", "FirstName", "LastName", "Age").
-		// Where(dbox.Eq("EmployeeId", "101-102-4")).Cursor(nil)
-		// Where(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4"))).Cursor(nil)
-		Where(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30"))).Cursor(nil)
-	if e != nil {
-		t.Errorf("Cursor pre error: %s \n", e.Error())
-		return
-	}
-	if csr == nil {
-		t.Errorf("Cursor not initialized")
-		return
-	}
-	defer csr.Close()
+// 	csr, e := c.NewQuery().
+// 		Select("EmployeeId", "FirstName", "LastName", "Age").
+// 		// Where(dbox.Eq("EmployeeId", "101-102-4")).Cursor(nil)
+// 		// Where(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4"))).Cursor(nil)
+// 		Where(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30"))).Cursor(nil)
+// 	if e != nil {
+// 		t.Errorf("Cursor pre error: %s \n", e.Error())
+// 		return
+// 	}
+// 	if csr == nil {
+// 		t.Errorf("Cursor not initialized")
+// 		return
+// 	}
+// 	defer csr.Close()
 
-	ds, e := csr.Fetch(nil, 5, false)
-	if e != nil {
-		t.Errorf("Unable to fetch: %s \n", e.Error())
-	} else {
-		fmt.Printf("Fetch OK. Result: %v \n", ds.Data)
-		// toolkit.JsonString(ds.Data))
-	}
-}
+// 	ds, e := csr.Fetch(nil, 5, false)
+// 	if e != nil {
+// 		t.Errorf("Unable to fetch: %s \n", e.Error())
+// 	} else {
+// 		fmt.Printf("Fetch OK. Result: %v \n", ds.Data)
+// 		// toolkit.JsonString(ds.Data))
+// 	}
+// }
 
 /*
 func TestSelectAggregate(t *testing.T) {
@@ -234,12 +235,6 @@ func TestCRUD(t *testing.T) {
 	// 	t.Errorf("Unable to Delete: %s \n", e.Error())
 	// }
 
-	// e = c.NewQuery().From("testtables").Delete().Exec(nil)
-	// if e != nil {
-	// 	t.Errorf("Unablet to clear table %s\n", e.Error())
-	// 	return
-	// }
-
 	// q := c.NewQuery().SetConfig("multiexec", true).From("testtables").Save()
 	// type user struct {
 	// 	Id    string `bson:"_id"`
@@ -264,12 +259,4 @@ func TestCRUD(t *testing.T) {
 	// }
 	// q.Close()
 
-	// data 		:= user{}
-	// data.Id 	= fmt.Sprintf("User-15")
-	// data.Title 	= fmt.Sprintf("User Lima Belas")
-	// data.Email 	= fmt.Sprintf("user15@yahoo.com")
-	// e = c.NewQuery().From("testtables").Update().Exec(toolkit.M{"data": data})
-	// if e != nil {
-	// 	t.Errorf("Unable to update: %s \n", e.Error())
-	// }
 }
