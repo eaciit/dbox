@@ -3,6 +3,7 @@ package csv
 import (
 	"encoding/csv"
 	// "fmt"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -359,8 +360,11 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 
 		for _, v := range q.Connection().(*Connection).headerColumn {
-			valAppend := dataMformat.Get(v.name, "").(string)
-			dataTemp = append(dataTemp, valAppend)
+			if dataMformat.Has(v.name) {
+				dataTemp = append(dataTemp, cast.ToString(dataMformat[v.name]))
+			} else {
+				dataTemp = append(dataTemp, "")
+			}
 		}
 
 		if len(dataTemp) > 0 {
@@ -425,9 +429,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 			foundChange = execCond.getCondition(recData)
 			if foundChange && len(dataTemp) > 0 {
 				for n, v := range tempHeader {
-					valChange := dataMformat.Get(v, "").(string)
-					if valChange != "" {
-						dataTemp[n] = valChange
+					if dataMformat.Has(v) {
+						dataTemp[n] = cast.ToString(dataMformat[v])
 					}
 				}
 			}
