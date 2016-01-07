@@ -126,6 +126,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		maxGetData = c.fetchRow + n
 	}
 	linecount := 0
+
 	for _, row := range c.reader.Sheet[c.sheetname].Rows {
 		isAppend := true
 		recData := toolkit.M{}

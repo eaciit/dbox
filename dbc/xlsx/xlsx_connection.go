@@ -2,7 +2,7 @@ package xlsx
 
 import (
 	// "fmt"
-	// "github.com/eaciit/cast"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
@@ -38,8 +38,6 @@ type Connection struct {
 	setNewHeader bool
 	isMapHeader  bool
 
-	// file *os.File
-	// tempfile *os.File
 	reader *xlsx.File
 	writer *xlsx.File
 
@@ -97,8 +95,9 @@ func (c *Connection) Connect() error {
 
 	// c.SetReaderParam()
 	// if !c.setNewHeader {
-	// 	c.SetHeaderData(useHeader)
+	c.SetHeaderData(useHeader)
 	// }
+
 	c.isMapHeader = false
 	if ci.Settings.Has("mapheader") {
 		c.isMapHeader = true
@@ -151,99 +150,112 @@ func (c *Connection) Connect() error {
 
 // }
 
-// func (c *Connection) SetHeaderData(useHeader bool) {
-// 	ci := c.Info()
-// 	dateformat := ci.Settings.Get("dateformat", "").(string)
+func (c *Connection) SetHeaderData(useHeader bool) {
+	ci := c.Info()
+	var headerrows int
+	headerrows = 5
+	// startdatarows := 0
+	if ci.Settings.Has("headerrows") {
+		// headerrows = cast.ToInt(ci.Settings["headerrows"])
+	}
+	// Dummy :
+	var tempstruct []headerstruct
+	n := 1
+	for i, _ := range c.reader.Sheet["HIST"].Rows[headerrows].Cells {
+		_ = i
+		ts := headerstruct{}
+		ts.name = cast.ToString(n)
+		ts.dataType = "string"
 
-// 	var tempstruct []headerstruct
+		tempstruct = append(tempstruct, ts)
+		n += 1
+	}
 
-// 	tempData, e := c.reader.Read()
-// 	for i, v := range tempData {
-// 		ts := headerstruct{}
-// 		ts.name = string(i)
-// 		ts.dataType = "string"
-// 		if useHeader {
-// 			ts.name = v
-// 		}
-// 		tempstruct = append(tempstruct, ts)
-// 	}
-// 	if useHeader && e != io.EOF {
-// 		tempData, e = c.reader.Read()
-// 	}
+	c.headerColumn = tempstruct
+	// for i, v := range tempData {
+	// 	ts := headerstruct{}
+	// 	ts.name = string(i)
+	// 	ts.dataType = "string"
+	// 	if useHeader {
+	// 		ts.name = v
+	// 	}
+	// 	tempstruct = append(tempstruct, ts)
+	// }
+	// if useHeader && e != io.EOF {
+	// 	tempData, e = c.reader.Read()
+	// }
 
-// 	isCheckType := true
-// 	ix := 0
-// 	for isCheckType && e != io.EOF {
-// 		ix += 1
-// 		isCheckType = false
+	// isCheckType := true
+	// ix := 0
+	// for isCheckType && e != io.EOF {
+	// 	ix += 1
+	// 	isCheckType = false
 
-// 		for i, v := range tempData {
-// 			if v != "" {
-// 				matchNumber := false
-// 				matchFloat := false
-// 				matchDate := false
+	// 	for i, v := range tempData {
+	// 		if v != "" {
+	// 			matchNumber := false
+	// 			matchFloat := false
+	// 			matchDate := false
 
-// 				//dd.mm.yyyy dd/mm/yyyy dd-mm-yyyy
-// 				//yyyy.mm.dd yyyy/mm/dd yyyy-mm-dd
-// 				formatDate := "((^(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)[\\d]{4}$)|(^[\\d]{4}(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])$))"
-// 				matchDate, _ = regexp.MatchString(formatDate, v)
-// 				if !matchDate && dateformat != "" {
-// 					d := cast.String2Date(v, dateformat)
-// 					if d.Year() > 1 {
-// 						matchDate = true
-// 					}
-// 				}
+	// 			formatDate := "((^(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)[\\d]{4}$)|(^[\\d]{4}(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])$))"
+	// 			matchDate, _ = regexp.MatchString(formatDate, v)
+	// 			if !matchDate && dateformat != "" {
+	// 				d := cast.String2Date(v, dateformat)
+	// 				if d.Year() > 1 {
+	// 					matchDate = true
+	// 				}
+	// 			}
 
-// 				x := strings.Index(v, ".")
+	// 			x := strings.Index(v, ".")
 
-// 				if x > 0 {
-// 					matchFloat = true
-// 					v = strings.Replace(v, ".", "", 1)
-// 				}
+	// 			if x > 0 {
+	// 				matchFloat = true
+	// 				v = strings.Replace(v, ".", "", 1)
+	// 			}
 
-// 				matchNumber, _ = regexp.MatchString("^\\d+$", v)
+	// 			matchNumber, _ = regexp.MatchString("^\\d+$", v)
 
-// 				tempstruct[i].dataType = "string"
-// 				if matchNumber {
-// 					tempstruct[i].dataType = "int"
-// 					if matchFloat {
-// 						tempstruct[i].dataType = "float"
-// 					}
-// 				}
+	// 			tempstruct[i].dataType = "string"
+	// 			if matchNumber {
+	// 				tempstruct[i].dataType = "int"
+	// 				if matchFloat {
+	// 					tempstruct[i].dataType = "float"
+	// 				}
+	// 			}
 
-// 				if matchDate {
-// 					tempstruct[i].dataType = "date"
-// 				}
-// 			}
-// 		}
-// 		for _, v := range tempstruct {
-// 			if v.dataType == "" {
-// 				isCheckType = true
-// 			}
-// 		}
+	// 			if matchDate {
+	// 				tempstruct[i].dataType = "date"
+	// 			}
+	// 		}
+	// 	}
+	// 	for _, v := range tempstruct {
+	// 		if v.dataType == "" {
+	// 			isCheckType = true
+	// 		}
+	// 	}
 
-// 		if isCheckType {
-// 			tempData, _ = c.reader.Read()
-// 		}
+	// 	if isCheckType {
+	// 		tempData, _ = c.reader.Read()
+	// 	}
 
-// 		// fmt.Println(ix, "-", isCheckType)
-// 		// fmt.Println(tempstruct)
-// 		if ix > 5 {
-// 			break
-// 		}
-// 	}
+	// 	// fmt.Println(ix, "-", isCheckType)
+	// 	// fmt.Println(tempstruct)
+	// 	if ix > 5 {
+	// 		break
+	// 	}
+	// }
 
-// 	c.headerColumn = tempstruct
+	// c.headerColumn = tempstruct
 
-// 	c.file.Close()
-// 	c.file, _ = os.Open(ci.Host)
-// 	c.reader = csv.NewReader(c.file)
-// 	c.SetReaderParam()
+	// c.file.Close()
+	// c.file, _ = os.Open(ci.Host)
+	// c.reader = csv.NewReader(c.file)
+	// c.SetReaderParam()
 
-// 	if useHeader {
-// 		tempData, _ = c.reader.Read()
-// 	}
-// }
+	// if useHeader {
+	// 	tempData, _ = c.reader.Read()
+	// }
+}
 
 func (c *Connection) NewQuery() dbox.IQuery {
 	q := new(Query)
