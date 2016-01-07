@@ -142,6 +142,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 									if len(c.jsonSelect.([]string)) == 0 {
 										ds.Data = append(ds.Data, v)
 									} else {
+										// fmt.Println(c.jsonSelect.([]string)[0])
+										// fmt.Println(v.(map[string]interface{}))
 										foundData = append(foundData, v.(map[string]interface{}))
 									}
 								}
@@ -157,6 +159,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 						for i, subData := range found {
 							for _, selected := range c.jsonSelect.([]string) {
 								if strings.ToLower(selected) == strings.ToLower(i) {
+									foundSelected[i] = subData
+								} else if selected == "*" {
 									foundSelected[i] = subData
 								}
 							}
