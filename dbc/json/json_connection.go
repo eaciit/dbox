@@ -55,7 +55,18 @@ func (c *Connection) Connect() error {
 	}
 
 	_, e := os.Stat(ci.Host)
-	if os.IsNotExist(e) {
+	if ci.Settings != nil {
+		if ci.Settings["newfile"] == true {
+			if os.IsNotExist(e) {
+				create, _ := os.Create(ci.Host)
+				create.Close()
+			}
+		} else {
+			if os.IsNotExist(e) {
+				return errorlib.Error(packageName, modConnection, "Connect", "Create new file is false")
+			}
+		}
+	} else if os.IsNotExist(e) {
 		return errorlib.Error(packageName, modConnection, "Connect", "No json file found")
 	}
 

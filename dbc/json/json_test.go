@@ -9,7 +9,8 @@ import (
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"E:\\WORKS\\data test\\testtables.json", "", "", "", nil}
+	config := toolkit.M{"newfile": true} //for create new file, if you dont need just overwrite "config" with "nil"
+	ci := &dbox.ConnectionInfo{"E:\\WORKS\\data_test\\testtables.json", "", "", "", config}
 
 	c, e := dbox.NewConnection("json", ci)
 	if e != nil {
@@ -205,27 +206,27 @@ func TestCRUD(t *testing.T) {
 	}
 	q.Close()
 
-	/// slice json
-	// var dataArray []user
-	// for i := 1; i <= 10; i++ {
-	// 	//go func(q dbox.IQuery, i int) {
-	// 	data := user{}
-	// 	data.Id = fmt.Sprintf("User-%d", i)
-	// 	data.Title = fmt.Sprintf("User-%d's name", i)
-	// 	data.Email = fmt.Sprintf("User-%d@myco.com", i)
-	// 	if i == 10 || i == 20 || i == 30 {
-	// 		data.Email = fmt.Sprintf("User-%d@myholding.com", i)
-	// 	}
-	// 	dataArray = append(dataArray, data)
-	// }
+	/*/// Test slice json
+	var dataArray []user
+	for i := 1; i <= 10; i++ {
+		//go func(q dbox.IQuery, i int) {
+		data := user{}
+		data.Id = fmt.Sprintf("User-%d", i)
+		data.Title = fmt.Sprintf("User-%d's name", i)
+		data.Email = fmt.Sprintf("User-%d@myco.com", i)
+		if i == 10 || i == 20 || i == 30 {
+			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
+		}
+		dataArray = append(dataArray, data)
+	}
 
-	// e = q.Exec(toolkit.M{
-	// 	"data": dataArray,
-	// })
-	// if e != nil {
-	// 	t.Errorf("Unable to save: %s \n", e.Error())
-	// }
-	// q.Close()
+	e = q.Exec(toolkit.M{
+		"data": dataArray,
+	})
+	if e != nil {
+		t.Errorf("Unable to save: %s \n", e.Error())
+	}
+	q.Close()*/
 
 	///insert
 	dataInsert := user{}
@@ -233,6 +234,18 @@ func TestCRUD(t *testing.T) {
 	dataInsert.Title = fmt.Sprintf("User Lima Belas")
 	dataInsert.Email = fmt.Sprintf("user15@yahoo.com")
 	e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataInsert})
+	if e != nil {
+		t.Errorf("Unable to insert: %s \n", e.Error())
+	}
+
+	/// Test insert slice
+	dataInsertSlice := user{}
+	var insertSlice []user
+	dataInsertSlice.Id = fmt.Sprintf("User-unknown")
+	dataInsertSlice.Title = fmt.Sprintf("User Unknown")
+	dataInsertSlice.Email = fmt.Sprintf("userUnknown@yahoo.com")
+	insertSlice = append(insertSlice, dataInsertSlice)
+	e = c.NewQuery().Insert().Exec(toolkit.M{"data": insertSlice})
 	if e != nil {
 		t.Errorf("Unable to insert: %s \n", e.Error())
 	}

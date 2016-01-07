@@ -206,19 +206,49 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 
 	if commandType == dbox.QueryPartInsert {
-		readF, _ := ioutil.ReadFile(filePath)
+		var jsonUpdatedValue []byte
+		if reflect.ValueOf(data).Kind() == reflect.Slice {
+			readF, _ := ioutil.ReadFile(filePath)
 
-		var dataMap []map[string]interface{}
-		e := json.Unmarshal(readF, &dataMap)
-		if e != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-		}
-		dataToMap, _ := toolkit.ToM(data)
+			var dataMap []map[string]interface{}
+			e := json.Unmarshal(readF, &dataMap)
+			if e != nil {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+			}
 
-		_, updatedValue := finUpdateObj(dataMap, dataToMap, "insert")
-		jsonUpdatedValue, err := json.MarshalIndent(updatedValue, "", "  ")
-		if err != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+			j, err := json.Marshal(data)
+			if err != nil {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+			}
+
+			var jToMap []toolkit.M
+			e = json.Unmarshal(j, &jToMap)
+
+			var sliceData []map[string]interface{}
+			for _, v := range jToMap {
+				// sliceData = append(dataMap, v)
+				_, sliceData = finUpdateObj(dataMap, v, "insert")
+			}
+
+			jsonUpdatedValue, err = json.MarshalIndent(sliceData, "", "  ")
+			if err != nil {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+			}
+		} else {
+			readF, _ := ioutil.ReadFile(filePath)
+
+			var dataMap []map[string]interface{}
+			e := json.Unmarshal(readF, &dataMap)
+			if e != nil {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+			}
+			dataToMap, _ := toolkit.ToM(data)
+
+			_, updatedValue := finUpdateObj(dataMap, dataToMap, "insert")
+			jsonUpdatedValue, e = json.MarshalIndent(updatedValue, "", "  ")
+			if e != nil {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+			}
 		}
 
 		q.Connection().(*Connection).WriteSession()
@@ -227,7 +257,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
 
-		err = q.Connection().(*Connection).CloseWriteSession()
+		err := q.Connection().(*Connection).CloseWriteSession()
 		if err != nil {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
 		}
