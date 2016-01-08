@@ -1,9 +1,8 @@
 package json
 
 import (
-	// "bufio"
 	"encoding/json"
-	// "fmt"
+	"fmt"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -12,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -320,14 +320,18 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
 				}
 
-				i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue) //t.WriteString(string(j))
-				if i == 0 || e != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-				}
+				if string(jsonUpdatedValue) == "null" {
+					ioutil.WriteFile(q.Connection().(*Connection).filePath, []byte("[\n]"), 0666)
+				} else {
+					i, e := q.Connection().(*Connection).openFile.Write(jsonUpdatedValue) //t.WriteString(string(j))
+					if i == 0 || e != nil {
+						return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+					}
 
-				err = q.Connection().(*Connection).CloseWriteSession()
-				if err != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
+					err = q.Connection().(*Connection).CloseWriteSession()
+					if err != nil {
+						return errorlib.Error(packageName, modQuery+".Exec", commandType, err.Error())
+					}
 				}
 			} else {
 				e := os.Remove(filePath)
@@ -340,6 +344,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 					cf, _ := os.Create(filePath)
 					cf.Close()
 				}
+				ioutil.WriteFile(q.Connection().(*Connection).filePath, []byte("[\n]"), 0666)
 			}
 		} else {
 
@@ -459,8 +464,14 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 	} else if isType == "deleteMulti" {
 		for _, v := range jsonData {
 			for _, subV := range v {
+				reflectIs := reflect.ValueOf(subV).Kind()
+				subvIdString := fmt.Sprintf("%s", ToString(reflectIs, subV))
+
 				for _, dataUpt := range replaceData {
-					if dataUpt == subV {
+					reflectIs := reflect.ValueOf(dataUpt).Kind()
+					dataUptId := fmt.Sprintf("%s", ToString(reflectIs, dataUpt))
+
+					if strings.ToLower(dataUptId) == strings.ToLower(subvIdString) {
 						remMap = v
 						break
 					}
@@ -483,13 +494,27 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 					newData[i] = newSubV
 				}
 				mapVal = append(mapVal, newData)
-			}
+			} /*else {
+				var emptySlice toolkit.M
+				mapVal = append(mapVal, emptySlice)
+			}*/
 
 		}
 		return mapVal, nil
 	}
 	return nil, nil
 
+}
+
+func ToString(reflectIs reflect.Kind, i interface{}) string {
+	var s string
+	if reflectIs != reflect.String {
+		toI := toolkit.ToInt(i)
+		s = strconv.Itoa(toI)
+	} else {
+		s = i.(string)
+	}
+	return s
 }
 
 func (q *Query) HasPartExec() error {
