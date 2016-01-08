@@ -9,17 +9,17 @@ import (
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	mapHeader := make([]toolkit.M, 7)
-	mapHeader[0] = toolkit.M{}.Set("A", "string")
-	mapHeader[1] = toolkit.M{}.Set("B", "int")
-	mapHeader[2] = toolkit.M{}.Set("C", "int")
-	mapHeader[3] = toolkit.M{}.Set("D", "int")
-	mapHeader[4] = toolkit.M{}.Set("E", "int")
-	mapHeader[5] = toolkit.M{}.Set("F", "int")
-	mapHeader[6] = toolkit.M{}.Set("G", "int")
+	// mapHeader := make([]toolkit.M, 7)
+	// mapHeader[0] = toolkit.M{}.Set("A", "date")
+	// mapHeader[1] = toolkit.M{}.Set("B", "int")
+	// mapHeader[2] = toolkit.M{}.Set("C", "int")
+	// mapHeader[3] = toolkit.M{}.Set("D", "int")
+	// mapHeader[4] = toolkit.M{}.Set("E", "int")
+	// mapHeader[5] = toolkit.M{}.Set("F", "int")
+	// mapHeader[6] = toolkit.M{}.Set("G", "int")
 	// mapHeader := []toolkit.M{} //AddMap Header
-	// var config = map[string]interface{}{"useheader": true}
-	var config = map[string]interface{}{"mapheader": mapHeader}
+	var config = map[string]interface{}{}
+	// var config = map[string]interface{}{"mapheader": mapHeader}
 	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\IO Price Indices.xlsm", "", "", "", config}
 	c, e := dbox.NewConnection("xlsx", ci)
 	if e != nil {
@@ -62,8 +62,8 @@ func TestSelect(t *testing.T) {
 	}
 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("A", "B", "C").
-		Where(dbox.Contains("A", "TSI")).
+	csr, e := c.NewQuery().Select("1", "2", "3", "4", "5").From("HIST").
+		// Where(dbox.Contains("A", "TSI")).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -75,7 +75,7 @@ func TestSelect(t *testing.T) {
 	}
 	defer csr.Close()
 
-	ds, e := csr.Fetch(nil, 2, false)
+	ds, e := csr.Fetch(nil, 5, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N1: %s \n", e.Error())
 	} else {
