@@ -324,7 +324,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 
 	q.Connection().(*Connection).ExecOpr = false
-	if !q.Connection().(*Connection).setNewHeader || commandType != dbox.QueryPartSave || (commandType == dbox.QueryPartSave && q.Connection().(*Connection).writer == nil) {
+	if !q.Connection().(*Connection).setNewHeader && (commandType != dbox.QueryPartSave || (commandType == dbox.QueryPartSave && q.Connection().(*Connection).writer == nil)) {
 		e = q.Connection().(*Connection).StartSessionWrite()
 	}
 
