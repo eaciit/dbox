@@ -6,10 +6,10 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
 	"testing"
+	"time"
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	// mapHeader := []toolkit.M{}
 	var config = map[string]interface{}{"useheader": true, "delimiter": ",", "dateformat": "MM-dd-YYYY", "newfile": true}
 	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\Data_Comma01.csv", "", "", "", config}
 	c, e := dbox.NewConnection("csv", ci)
@@ -25,26 +25,37 @@ func prepareConnection() (dbox.IConnection, error) {
 	return c, nil
 }
 
-// func TestConnect(t *testing.T) {
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("Unable to connect: %s \n", e.Error())
-// 	}
-// 	c.Close()
-// }
+func TestConnect(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect: %s \n", e.Error())
+	}
+	c.Close()
+	time.Sleep(100 * time.Millisecond)
+}
 
-// func TestFilter(t *testing.T) {
-// 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
-// 	fb.AddFilter(dbox.Or(
-// 		dbox.Eq("_id", 1),
-// 		dbox.Eq("group", "administrators")))
-// 	b, e := fb.Build()
-// 	if e != nil {
-// 		t.Errorf("Error %s", e.Error())
-// 	} else {
-// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
-// 	}
-// }
+func TestFilter(t *testing.T) {
+	fb := dbox.NewFilterBuilder(new(FilterBuilder))
+	fb.AddFilter(dbox.Or(
+		dbox.Contains("regfield", "1"),
+		dbox.Ne("nefield", 1),
+		dbox.Eq("group", "administrators")))
+	b, e := fb.Build()
+	if e != nil {
+		t.Errorf("Error %s", e.Error())
+	} else {
+		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
+	}
+
+	fb = dbox.NewFilterBuilder(new(FilterBuilder))
+	fb.AddFilter(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30")))
+	c, e := fb.Build()
+	if e != nil {
+		t.Errorf("Error %s", e.Error())
+	} else {
+		fmt.Printf("Result:\n%v\n", toolkit.JsonString(c))
+	}
+}
 
 // func TestSelect(t *testing.T) {
 // 	c, e := prepareConnection()

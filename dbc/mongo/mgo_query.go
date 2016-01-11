@@ -106,7 +106,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	//fmt.Printf("Result: %s \n", toolkit.JsonString(fields))
 	//fmt.Printf("Database:%s table:%s \n", dbname, tablename)
 	var sort []string
-	sortParts, hasSort := parts[dbox.QueryPartSelect]
+	sortParts, hasSort := parts[dbox.QueryPartOrder]
 	if hasSort {
 		sort = []string{}
 		for _, sl := range sortParts.([]interface{}) {
