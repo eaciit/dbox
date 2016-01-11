@@ -407,11 +407,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 				io.WriteString(q.Connection().(*Connection).openFile, ",")
 			} else {
 				q.hasSave = hasSave
-				io.WriteString(q.Connection().(*Connection).openFile, ",")
+				// io.WriteString(q.Connection().(*Connection).openFile, ",")
 				_, e = q.Connection().(*Connection).openFile.Write(j)
 				if e != nil {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
+				io.WriteString(q.Connection().(*Connection).openFile, ",")
 			}
 		}
 	}
@@ -430,33 +431,30 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 	)
 
 	if isType == "update" {
+		iReplaceData := toolkit.Id(replaceData)
+		reflectIs := reflect.ValueOf(iReplaceData).Kind()
+		dataUptId := fmt.Sprintf("%s", ToString(reflectIs, iReplaceData))
+
 		for _, v := range jsonData {
-			for _, subV := range v {
-				for _, dataUpt := range replaceData {
-					if dataUpt == subV {
-						remMap = v
-						break
-					}
-				}
-
-				for key, remVal := range remMap {
+			iSubV := toolkit.Id(v)
+			reflectIs := reflect.ValueOf(iSubV).Kind()
+			subvIdString := fmt.Sprintf("%s", ToString(reflectIs, iSubV))
+			if strings.ToLower(subvIdString) == strings.ToLower(dataUptId) {
+				for key, _ := range v {
 					delete(v, key)
-					if strings.ToLower(remVal.(string)) == strings.ToLower(subV.(string)) {
-						break
-					}
 				}
-			}
 
-			var newData map[string]interface{}
-			newData = map[string]interface{}{}
-			for i, dataUpt := range replaceData {
-				newData[i] = dataUpt
 			}
-			for i, newSubV := range v {
-				newData[i] = newSubV
+			if len(v) != 0 {
+				var newData = make(map[string]interface{})
+				for i, newSubV := range v {
+					newData[i] = newSubV
+				}
+				mapVal = append(mapVal, newData)
 			}
-			mapVal = append(mapVal, newData)
 		}
+		mapVal = append(mapVal, replaceData)
+
 		return mapVal, nil
 	} else if isType == "insert" {
 		val := append(jsonData, replaceData)
@@ -523,10 +521,13 @@ func (q *Query) HasPartExec() error {
 
 		ioutil.WriteFile(q.Connection().(*Connection).tempPathFile, []byte("[\n"+s+"]"), 0666)
 	} else if q.hasSave {
-		i, e := io.WriteString(q.Connection().(*Connection).openFile, "]")
-		if i == 0 || e != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", "Has save part exec", e.Error())
-		}
+		s := q.Connection().(*Connection).RemLastLine(q.Connection().(*Connection).tempPathFile, "hasNewSave")
+
+		ioutil.WriteFile(q.Connection().(*Connection).tempPathFile, []byte(s+"]"), 0666)
+		// i, e := io.WriteString(q.Connection().(*Connection).openFile, s+"]")
+		// if i == 0 || e != nil {
+		// 	return errorlib.Error(packageName, modQuery+".Exec", "Has save part exec", e.Error())
+		// }
 	}
 
 	q.Connection().(*Connection).Close()
