@@ -128,3 +128,11 @@ func Or(fs ...*Filter) *Filter {
 	f.Value = fs
 	return f
 }
+
+func Ne(field string, value interface{}) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpNoEqual)
+	f.Value = value
+	return f
+}

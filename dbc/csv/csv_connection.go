@@ -113,7 +113,7 @@ func (c *Connection) Connect() error {
 	} else {
 		return errorlib.Error(packageName, modConnection, "Connect", "File is not initialized")
 	}
-	// fmt.Println("LINE116 : ", c.setNewHeader)
+
 	c.SetReaderParam()
 	if !c.setNewHeader {
 		c.SetHeaderData()
@@ -310,9 +310,9 @@ func (c *Connection) Close() {
 		c.file.Close()
 	}
 
-	// if c.setNewHeader {
-	// 	os.Remove(c.Info().Host)
-	// }
+	if c.setNewHeader {
+		os.Remove(c.Info().Host)
+	}
 }
 
 func (c *Connection) StartSessionWrite() error {
