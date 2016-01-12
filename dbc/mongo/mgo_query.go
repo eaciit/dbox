@@ -94,7 +94,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			return qps
 		}()
 		for _, el := range aggrElements {
-			aggr := el.Value.(*dbox.AggrInfo)
+			aggr := el.Value.(dbox.AggrInfo)
 			if aggr.Op == dbox.AggrSum {
 				aggrExpression.Set(aggr.Alias, aggr.Field)
 			}
