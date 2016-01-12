@@ -2,14 +2,16 @@ package csv
 
 import (
 	"encoding/csv"
-	"fmt"
+	// "fmt"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io"
 	"os"
-	// "reflect"
+	"reflect"
+	"regexp"
 )
 
 const (
@@ -66,8 +68,37 @@ func foundCondition(dataCheck toolkit.M, cond toolkit.M) bool {
 					}
 				}
 			}
-		} else if val != dataCheck.Get(key, "").(string) {
-			resBool = false
+		} else {
+			if reflect.ValueOf(val).Kind() == reflect.Map {
+				mVal := val.(map[string]interface{})
+				tomVal, _ := toolkit.ToM(mVal)
+				switch {
+				case tomVal.Has("$ne"):
+					if tomVal["$ne"].(string) == dataCheck.Get(key, "").(string) {
+						resBool = false
+					}
+				case tomVal.Has("$regex"):
+					resBool, _ = regexp.MatchString(tomVal["$regex"].(string), dataCheck.Get(key, "").(string))
+				case tomVal.Has("$gt"):
+					if tomVal["$gt"].(string) >= dataCheck.Get(key, "").(string) {
+						resBool = false
+					}
+				case tomVal.Has("$gte"):
+					if tomVal["$gte"].(string) > dataCheck.Get(key, "").(string) {
+						resBool = false
+					}
+				case tomVal.Has("$lt"):
+					if tomVal["$lt"].(string) <= dataCheck.Get(key, "").(string) {
+						resBool = false
+					}
+				case tomVal.Has("$lte"):
+					if tomVal["$lte"].(string) < dataCheck.Get(key, "").(string) {
+						resBool = false
+					}
+				}
+			} else if reflect.ValueOf(val).Kind() == reflect.String && val != dataCheck.Get(key, "").(string) {
+				resBool = false
+			}
 		}
 	}
 
@@ -102,6 +133,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	var e error
 
 	aggregate := false
+
+	if q.Connection().(*Connection).setNewHeader {
+		q.Connection().(*Connection).Close()
+		filename := q.Connection().(*Connection).Info().Host
+		os.Remove(filename)
+		return nil, errorlib.Error(packageName, "Cursor", modQuery, "Only Insert Query Permited")
+	}
 
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
@@ -181,7 +219,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	cursor.(*Cursor).reader = q.Reader()
 	cursor.(*Cursor).headerColumn = q.Connection().(*Connection).headerColumn
 	cursor.(*Cursor).count = 0
-	fmt.Println(cursor.(*Cursor).headerColumn)
+	// fmt.Println(cursor.(*Cursor).headerColumn)
 	if e != nil {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", e.Error())
 	}
@@ -272,13 +310,21 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	}
 
+	//Check setNewHeader First
+	if q.Connection().(*Connection).setNewHeader && commandType != dbox.QueryPartInsert {
+		q.Connection().(*Connection).Close()
+		filename := q.Connection().(*Connection).Info().Host
+		os.Remove(filename)
+		return errorlib.Error(packageName, "Query", modQuery, "Only Insert Permited")
+	}
+
 	q.Connection().(*Connection).TypeOpenFile = TypeOpenFile_Append
 	if hasDelete || hasUpdate {
 		q.Connection().(*Connection).TypeOpenFile = TypeOpenFile_Create
 	}
 
 	q.Connection().(*Connection).ExecOpr = false
-	if commandType != dbox.QueryPartSave || (commandType == dbox.QueryPartSave && q.Connection().(*Connection).writer == nil) {
+	if !q.Connection().(*Connection).setNewHeader && (commandType != dbox.QueryPartSave || (commandType == dbox.QueryPartSave && q.Connection().(*Connection).writer == nil)) {
 		e = q.Connection().(*Connection).StartSessionWrite()
 	}
 
@@ -296,10 +342,29 @@ func (q *Query) Exec(parm toolkit.M) error {
 	case dbox.QueryPartInsert, dbox.QueryPartSave:
 		var dataTemp []string
 		dataMformat, _ := toolkit.ToM(data)
+		// fmt.Println("LINE338:", q.Connection().(*Connection).setNewHeader)
+		if q.Connection().(*Connection).setNewHeader {
+			q.Connection().(*Connection).SetHeaderToolkitM(dataMformat)
+			q.Connection().(*Connection).setNewHeader = false
+
+			for _, v := range q.Connection().(*Connection).headerColumn {
+				dataTemp = append(dataTemp, v.name)
+			}
+
+			if len(dataTemp) > 0 {
+				writer.Write(dataTemp)
+				writer.Flush()
+			}
+			// fmt.Println("LINE342:", q.Connection().(*Connection).headerColumn)
+			dataTemp = []string{}
+		}
 
 		for _, v := range q.Connection().(*Connection).headerColumn {
-			valAppend := dataMformat.Get(v.name, "").(string)
-			dataTemp = append(dataTemp, valAppend)
+			if dataMformat.Has(v.name) {
+				dataTemp = append(dataTemp, cast.ToString(dataMformat[v.name]))
+			} else {
+				dataTemp = append(dataTemp, "")
+			}
 		}
 
 		if len(dataTemp) > 0 {
@@ -312,11 +377,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 		for _, val := range q.Connection().(*Connection).headerColumn {
 			tempHeader = append(tempHeader, val.name)
 		}
-
-		// if q.Connection().Info().Settings.Get("useheader", false).(bool) {
-		// 	writer.Write(tempHeader)
-		// 	writer.Flush()
-		// }
 
 		for {
 			foundDelete := true
@@ -338,6 +398,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			} else if e != nil {
 				return errorlib.Error(packageName, modQuery, "Delete", e.Error())
 			}
+
 			if !foundDelete && dataTemp != nil {
 				writer.Write(dataTemp)
 				writer.Flush()
@@ -368,9 +429,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 			foundChange = execCond.getCondition(recData)
 			if foundChange && len(dataTemp) > 0 {
 				for n, v := range tempHeader {
-					valChange := dataMformat.Get(v, "").(string)
-					if valChange != "" {
-						dataTemp[n] = valChange
+					if dataMformat.Has(v) {
+						dataTemp[n] = cast.ToString(dataMformat[v])
 					}
 				}
 			}
