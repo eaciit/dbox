@@ -7,7 +7,7 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
-	"io"
+	// "io"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -21,9 +21,10 @@ const (
 
 type Query struct {
 	dbox.Query
-	filePath            string
+	filePath, dataType  string
 	session             *os.File
 	hasNewSave, hasSave bool
+	sliceData           toolkit.Ms
 }
 
 func (q *Query) Prepare() error {
@@ -353,16 +354,16 @@ func (q *Query) Exec(parm toolkit.M) error {
 		dataType := reflect.ValueOf(data).Kind()
 
 		if reflect.Slice == dataType {
-			j, err := json.MarshalIndent(data, "", "  ")
-			if err != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-			}
-
 			if q.Connection().(*Connection).openFile == nil {
 				q.Connection().(*Connection).OpenSession()
 			}
 
 			if q.Connection().(*Connection).isNewSave {
+				j, err := json.MarshalIndent(data, "", "  ")
+				if err != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+
 				i, e := q.Connection().(*Connection).openFile.Write(j) //t.WriteString(string(j))
 				if i == 0 || e != nil {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
@@ -393,26 +394,17 @@ func (q *Query) Exec(parm toolkit.M) error {
 				}
 			}
 		} else if reflect.Struct == dataType {
-			if q.Connection().(*Connection).writer == nil {
-				q.Connection().(*Connection).OpenSaveSession()
+			if q.Connection().(*Connection).openFile == nil {
+				q.Connection().(*Connection).OpenSession()
 			}
+			q.dataType = "struct"
+			dataMap, _ := toolkit.ToM(data)
+			q.sliceData = append(q.sliceData, dataMap)
 
-			j, _ := json.Marshal(data)
 			if q.Connection().(*Connection).isNewSave {
 				q.hasNewSave = hasSave
-				_, e = q.Connection().(*Connection).openFile.Write(j)
-				if e != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-				}
-				io.WriteString(q.Connection().(*Connection).openFile, ",")
 			} else {
 				q.hasSave = hasSave
-				// io.WriteString(q.Connection().(*Connection).openFile, ",")
-				_, e = q.Connection().(*Connection).openFile.Write(j)
-				if e != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
-				}
-				io.WriteString(q.Connection().(*Connection).openFile, ",")
 			}
 		}
 	}
@@ -445,15 +437,18 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 				}
 
 			}
-			if len(v) != 0 {
-				var newData = make(map[string]interface{})
-				for i, newSubV := range v {
-					newData[i] = newSubV
-				}
-				mapVal = append(mapVal, newData)
+			// if len(v) != 0 {
+			var newData = make(map[string]interface{})
+			for i, dataUpt := range replaceData {
+				newData[i] = dataUpt
 			}
+			for i, newSubV := range v {
+				newData[i] = newSubV
+			}
+			mapVal = append(mapVal, newData)
+			// }
 		}
-		mapVal = append(mapVal, replaceData)
+		// mapVal = append(mapVal, replaceData)
 
 		return mapVal, nil
 	} else if isType == "insert" {
@@ -516,35 +511,33 @@ func ToString(reflectIs reflect.Kind, i interface{}) string {
 }
 
 func (q *Query) HasPartExec() error {
+	var jsonString []byte
+	var err error
 	if q.hasNewSave {
-		s := q.Connection().(*Connection).RemLastLine(q.Connection().(*Connection).tempPathFile, "hasNewSave")
-
-		ioutil.WriteFile(q.Connection().(*Connection).tempPathFile, []byte("[\n"+s+"]"), 0666)
+		jsonString, err = json.MarshalIndent(q.sliceData, "", "  ")
+		if err != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", "Has part exec Marshal JSON", err.Error())
+		}
 	} else if q.hasSave {
-		s := q.Connection().(*Connection).RemLastLine(q.Connection().(*Connection).tempPathFile, "hasNewSave")
+		lastJson := q.Connection().(*Connection).getJsonToMap
+		var allJsonData toolkit.Ms
+		allJsonData = append(lastJson, q.sliceData...)
 
-		ioutil.WriteFile(q.Connection().(*Connection).tempPathFile, []byte(s+"]"), 0666)
-		// i, e := io.WriteString(q.Connection().(*Connection).openFile, s+"]")
-		// if i == 0 || e != nil {
-		// 	return errorlib.Error(packageName, modQuery+".Exec", "Has save part exec", e.Error())
-		// }
+		jsonString, err = json.MarshalIndent(allJsonData, "", "  ")
+		if err != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", "Has part exec Marshal JSON", err.Error())
+		}
 	}
 
-	q.Connection().(*Connection).Close()
-	eRem := os.Remove(q.Connection().(*Connection).filePath)
-	if eRem != nil {
-		return errorlib.Error(packageName, modQuery+".Exec", "Has part exec", eRem.Error())
-	}
-
-	eRen := os.Rename(q.Connection().(*Connection).tempPathFile, q.Connection().(*Connection).filePath)
-	if eRen != nil {
-		return errorlib.Error(packageName, modQuery+".Exec", "Has part exec", eRen.Error())
+	err = ioutil.WriteFile(q.Connection().(*Connection).filePath, jsonString, 0666)
+	if err != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", "Write file", err.Error())
 	}
 	return nil
 }
 
 func (q *Query) Close() {
-	if q.Connection().(*Connection).dataType == "struct" {
+	if q.dataType == "struct" {
 		q.HasPartExec()
 	}
 
