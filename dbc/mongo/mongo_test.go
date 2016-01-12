@@ -8,7 +8,8 @@ import (
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"localhost:27017", "eccolony", "", "", nil}
+	var config = toolkit.M{}.Set("timeout", 1)
+	ci := &dbox.ConnectionInfo{"localhost:27017", "eccolony", "", "", config}
 	c, e := dbox.NewConnection("mongo", ci)
 	if e != nil {
 		return nil, e
@@ -26,6 +27,7 @@ func TestConnect(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect: %s \n", e.Error())
+		return
 	}
 	defer c.Close()
 }
@@ -47,6 +49,7 @@ func TestSelect(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
+		return
 	}
 	defer c.Close()
 

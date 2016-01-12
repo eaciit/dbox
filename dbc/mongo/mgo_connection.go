@@ -48,7 +48,7 @@ func (c *Connection) Connect() error {
 	info.Database = ci.Database
 	info.Source = "admin"
 
-	if ci.Settings != nil {
+	if ci.Settings == nil {
 		ci.Settings = toolkit.M{}
 	}
 
