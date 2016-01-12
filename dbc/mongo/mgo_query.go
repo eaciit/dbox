@@ -82,6 +82,25 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			Value.(int)
 	}
 
+	aggrParts, hasAggr := parts[dbox.QueryPartAggr]
+	if hasAggr {
+		aggregate = true
+		aggrExpression := toolkit.M{}
+		aggrElements := func() []*dbox.QueryPart {
+			var qps []*dbox.QueryPart
+			for _, v := range aggrParts.([]interface{}) {
+				qps = append(qps, v.(*dbox.QueryPart))
+			}
+			return qps
+		}()
+		for _, el := range aggrElements {
+			aggr := el.Value.(*dbox.AggrInfo)
+			if aggr.Op == dbox.AggrSum {
+				aggrExpression.Set(aggr.Alias, aggr.Field)
+			}
+		}
+	}
+
 	var fields toolkit.M
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
 	if hasSelect {
