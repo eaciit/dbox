@@ -133,13 +133,14 @@ func (c *Connection) Connect() error {
 
 			if len(dataTemp) > 0 {
 				c.TypeOpenFile = TypeOpenFile_Append
+				c.setNewHeader = false
+
 				c.StartSessionWrite()
 
 				c.writer.Write(dataTemp)
 				c.writer.Flush()
 
 				c.EndSessionWrite()
-				c.setNewHeader = false
 			}
 		}
 	}
