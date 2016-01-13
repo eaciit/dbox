@@ -137,8 +137,7 @@ func Ne(field string, value interface{}) *Filter {
 	return f
 }
 
-
-func In(field string, value []string) *Filter {
+func In(field string, value []interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpIn)
@@ -146,7 +145,7 @@ func In(field string, value []string) *Filter {
 	return f
 }
 
-func Nin(field string, value []string) *Filter {
+func Nin(field string, value []interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpNin)
@@ -154,8 +153,7 @@ func Nin(field string, value []string) *Filter {
 	return f
 }
 
-func Gt(field string, value int) *Filter {
-
+func Gt(field string, value interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpGt)
@@ -163,8 +161,7 @@ func Gt(field string, value int) *Filter {
 	return f
 }
 
-func Gte(field string, value int) *Filter {
-
+func Gte(field string, value interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpGte)
@@ -172,8 +169,7 @@ func Gte(field string, value int) *Filter {
 	return f
 }
 
-func Lt(field string, value int) *Filter {
-
+func Lt(field string, value interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpLt)
@@ -181,8 +177,7 @@ func Lt(field string, value int) *Filter {
 	return f
 }
 
-func Lte(field string, value int) *Filter {
-
+func Lte(field string, value interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpLte)
