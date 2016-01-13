@@ -264,28 +264,17 @@ func (q *Query) Exec(parm toolkit.M) error {
 	data := parm.Get("data", nil)
 
 	/*
-		p arts will return E - map{interface{}}interface{}
+		parts will return E - map{interface{}}interface{}
 		where each interface{} returned is slice of interfaces --> []interface{}
 	*/
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
-		/*
-			fmt.Printf("[%s] QP = %s \n",
-				toolkit.Id(data),
-				toolkit.JsonString(qp))
-		*/
 		return qp.PartType
 	}, nil).Data
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	if !hasFrom {
-		/*
-			fmt.Printf("Data:\n%s\nParts:\n%s\nGrouped:\n%s\n",
-				toolkit.JsonString(data),
-				toolkit.JsonString(q.Parts()),
-				toolkit.JsonString(parts))
-		*/
-		return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
+		return errorlib.Error(packageName, modQuery, "Exec", "Invalid table name")
 	}
 	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
 
@@ -308,8 +297,25 @@ func (q *Query) Exec(parm toolkit.M) error {
 		commandType = dbox.QueryPartSave
 	}
 
+	whereParts, hasWhere := parts[dbox.QueryPartWhere]
+	if hasWhere {
+		fb := q.Connection().Fb()
+		for _, p := range whereParts.([]interface{}) {
+			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+			for _, f := range fs {
+				fb.AddFilter(f)
+			}
+		}
+		where, e = fb.Build()
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Exec",
+				e.Error())
+		} else {
+			//fmt.Printf("Where: %s\n", toolkit.JsonString(where))
+		}
+	}
+
 	if data == nil {
-		//---
 		multi = true
 	} else {
 		if where == nil {
@@ -333,7 +339,15 @@ func (q *Query) Exec(parm toolkit.M) error {
 		e = mgoColl.Insert(data)
 	} else if commandType == dbox.QueryPartUpdate {
 		if multi {
-			_, e = mgoColl.UpdateAll(where, data)
+			dataM, e := toolkit.ToM(data)
+			if e != nil {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+			}
+			if len(dataM) == 0 {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType, "Update data points is empty")
+			}
+			updatedData := toolkit.M{}.Set("$set", dataM)
+			_, e = mgoColl.UpdateAll(where, updatedData)
 		} else {
 			e = mgoColl.Update(where, data)
 			if e != nil {

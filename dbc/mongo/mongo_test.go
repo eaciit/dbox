@@ -193,8 +193,8 @@ func TestProcedure(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "spSomething").Set("parms", toolkit.M{}.Set("@name", "EACIIT"))).Cursor(nil)
-	if csr == nil {
-		t.Errorf("Cursor not initialized")
+	if e != nil {
+		t.Error(e)
 		return
 	}
 	defer csr.Close()
