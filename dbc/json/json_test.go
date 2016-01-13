@@ -251,6 +251,25 @@ func TestCRUD(t *testing.T) {
 	}
 
 	///update
+	/*type field struct {
+		Id         int    `json:"_id"`
+		DataSource string `json:"dataSource"`
+		Field      string `json:"field"`
+	}
+	type user struct {
+		Id               string  `json:"ID"`
+		Fields           []field `json:"fields"`
+		MasterDataSource string  `json:"masterDataSource"`
+		Title            string  `json:"title"`
+	}
+
+	data.Id = "1"
+	data.Fields = []field{
+		{1, "John", "Doe"},
+		{2, "Barrack", "Obama"},
+	}
+	data.MasterDataSource = "master"
+	data.Title = "Test update"*/
 	data := user{}
 	data.Id = fmt.Sprintf("User-10")
 	data.Title = fmt.Sprintf("User sepoloh")
