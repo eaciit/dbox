@@ -7,6 +7,7 @@ import (
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"gopkg.in/mgo.v2"
+	"strings"
 )
 
 const (
@@ -64,6 +65,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		return qp.PartType
 	}, nil).Data
 
+	//return nil, errorlib.Error(packageName, modQuery, "Cursor", "asdaa")
+	//fmt.Printf("Query parts: %s\n", toolkit.JsonString(q.Parts()))
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	if hasFrom == false {
 		return nil, errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
@@ -80,6 +83,47 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	if takeParts, has := parts[dbox.QueryPartTake]; has {
 		take = takeParts.([]interface{})[0].(*dbox.QueryPart).
 			Value.(int)
+	}
+
+	aggrParts, hasAggr := parts[dbox.QueryPartAggr]
+	aggrExpression := toolkit.M{}
+	if hasAggr {
+		aggregate = true
+		aggrElements := func() []*dbox.QueryPart {
+			var qps []*dbox.QueryPart
+			for _, v := range aggrParts.([]interface{}) {
+				qps = append(qps, v.(*dbox.QueryPart))
+			}
+			return qps
+		}()
+		for _, el := range aggrElements {
+			aggr := el.Value.(dbox.AggrInfo)
+			//if aggr.Op == dbox.AggrSum {
+			aggrExpression.Set(aggr.Alias, toolkit.M{}.Set(aggr.Op, aggr.Field))
+			//}
+		}
+		toolkit.Printf("Aggr: %s\n", toolkit.JsonString(aggrExpression))
+	}
+	partGroup, hasGroup := parts[dbox.QueryPartGroup]
+	if hasGroup {
+		aggregate = true
+		groups := func() toolkit.M {
+			s := toolkit.M{}
+			for _, v := range partGroup.([]interface{}) {
+				gs := v.(*dbox.QueryPart).Value.([]string)
+				for _, g := range gs {
+					if strings.TrimSpace(g) != "" {
+						s.Set(g, "$"+g)
+					}
+				}
+			}
+			return s
+		}()
+		if len(groups) == 0 {
+			aggrExpression.Set("_id", "")
+		} else {
+			aggrExpression.Set("_id", groups)
+		}
 	}
 
 	var fields toolkit.M
@@ -106,7 +150,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	//fmt.Printf("Result: %s \n", toolkit.JsonString(fields))
 	//fmt.Printf("Database:%s table:%s \n", dbname, tablename)
 	var sort []string
-	sortParts, hasSort := parts[dbox.QueryPartSelect]
+	sortParts, hasSort := parts[dbox.QueryPartOrder]
 	if hasSort {
 		sort = []string{}
 		for _, sl := range sortParts.([]interface{}) {
@@ -138,13 +182,36 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		//where = iwhere.(toolkit.M)
 	}
 
+	pipes := []toolkit.M{}
+	pipe := parts["pipe"]
+	if pipe != nil {
+		aggregate = true
+		pipes = pipe.([]interface{})[0].(*dbox.QueryPart).Value.([]toolkit.M)
+	}
+
 	session := q.Session()
 	mgoColl := session.DB(dbname).C(tablename)
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.(*Cursor).session = session
 	cursor.(*Cursor).isPoolingSession = q.usePooling
 
-	if !aggregate {
+	if aggregate == true {
+		if len(pipes) == 0 {
+			pipes = append(pipes, toolkit.M{}.Set("$group", aggrExpression))
+		}
+		if hasWhere {
+			pipes = append(append([]toolkit.M{}, toolkit.M{}.Set("$match", where)), pipes...)
+		}
+		mgoPipe := session.DB(dbname).C(tablename).
+			Pipe(pipes).AllowDiskUse()
+		toolkit.Printf("Pipe: %s \n", toolkit.JsonString(pipes))
+		//iter := mgoPipe.Iter()
+
+		cursor.(*Cursor).ResultType = QueryResultPipe
+		cursor.(*Cursor).mgoPipe = mgoPipe
+		//cursor.(*Cursor).mgoIter = iter
+
+	} else {
 		mgoCursor := mgoColl.Find(where)
 		count, e := mgoCursor.Count()
 		if e != nil {
@@ -168,15 +235,10 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		cursor.(*Cursor).mgoCursor = mgoCursor
 		cursor.(*Cursor).count = count
 		//cursor.(*Cursor).mgoIter = mgoCursor.Iter()
-	} else {
-		pipes := toolkit.M{}
-		mgoPipe := session.DB(dbname).C(tablename).
-			Pipe(pipes).AllowDiskUse()
-		//iter := mgoPipe.Iter()
+	}
 
-		cursor.(*Cursor).ResultType = QueryResultPipe
-		cursor.(*Cursor).mgoPipe = mgoPipe
-		//cursor.(*Cursor).mgoIter = iter
+	if cursor == nil {
+		return nil, errorlib.Error(packageName, modQuery, "Cursor", "Unable to initialize cursor. This is likely caused by unimplemented command or invalid series of query")
 	}
 	return cursor, nil
 }

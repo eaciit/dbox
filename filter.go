@@ -107,6 +107,14 @@ func Eq(field string, value interface{}) *Filter {
 	return f
 }
 
+func Contains(field string, value interface{}) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpContains)
+	f.Value = value
+	return f
+}
+
 func And(fs ...*Filter) *Filter {
 	f := new(Filter)
 	f.Op = string(FilterOpAnd)
@@ -118,5 +126,66 @@ func Or(fs ...*Filter) *Filter {
 	f := new(Filter)
 	f.Op = string(FilterOpOr)
 	f.Value = fs
+	return f
+}
+
+func Ne(field string, value interface{}) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpNoEqual)
+	f.Value = value
+	return f
+}
+
+
+func In(field string, value []string) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpIn)
+	f.Value = value
+	return f
+}
+
+func Nin(field string, value []string) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpNin)
+	f.Value = value
+	return f
+}
+
+func Gt(field string, value int) *Filter {
+
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpGt)
+	f.Value = value
+	return f
+}
+
+func Gte(field string, value int) *Filter {
+
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpGte)
+	f.Value = value
+	return f
+}
+
+func Lt(field string, value int) *Filter {
+
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpLt)
+	f.Value = value
+	return f
+}
+
+func Lte(field string, value int) *Filter {
+
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpLte)
+	f.Value = value
 	return f
 }

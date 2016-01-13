@@ -2,11 +2,11 @@ package json
 
 import (
 	"encoding/json"
-	// "fmt"
+	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
-	"io"
+	// "io"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -27,6 +27,7 @@ type Connection struct {
 	writer                 *json.Encoder
 	isNewSave              bool
 	lines                  int
+	getJsonToMap           toolkit.Ms
 }
 
 func init() {
@@ -55,7 +56,18 @@ func (c *Connection) Connect() error {
 	}
 
 	_, e := os.Stat(ci.Host)
-	if os.IsNotExist(e) {
+	if ci.Settings != nil {
+		if ci.Settings["newfile"] == true {
+			if os.IsNotExist(e) {
+				create, _ := os.Create(ci.Host)
+				create.Close()
+			}
+		} else {
+			if os.IsNotExist(e) {
+				return errorlib.Error(packageName, modConnection, "Connect", "Create new file is false")
+			}
+		}
+	} else if os.IsNotExist(e) {
 		return errorlib.Error(packageName, modConnection, "Connect", "No json file found")
 	}
 
@@ -81,7 +93,7 @@ func (c *Connection) OpenSession() error {
 
 	t, e := os.OpenFile(c.filePath, os.O_RDWR, 0)
 	if e != nil {
-		return errorlib.Error(packageName, modConnection, "Read File", "Cannot open file")
+		return errorlib.Error(packageName, modConnection, "Open File", e.Error())
 	}
 	c.openFile = t
 
@@ -90,8 +102,16 @@ func (c *Connection) OpenSession() error {
 		return errorlib.Error(packageName, modQuery+".Exec", "Read file", e.Error())
 	}
 
-	if string(i) == "" {
+	var hoomanJson toolkit.Ms
+	e = toolkit.Unjson(i, &hoomanJson)
+	if e != nil {
+		return errorlib.Error(packageName, modQuery+".Exec", "Cannot Unjson", e.Error())
+	}
+
+	if len(hoomanJson) == 0 {
 		c.isNewSave = true
+	} else {
+		c.getJsonToMap = hoomanJson
 	}
 
 	return nil
@@ -128,54 +148,10 @@ func (c *Connection) CloseWriteSession() error {
 	return nil
 }
 
-func (c *Connection) OpenSaveSession() error {
-	c.Close()
-
-	///create temp text file
-	basePath, baseFile, sep := c.GetBaseFilepath()
-	splitBaseFile := strings.Split(baseFile, ".")
-	tempPathFile := basePath + sep + splitBaseFile[0] + ".temp"
-	create, _ := os.Create(tempPathFile)
-	create.Close()
-
-	t, e := os.OpenFile(tempPathFile, os.O_WRONLY|os.O_APPEND, 0)
-	if e != nil {
-		return errorlib.Error(packageName, modConnection, "Open File", "Cannot open file")
-	}
-	c.openFile = t
-	c.writer = json.NewEncoder(t)
-	c.tempPathFile = tempPathFile
-	c.dataType = "struct"
-
-	i, e := ioutil.ReadFile(c.filePath)
-	if e != nil {
-		return errorlib.Error(packageName, modQuery+".Exec", "Read file", e.Error())
-	}
-
-	if string(i) == "" {
-		c.isNewSave = true
-	} else {
-		///do backup to temp file
-
-		src, e := os.OpenFile(c.filePath, os.O_RDONLY|os.O_SYNC, 0)
-		defer src.Close()
-		if _, e = io.Copy(t, src); e != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", "Copy file", e.Error())
-		}
-
-		s := c.RemLastLine(tempPathFile, "hasSave")
-		e = ioutil.WriteFile(tempPathFile, []byte(s), 0666)
-		if e != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", "Write file", e.Error())
-		}
-	}
-	return nil
-}
-
 func (c *Connection) FetchSession() error {
 	///create temp text file
 	basePath, _, sep := c.GetBaseFilepath()
-	tempPathFile := basePath + sep + "fetch.temp"
+	tempPathFile := fmt.Sprintf("%s%sfetch.temp", basePath, sep) //basePath + sep + "fetch.temp"
 	_, e := os.Stat(tempPathFile)
 	if os.IsNotExist(e) {
 		create, _ := os.Create(tempPathFile)
@@ -207,7 +183,7 @@ func (c *Connection) GetBaseFilepath() (string, string, string) {
 	return strings.Join(removeLastSlice, separator), splitString[len(splitString)-1], separator
 }
 
-func (c *Connection) RemLastLine(filename, methodType string) string {
+/*func (c *Connection) RemLastLine(filename, methodType string) string {
 	var (
 		s         string
 		delimiter byte
@@ -227,3 +203,4 @@ func (c *Connection) RemLastLine(filename, methodType string) string {
 	}
 	return s
 }
+*/
