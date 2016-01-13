@@ -155,6 +155,39 @@ func TestSelectAggregate(t *testing.T) {
 	}
 }
 
+func TestSelectAggregateUsingCommand(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	//fb := c.Fb()
+	pipe := toolkit.M{}.Set("$group",toolkit.M{}.Set("_id","$enable").Set("count":toolkit.M{}.Set("$sum":1)))
+	csr, e := c.NewQuery().
+		Command("pipe",pipe)
+		From("ORMUsers").
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	ds, e := csr.Fetch(nil, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch OK. Result: %v \n",
+			toolkit.JsonString(ds.Data))
+
+	}
+}
 // func TestCRUD(t *testing.T) {
 // 	//t.Skip()
 // 	c, e := prepareConnection()
