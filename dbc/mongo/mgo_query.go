@@ -236,6 +236,10 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		cursor.(*Cursor).count = count
 		//cursor.(*Cursor).mgoIter = mgoCursor.Iter()
 	}
+
+	if cursor == nil {
+		return nil, errorlib.Error(packageName, modQuery, "Cursor", "Unable to initialize cursor. This is likely caused by unimplemented command or invalid series of query")
+	}
 	return cursor, nil
 }
 
