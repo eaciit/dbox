@@ -12,7 +12,7 @@ type ICursor interface {
 	Close()
 	Count() int
 	ResetFetch() error
-	Fetch(interface{}, int, bool) (*DataSet, error)
+	Fetch(interface{}, int, bool) error
 
 	//--- getter
 	Connection() IConnection
@@ -66,6 +66,6 @@ func (c *Cursor) ResetFetch() error {
 }
 
 func (c *Cursor) Fetch(o interface{}, n int,
-	closeWhenDone bool) (*DataSet, error) {
-	return nil, errorlib.Error(packageName, modCursor, "Fetch", errorlib.NotYetImplemented)
+	closeWhenDone bool) error {
+	return errorlib.Error(packageName, modCursor, "Fetch", errorlib.NotYetImplemented)
 }

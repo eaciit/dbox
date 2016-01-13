@@ -95,12 +95,12 @@ func TestQueryAggregate(t *testing.T) {
 	}
 	defer cursor.Close()
 
-	//results := make([]toolkit.M, 0)
-	ds, e := cursor.Fetch(nil, 0, false)
+	results := make([]toolkit.M, 0)
+	e = cursor.Fetch(&results, 0, false)
 	if e != nil {
 		t.Errorf("Unable to iterate cursor %s", e.Error())
 	} else {
-		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(ds.Data))
+		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(results))
 	}
 }
 
@@ -113,14 +113,14 @@ func TestProcedure(t *testing.T) {
 	}
 	defer cursor.Close()
 
-	//results := make([]toolkit.M, 0)
-	ds, e := cursor.Fetch(nil, 0, false)
+	results := make([]toolkit.M, 0)
+	e = cursor.Fetch(&results, 0, false)
 	if e != nil {
 		t.Fatalf("Unable to iterate cursor %s", e.Error())
-	} else if len(ds.Data) == 0 {
+	} else if len(results) == 0 {
 		t.Fatalf("No record returned")
 	} else {
-		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(ds.Data))
+		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(results[0:10]))
 	}
 }
 
