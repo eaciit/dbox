@@ -109,14 +109,16 @@ func TestProcedure(t *testing.T) {
 	inProc := toolkit.M{}.Set("name", "spSelectByFullName").Set("parms", toolkit.M{}.Set("@name", "User 20"))
 	cursor, e := ctx.NewQuery().Command("procedure", inProc).Cursor(nil)
 	if e != nil {
-		t.Errorf("Unable to generate cursor. %s", e.Error())
+		t.Fatalf("Unable to generate cursor. %s", e.Error())
 	}
 	defer cursor.Close()
 
 	//results := make([]toolkit.M, 0)
 	ds, e := cursor.Fetch(nil, 0, false)
 	if e != nil {
-		t.Errorf("Unable to iterate cursor %s", e.Error())
+		t.Fatalf("Unable to iterate cursor %s", e.Error())
+	} else if len(ds.Data) == 0 {
+		t.Fatalf("No record returned")
 	} else {
 		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(ds.Data))
 	}

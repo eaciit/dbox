@@ -102,7 +102,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			aggrExpression.Set(aggr.Alias, toolkit.M{}.Set(aggr.Op, aggr.Field))
 			//}
 		}
-		toolkit.Printf("Aggr: %s\n", toolkit.JsonString(aggrExpression))
+		//toolkit.Printf("Aggr: %s\n", toolkit.JsonString(aggrExpression))
 	}
 	partGroup, hasGroup := parts[dbox.QueryPartGroup]
 	if hasGroup {
@@ -204,7 +204,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 		mgoPipe := session.DB(dbname).C(tablename).
 			Pipe(pipes).AllowDiskUse()
-		toolkit.Printf("Pipe: %s \n", toolkit.JsonString(pipes))
+		//toolkit.Printf("Pipe: %s \n", toolkit.JsonString(pipes))
 		//iter := mgoPipe.Iter()
 
 		cursor.(*Cursor).ResultType = QueryResultPipe
