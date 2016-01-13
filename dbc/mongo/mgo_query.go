@@ -182,6 +182,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		//where = iwhere.(toolkit.M)
 	}
 
+	pipes := []toolkit.M{}
+	pipe := parts["pipe"]
+	if pipe != nil {
+		aggregate = true
+		pipes = pipe.([]interface{})[0].(*dbox.QueryPart).Value.([]toolkit.M)
+	}
+
 	session := q.Session()
 	mgoColl := session.DB(dbname).C(tablename)
 	cursor := dbox.NewCursor(new(Cursor))
@@ -189,14 +196,12 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	cursor.(*Cursor).isPoolingSession = q.usePooling
 
 	if aggregate == true {
-		pipes := []toolkit.M{}
-
-		if hasWhere {
-			pipes = append(pipes, toolkit.M{}.Set("$match", where))
+		if len(pipes) == 0 {
+			pipes = append(pipes, toolkit.M{}.Set("$group", aggrExpression))
 		}
-
-		pipes = append(pipes, toolkit.M{}.Set("$group", aggrExpression))
-
+		if hasWhere {
+			pipes = append(append([]toolkit.M{}, toolkit.M{}.Set("$match", where)), pipes...)
+		}
 		mgoPipe := session.DB(dbname).C(tablename).
 			Pipe(pipes).AllowDiskUse()
 		toolkit.Printf("Pipe: %s \n", toolkit.JsonString(pipes))

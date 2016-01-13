@@ -164,7 +164,7 @@ func TestSelectAggregateUsingCommand(t *testing.T) {
 	defer c.Close()
 
 	//fb := c.Fb()
-	pipe := toolkit.M{}.Set("$group", toolkit.M{}.Set("_id", "$enable").Set("count", toolkit.M{}.Set("$sum", 1)))
+	pipe := []toolkit.M{toolkit.M{}.Set("$group", toolkit.M{}.Set("_id", "$enable").Set("count", toolkit.M{}.Set("$sum", 1)))}
 	csr, e := c.NewQuery().
 		Command("pipe", pipe).
 		From("ORMUsers").
