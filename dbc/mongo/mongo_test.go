@@ -185,8 +185,28 @@ func TestSelectAggregateUsingCommand(t *testing.T) {
 	} else {
 		fmt.Printf("Fetch OK. Result: %v \n",
 			toolkit.JsonString(ds.Data))
-
 	}
+}
+
+func TestProcedure(t *testing.T) {
+	c, _ := prepareConnection()
+	defer c.Close()
+
+	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "spSomething").Set("parms", toolkit.M{}.Set("@name", "EACIIT")))
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	ds, e := csr.Fetch(nil, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch OK. Result: %v \n",
+			toolkit.JsonString(ds.Data))
+	}
+
 }
 
 // func TestCRUD(t *testing.T) {
