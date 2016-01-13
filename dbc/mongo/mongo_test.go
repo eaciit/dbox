@@ -130,10 +130,10 @@ func TestSelectAggregate(t *testing.T) {
 
 	//fb := c.Fb()
 	csr, e := c.NewQuery().
-		Aggr(dbox.AggrSum, 1, "Count").
-		//Aggr(dbox.AggrSum, 1, "Avg").
-		From("appusers").
-		Group("").
+		Aggr(dbox.AggrSum, 1, "Sum").
+		Aggr(dbox.AggrMax, "$fullname", "Name").
+		From("ORMUsers").
+		Group("enable").
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -150,7 +150,7 @@ func TestSelectAggregate(t *testing.T) {
 		t.Errorf("Unable to fetch: %s \n", e.Error())
 	} else {
 		fmt.Printf("Fetch OK. Result: %v \n",
-			toolkit.JsonString(ds.Data[0]))
+			toolkit.JsonString(ds.Data))
 
 	}
 }
