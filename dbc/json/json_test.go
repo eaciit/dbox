@@ -5,12 +5,15 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
 	// "io"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
 func prepareConnection() (dbox.IConnection, error) {
 	config := toolkit.M{"newfile": true} //for create new file, if you dont need just overwrite "config" with "nil"
-	ci := &dbox.ConnectionInfo{"E:\\WORKS\\data_test\\testtables.json", "", "", "", config}
+	wd, _ := os.Getwd()
+	ci := &dbox.ConnectionInfo{filepath.Join(wd, "test.json"), "", "", "", config}
 
 	c, e := dbox.NewConnection("json", ci)
 	if e != nil {
