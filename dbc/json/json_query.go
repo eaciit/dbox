@@ -236,14 +236,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
 		} else {
-			readF, _ := ioutil.ReadFile(filePath)
+			readF, e := ioutil.ReadFile(filePath)
+			if e != nil {
+				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+			}
 
 			var dataMap []map[string]interface{}
-			e := json.Unmarshal(readF, &dataMap)
+			e = json.Unmarshal(readF, &dataMap)
 			if e != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
-			dataToMap, _ := toolkit.ToM(data)
+			dataToMap, e := toolkit.ToM(data)
+			if e != nil {
+				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+			}
 
 			_, updatedValue := finUpdateObj(dataMap, dataToMap, "insert")
 			jsonUpdatedValue, e = json.MarshalIndent(updatedValue, "", "  ")
@@ -266,14 +272,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 		if multi {
 			// 		_, e = mgoColl.UpdateAll(where, data)
 		} else {
-			readF, _ := ioutil.ReadFile(filePath)
+			readF, e := ioutil.ReadFile(filePath)
+			if e != nil {
+				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+			}
 
 			var dataMap []map[string]interface{}
-			e := json.Unmarshal(readF, &dataMap)
+			e = json.Unmarshal(readF, &dataMap)
 			if e != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 			}
-			a, _ := toolkit.ToM(data)
+			a, e := toolkit.ToM(data)
+			if e != nil {
+				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+			}
 
 			updatedValue, _ := finUpdateObj(dataMap, a, "update")
 
@@ -300,14 +312,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 	} else if commandType == dbox.QueryPartDelete {
 		if multi {
 			if where != nil {
-				readF, _ := ioutil.ReadFile(filePath)
+				readF, e := ioutil.ReadFile(filePath)
+				if e != nil {
+					return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+				}
 
 				var dataMap []map[string]interface{}
-				e := json.Unmarshal(readF, &dataMap)
+				e = json.Unmarshal(readF, &dataMap)
 				if e != nil {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
-				a, _ := toolkit.ToM(where)
+				a, e := toolkit.ToM(where)
+				if e != nil {
+					return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+				}
 
 				updatedValue, _ := finUpdateObj(dataMap, a, "deleteMulti")
 
@@ -342,7 +360,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 				_, err := os.Stat(filePath)
 				if os.IsNotExist(err) {
-					cf, _ := os.Create(filePath)
+					cf, e := os.Create(filePath)
+					if e != nil {
+						return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+					}
 					cf.Close()
 				}
 				ioutil.WriteFile(q.Connection().(*Connection).filePath, []byte("[\n]"), 0666)
@@ -369,7 +390,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			} else {
-				readF, _ := ioutil.ReadFile(filePath)
+				readF, e := ioutil.ReadFile(filePath)
+				if e != nil {
+					return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+				}
 
 				var dataMap, newData []map[string]interface{}
 				if e := json.Unmarshal(readF, &dataMap); e != nil {
@@ -398,7 +422,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 				q.Connection().(*Connection).OpenSession()
 			}
 			q.dataType = "struct"
-			dataMap, _ := toolkit.ToM(data)
+			dataMap, e := toolkit.ToM(data)
+			if e != nil {
+				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+			}
 			q.sliceData = append(q.sliceData, dataMap)
 
 			if q.Connection().(*Connection).isNewSave {
