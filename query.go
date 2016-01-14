@@ -68,7 +68,7 @@ type IQuery interface {
 	Order(...string) IQuery
 	Group(...string) IQuery
 
-	Command(string, toolkit.M) IQuery
+	Command(string, interface{}) IQuery
 	Aggr(string, interface{}, string) IQuery
 
 	//-- op
@@ -130,13 +130,13 @@ func populateParmValue(inputM *toolkit.M, parms toolkit.M) {
 	*inputM = in
 }
 
-func (q *Query) Command(commandName string, m toolkit.M) IQuery {
-	q.initParts()
+func (q *Query) Command(commandName string, m interface{}) IQuery {
+	//q.initParts()
 	qp := new(QueryPart)
 	qp.PartType = commandName
 	qp.Value = m
-	q.parts = append(q.parts, qp)
-	return q
+	//q.parts = append(q.parts, qp)
+	return q.AddPart(qp)
 }
 
 func (q *Query) Parts() []*QueryPart {
