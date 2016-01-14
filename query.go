@@ -68,6 +68,7 @@ type IQuery interface {
 	Order(...string) IQuery
 	Group(...string) IQuery
 
+	Command(string, interface{}) IQuery
 	Aggr(string, interface{}, string) IQuery
 
 	//-- op
@@ -109,6 +110,33 @@ func (q *Query) this() IQuery {
 	} else {
 		return q.thisQuery
 	}
+}
+
+func (q *Query) initParts() {
+	if q.parts == nil {
+		q.parts = []*QueryPart{}
+	}
+}
+
+func populateParmValue(inputM *toolkit.M, parms toolkit.M) {
+	in := *inputM
+	for k, _ := range in {
+		if parms.Has(k) {
+			in[k] = parms[k]
+		} else {
+			in[k] = ""
+		}
+	}
+	*inputM = in
+}
+
+func (q *Query) Command(commandName string, m interface{}) IQuery {
+	//q.initParts()
+	qp := new(QueryPart)
+	qp.PartType = commandName
+	qp.Value = m
+	//q.parts = append(q.parts, qp)
+	return q.AddPart(qp)
 }
 
 func (q *Query) Parts() []*QueryPart {

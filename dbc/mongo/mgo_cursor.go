@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
-	_ "github.com/eaciit/toolkit"
+	. "github.com/eaciit/toolkit"
 	"gopkg.in/mgo.v2"
 	//"reflect"
 )
@@ -83,38 +83,54 @@ func (c *Cursor) ResetFetch() error {
 	return nil
 }
 
-func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
-	*dbox.DataSet, error) {
+func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	if closeWhenDone {
 		defer c.Close()
 	}
 
 	e := c.prepIter()
 	if e != nil {
-		return nil, errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
 	if c.mgoIter == nil {
-		return nil, errorlib.Error(packageName, modCursor, "Fetch", "Iter object is not yet initialized")
+		return errorlib.Error(packageName, modCursor, "Fetch", "Iter object is not yet initialized")
 	}
 
-	ds := dbox.NewDataSet(m)
+	if !IsPointer(m) {
+		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
+	}
+
+	//ds := dbox.NewDataSet(m)
+	//	var datas []interface{}
+	//	rt := reflect.TypeOf(m)
+	//datias := reflect.MakeSlice(rt, 0, 0)
 	if n == 0 {
-		datas := []interface{}{}
-		e = c.mgoIter.All(&datas)
+		//datas := []interface{}{}
+		e = c.mgoIter.All(m)
 		if e != nil {
-			return ds, errorlib.Error(packageName, modCursor,
+			return errorlib.Error(packageName, modCursor,
 				"Fetch", e.Error())
 		}
-		ds.Data = datas
-	} else if n > 0 {
+		//ds.Data = datas
+	} else if n == 1 {
+		c.mgoIter.Next(m)
+	} else if n > 1 {
 		fetched := 0
 		fetching := true
 		for fetching {
-			dataHolder := m
-
-			if bOk := c.mgoIter.Next(&dataHolder); bOk {
-				ds.Data = append(ds.Data, dataHolder)
+			dataHolder, e := GetEmptySliceElement(m)
+			if e != nil {
+				return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+			}
+			var bOk bool
+			if IsPointer(dataHolder) {
+				bOk = c.mgoIter.Next(dataHolder)
+			} else {
+				bOk = c.mgoIter.Next(&dataHolder)
+			}
+			if bOk {
+				AppendSlice(m, dataHolder)
 				fetched++
 				if fetched == n {
 					fetching = false
@@ -125,5 +141,5 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		}
 	}
 
-	return ds, nil
+	return nil
 }

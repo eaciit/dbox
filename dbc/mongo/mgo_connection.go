@@ -43,10 +43,10 @@ func (c *Connection) Connect() error {
 	if ci.UserName != "" {
 		info.Username = ci.UserName
 		info.Password = ci.Password
+		info.Source = "admin"
 	}
 	info.Addrs = []string{ci.Host}
 	info.Database = ci.Database
-	info.Source = "admin"
 
 	if ci.Settings == nil {
 		ci.Settings = toolkit.M{}
@@ -62,10 +62,11 @@ func (c *Connection) Connect() error {
 		info.Timeout = time.Duration(timeout) * time.Second
 	}
 
+	//sess, e := mgo.Dial(info.Addrs[0])
 	sess, e := mgo.DialWithInfo(info)
 	if e != nil {
 		return errorlib.Error(packageName, modConnection,
-			"Connect", e.Error())
+			"Connect", e.Error()+" "+ci.UserName+"@"+ci.Host+"/"+ci.Database)
 	}
 	sess.SetMode(mgo.Monotonic, true)
 	c.session = sess
