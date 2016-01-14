@@ -2,6 +2,7 @@ package csv
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/eaciit/dbox"
@@ -9,7 +10,7 @@ import (
 	"github.com/eaciit/toolkit"
 	"io"
 	"os"
-	// "reflect"
+	"reflect"
 )
 
 const (
@@ -95,8 +96,7 @@ func (c *Cursor) ResetFetch() error {
 // 	return nil
 // }
 
-func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
-	*dbox.DataSet, error) {
+func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	if closeWhenDone {
 		defer c.Close()
@@ -104,10 +104,31 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 
 	e := c.prepIter()
 	if e != nil {
-		return nil, errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	ds := dbox.NewDataSet(m)
+	// if !toolkit.IsPointer(m) {
+	// 	return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
+	// }
+	if n != 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
+		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer of slice")
+	}
+	// fmt.Println("LINE 112 : ", reflect.ValueOf(m).Elem().Kind())
+	// ds := dbox.NewDataSet(m)
+	// rm := reflect.ValueOf(m)
+	// // erm := rm.Elem()
+	// fmt.Println(rm)
+	// var v reflect.Type
+
+	// if n == 1 {
+	// 	v = reflect.TypeOf(m).Elem()
+	// } else {
+	// 	v = reflect.TypeOf(m).Elem().Elem()
+	// }
+
+	// vdatas := reflect.MakeSlice(reflect.SliceOf(v), 0, n)
+	// fmt.Println("LINE 122 : ", reflect.TypeOf(vdatas))
+	datas := []toolkit.M{}
 	lineCount := 0
 
 	//=============================
@@ -139,16 +160,16 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 
 		if e == io.EOF {
 			if isAppend && len(appendData) > 0 {
-				ds.Data = append(ds.Data, appendData)
+				datas = append(datas, appendData)
 				lineCount += 1
 			}
 			break
 		} else if e != nil {
-			return ds, errorlib.Error(packageName, modCursor,
+			return errorlib.Error(packageName, modCursor,
 				"Fetch", e.Error())
 		}
 		if isAppend && len(appendData) > 0 {
-			ds.Data = append(ds.Data, appendData)
+			datas = append(datas, appendData)
 			lineCount += 1
 		}
 
@@ -158,5 +179,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			}
 		}
 	}
-	return ds, nil
+
+	bs, _ := json.Marshal(datas)
+	_ = json.Unmarshal(bs, m)
+
+	return nil
 }
