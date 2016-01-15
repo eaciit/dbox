@@ -1,10 +1,8 @@
-
-
 package rdbms
 
 import (
 	"database/sql"
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
@@ -23,9 +21,9 @@ const (
 
 type Query struct {
 	dbox.Query
-	Sql            sql.DB
-	usePooling     bool
-	DriverDB       string
+	Sql        sql.DB
+	usePooling bool
+	DriverDB   string
 }
 
 func (q *Query) Session() sql.DB {
@@ -40,13 +38,10 @@ func (q *Query) Session() sql.DB {
 	return q.Sql
 }
 
-func (q *Query) GetDriverDB() string { 
-	q.DriverDB = q.Connection().(*Connection).Drivername 
+func (q *Query) GetDriverDB() string {
+	q.DriverDB = q.Connection().(*Connection).Drivername
 	return q.DriverDB
 }
-
- 
-
 
 func (q *Query) Close() {
 	// if q.Sql != nil && q.usePooling == false {
@@ -185,18 +180,18 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	return cursor, nil
 }
 
-func  StringValue(v interface{},db string) string {
+func StringValue(v interface{}, db string) string {
 	var ret string
 	switch v.(type) {
 	case string:
-		ret = fmt.Sprintf("%s","'"+ v.(string)+"'")
+		ret = fmt.Sprintf("%s", "'"+v.(string)+"'")
 	case time.Time:
-		t := v.(time.Time).UTC() 
-		if(strings.Contains(db,"oracle")){  
-			ret = "to_date('"+t.Format("2006-01-02 15:04:05")+"','yyyy-mm-dd hh24:mi:ss')" 	
-		}else{ 
-			ret = "'"+t.Format("2006-01-02 15:04:05")+"'" 
-		} 
+		t := v.(time.Time).UTC()
+		if strings.Contains(db, "oracle") {
+			ret = "to_date('" + t.Format("2006-01-02 15:04:05") + "','yyyy-mm-dd hh24:mi:ss')"
+		} else {
+			ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
+		}
 	case int, int32, int64, uint, uint32, uint64:
 		ret = fmt.Sprintf("%d", v.(int))
 	case nil:
@@ -214,63 +209,61 @@ func (q *Query) Exec(parm toolkit.M) error {
 		parm = toolkit.M{}
 	}
 	// fmt.Println("Parameter Exec : ", parm)
-	
+
 	dbname := q.Connection().Info().Database
 	tablename := ""
 
 	if parm == nil {
 		parm = toolkit.M{}
 	}
-	data := parm.Get("data", nil)  
-	 
+	data := parm.Get("data", nil)
+
 	// fmt.Println("Hasil ekstraksi Param : ", data)
 
 	//========================EXTRACT FIELD, DATA AND FORMAT DATE=============================
-    var attributes string
-	var tanya string
-	var values string //[]interface{}{}
-   if(data!=nil){
+
+	var attributes string
+	var values string
+	var setUpdate string
+
+	if data != nil {
+
 		var reflectValue = reflect.ValueOf(data)
-		if  reflectValue.Kind() == reflect.Ptr {
+		if reflectValue.Kind() == reflect.Ptr {
 			reflectValue = reflectValue.Elem()
 		}
-		var reflectType = reflectValue.Type() 
+		var reflectType = reflectValue.Type()
 
 		for i := 0; i < reflectValue.NumField(); i++ {
 			namaField := reflectType.Field(i).Name
-			//tipeData := reflectType.Field(i).Type
 			dataValues := reflectValue.Field(i).Interface()
+			stringValues := StringValue(dataValues, q.GetDriverDB())
 			if i == 0 {
 				attributes = "(" + namaField
-				tanya = "(" + "?"
-				values = StringValue(dataValues,q.GetDriverDB())
-
+				values = "(" + stringValues
+				setUpdate = namaField + " = " + stringValues
 			} else {
-				attributes = attributes + "," + namaField
-				tanya = tanya + "," + "?"
-				values = values+","+StringValue(dataValues,q.GetDriverDB())
-
+				attributes += " , " + namaField
+				values += " , " + stringValues
+				setUpdate += " , " + namaField + " = " + stringValues
 			}
-			// values = append(values, StringValue(dataValues))
-
 		}
+		attributes += ")"
+		values += ")"
 	}
+
 	//=================================END OF EXTRACTION=======================================
 
-	 
 	temp := ""
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
-		// fmt.Printf("[%s] QP = %s \n",
-		// 	toolkit.Id(data),
-		// 	toolkit.JsonString(qp))
 		temp = toolkit.JsonString(qp)
 		return qp.PartType
 	}, nil).Data
 
-	fromParts, hasFrom := parts[dbox.QueryPartFrom] 
+	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	if !hasFrom {
-		 
+
 		return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
 	}
 	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
@@ -287,12 +280,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 		where, e = fb.Build()
 		if e != nil {
-			 
+
 		} else {
-			 
+
 		}
-		 
-	} 
+
+	}
 	commandType := ""
 	multi := false
 
@@ -325,59 +318,30 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	}
 	session := q.Session()
-	row, _ := json.Marshal(data)
-	result := string(row) 
-	result = strings.Replace(result, "{", "", -1)
-	result = strings.Replace(result, "}", "", -1)
-	result = strings.Replace(result, "\\", "", -1) 
 
 	if dbname != "" && tablename != "" && multi == true {
 
 	}
 	if commandType == dbox.QueryPartInsert {
-	 
+
 	} else if commandType == dbox.QueryPartUpdate {
-		result := strings.Replace(result, ":", "=", -1)
-		datas := strings.Split(result, ",")
-		var attribute []string
-		var set string
-		var vals []string
-		for i := 0; i < len(datas); i++ {
-			rows := strings.Split(datas[i], "=")
-			for j := 0; j < len(rows); j++ {
-				if j == 0 {
-					rows[j] = strings.Replace(rows[j], "\"", "", -1)
-					attribute = append(attribute, rows[j])
-				} else {
-					vals = append(vals, rows[j])
-				}
-			}
-		}
-		for i := 0; i < len(attribute); i++ {
-			if i == 0 {
-				vals[i] = strings.Replace(vals[i], "\"", "'", -1)
-				set = set + attribute[i] + "=" + vals[i]
-			} else {
-				vals[i] = strings.Replace(vals[i], "\"", "'", -1)
-				set = set + "," + attribute[i] + "=" + vals[i]
-			}
-		}
-		statement := "UPDATE " + tablename + " SET " + set + " WHERE " + cast.ToString(where)
-		fmt.Println(statement)
+		statement := "UPDATE " + tablename + " SET " + setUpdate + " WHERE " + cast.ToString(where)
+		fmt.Println("Update Statement : ", statement)
 		_, e = session.Exec(statement)
 		if e != nil {
 			fmt.Println(e.Error())
 		}
+
 	} else if commandType == dbox.QueryPartDelete {
 		if where == nil {
-			statement :="DELETE FROM "+ tablename
+			statement := "DELETE FROM " + tablename
 			fmt.Println(statement)
 			_, e = session.Exec(statement)
 			if e != nil {
 				fmt.Println(e.Error())
 			}
 		} else {
-			statement :="DELETE FROM " + tablename + " where " + cast.ToString(where)
+			statement := "DELETE FROM " + tablename + " where " + cast.ToString(where)
 			fmt.Println(statement)
 			_, e = session.Exec(statement)
 			if e != nil {
@@ -386,35 +350,13 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 
 	} else if commandType == dbox.QueryPartSave {
-		attributes = attributes + ")"
-		tanya = tanya + ")"
-		
-		// sqlStr := "INSERT INTO " + tablename + " " + attributes + " VALUES " + tanya
-		// val :=""
-		// for i := 0; i < len(values); i++ {
-		// 	if(i==0){
-		// 		val="("+cast.ToString(values[i])
-		// 	}else{
-		// 		val=val+","+cast.ToString(values[i])
-		// 	}
-		// }
 
-		// val=val+")"
-		statement := "INSERT INTO " + tablename + " " + attributes + " VALUES ( "+values+ " )"		
-		// fmt.Println("Syntax Insert : ", sqlStr)
-		// fmt.Println("Data yang akan di insert : ", values)
-		// stmt, _ := session.Prepare(sqlStr)
-		// fmt.Println("Session data : ", stmt)
-
-		// res, e := stmt.Exec(values...)
-		// if e != nil {
-		// 	fmt.Println(res)
-		// }
-		// fmt.Println(statement)
+		statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+		fmt.Println("Insert Statement : ", statement)
 		_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
+		if e != nil {
+			fmt.Println(e.Error())
+		}
 	}
 	if e != nil {
 		return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
