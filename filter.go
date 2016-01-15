@@ -88,6 +88,7 @@ func (fb *FilterBuilder) Build() (interface{}, error) {
 		}
 		mfilters = append(mfilters, fbout)
 	}
+	fb.Filters = []*Filter{}
 	return fb.this().CombineFilters(mfilters)
 }
 
@@ -100,6 +101,7 @@ func (fb *FilterBuilder) CombineFilters(mfs []interface{}) (interface{}, error) 
 }
 
 func Eq(field string, value interface{}) *Filter {
+
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpEqual)
@@ -107,48 +109,10 @@ func Eq(field string, value interface{}) *Filter {
 	return f
 }
 
-func Contains(field string, value interface{}) *Filter {
-	f := new(Filter)
-	f.Field = field
-	f.Op = string(FilterOpContains)
-	f.Value = value
-	return f
-}
-
-func And(fs ...*Filter) *Filter {
-	f := new(Filter)
-	f.Op = string(FilterOpAnd)
-	f.Value = fs
-	return f
-}
-
-func Or(fs ...*Filter) *Filter {
-	f := new(Filter)
-	f.Op = string(FilterOpOr)
-	f.Value = fs
-	return f
-}
-
-func Ne(field string, value interface{}) *Filter {
+func Neq(field string, value interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpNoEqual)
-	f.Value = value
-	return f
-}
-
-func In(field string, value []interface{}) *Filter {
-	f := new(Filter)
-	f.Field = field
-	f.Op = string(FilterOpIn)
-	f.Value = value
-	return f
-}
-
-func Nin(field string, value []interface{}) *Filter {
-	f := new(Filter)
-	f.Field = field
-	f.Op = string(FilterOpNin)
 	f.Value = value
 	return f
 }
@@ -182,5 +146,43 @@ func Lte(field string, value interface{}) *Filter {
 	f.Field = field
 	f.Op = string(FilterOpLte)
 	f.Value = value
+	return f
+}
+
+func In(field string, invalues ...interface{}) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpIn)
+	f.Value = invalues
+	return f
+}
+
+func Nin(field string, invalues ...interface{}) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpNin)
+	f.Value = invalues
+	return f
+}
+
+func Contains(field string, values ...string) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpContains)
+	f.Value = values
+	return f
+}
+
+func And(fs ...*Filter) *Filter {
+	f := new(Filter)
+	f.Op = string(FilterOpAnd)
+	f.Value = fs
+	return f
+}
+
+func Or(fs ...*Filter) *Filter {
+	f := new(Filter)
+	f.Op = string(FilterOpOr)
+	f.Value = fs
 	return f
 }

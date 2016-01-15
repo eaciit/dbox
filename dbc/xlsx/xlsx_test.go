@@ -75,18 +75,19 @@ func TestSelect(t *testing.T) {
 	}
 	defer csr.Close()
 
-	ds, e := csr.Fetch(nil, 5, false)
+	results := make([]map[string]interface{}, 0)
+	e = csr.Fetch(&results, 5, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N1: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch N1 OK. Result: %v \n", ds.Data)
+		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
 	}
 
-	ds, e = csr.Fetch(nil, 3, false)
+	e = csr.Fetch(&results, 3, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N2: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch N2 OK. Result: %v \n", ds.Data)
+		fmt.Printf("Fetch N2 OK. Result: %v \n", results)
 	}
 
 	// e = csr.ResetFetch()

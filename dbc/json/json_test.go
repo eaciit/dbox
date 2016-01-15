@@ -5,12 +5,15 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
 	// "io"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
 func prepareConnection() (dbox.IConnection, error) {
 	config := toolkit.M{"newfile": true} //for create new file, if you dont need just overwrite "config" with "nil"
-	ci := &dbox.ConnectionInfo{"E:\\WORKS\\data_test\\testtables.json", "", "", "", config}
+	wd, _ := os.Getwd()
+	ci := &dbox.ConnectionInfo{filepath.Join(wd, "test.json"), "", "", "", config}
 
 	c, e := dbox.NewConnection("json", ci)
 	if e != nil {
@@ -69,11 +72,13 @@ func TestSelect(t *testing.T) {
 
 	//rets := []toolkit.M{}
 
-	ds, e := csr.Fetch(nil, 0, false)
+	//ds, e := csr.Fetch(nil, 0, false)
+	results := make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 0, false)
 	if e != nil {
 		t.Errorf("Unable to fetch all: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch all OK. Result: %d \n", len(ds.Data))
+		fmt.Printf("Fetch all OK. Result: %v \n", len(results))
 	}
 
 	e = csr.ResetFetch()
@@ -81,12 +86,22 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Unable to reset fetch: %s \n", e.Error())
 	}
 
-	ds, e = csr.Fetch(nil, 3, false)
+	//ds, e = csr.Fetch(nil, 3, false)
+	// resultToN := make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 3, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch N OK. Result: %v \n",
-			ds.Data)
+		fmt.Printf("Fetch N3 OK. Result: %v \n",
+			results)
+	}
+
+	e = csr.Fetch(&results, 4, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N4 OK. Result: %v \n",
+			results)
 	}
 }
 
@@ -114,12 +129,14 @@ func TestSelectFilter(t *testing.T) {
 
 	//rets := []toolkit.M{}
 
-	ds, e := csr.Fetch(nil, 0, false)
+	//ds, e := csr.Fetch(nil, 0, false)
+	results := make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 0, false)
 	if e != nil {
 		t.Errorf("Unable to fetch: %s \n", e.Error())
 	} else {
 		fmt.Printf("Fetch OK. Result: %v \n",
-			toolkit.JsonString(ds.Data[0]))
+			toolkit.JsonString(results[0]))
 
 	}
 }
