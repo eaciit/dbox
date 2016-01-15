@@ -57,7 +57,67 @@ func TestSelect(t *testing.T) {
 	}
 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("id", "email").Cursor(nil)
+	csr, e := c.NewQuery().Select("*").Cursor(nil)
+
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+
+	defer csr.Close()
+
+	//rets := []toolkit.M{}
+
+	// results := make([]toolkit.M, 0)
+	type App struct {
+		Id    string `json:"id"`
+		Title string `json:"title"`
+		Email string `json:"email"`
+	}
+
+	var apps []App
+	e = csr.Fetch(&apps, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch all: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch all OK. Result: %v \n", len(apps))
+	}
+
+	e = csr.ResetFetch()
+	if e != nil {
+		t.Errorf("Unable to reset fetch: %s \n", e.Error())
+	}
+
+	//ds, e = csr.Fetch(nil, 3, false)
+	e = csr.Fetch(&apps, 3, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N3 OK. Result: %v \n",
+			apps)
+	}
+
+	e = csr.Fetch(&apps, 4, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N4 OK. Result: %v \n",
+			apps)
+	}
+}
+
+func TestSelectAll(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().Cursor(nil)
 
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -78,30 +138,7 @@ func TestSelect(t *testing.T) {
 	if e != nil {
 		t.Errorf("Unable to fetch all: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch all OK. Result: %v \n", len(results))
-	}
-
-	e = csr.ResetFetch()
-	if e != nil {
-		t.Errorf("Unable to reset fetch: %s \n", e.Error())
-	}
-
-	//ds, e = csr.Fetch(nil, 3, false)
-	// resultToN := make([]toolkit.M, 0)
-	e = csr.Fetch(&results, 3, false)
-	if e != nil {
-		t.Errorf("Unable to fetch N: %s \n", e.Error())
-	} else {
-		fmt.Printf("Fetch N3 OK. Result: %v \n",
-			results)
-	}
-
-	e = csr.Fetch(&results, 4, false)
-	if e != nil {
-		t.Errorf("Unable to fetch N: %s \n", e.Error())
-	} else {
-		fmt.Printf("Fetch N4 OK. Result: %v \n",
-			results)
+		fmt.Printf("Fetch all fields. Result: %v \n", toolkit.JsonString(results[0]))
 	}
 }
 
@@ -129,14 +166,20 @@ func TestSelectFilter(t *testing.T) {
 
 	//rets := []toolkit.M{}
 
-	//ds, e := csr.Fetch(nil, 0, false)
-	results := make([]toolkit.M, 0)
-	e = csr.Fetch(&results, 0, false)
+	// results := make([]toolkit.M, 0)
+	type App struct {
+		Id    string `json:"id"`
+		Title string `json:"title"`
+		Email string `json:"email"`
+	}
+
+	var apps []App
+	e = csr.Fetch(&apps, 0, false)
 	if e != nil {
 		t.Errorf("Unable to fetch: %s \n", e.Error())
 	} else {
 		fmt.Printf("Fetch OK. Result: %v \n",
-			toolkit.JsonString(results[0]))
+			toolkit.JsonString(apps[0]))
 
 	}
 }
@@ -202,7 +245,8 @@ func TestCRUD(t *testing.T) {
 		return
 	}
 
-	q := c.NewQuery().SetConfig("multiexec", true).Save()
+	///Test save 10000 datas
+	/*q := c.NewQuery().SetConfig("multiexec", true).Save()
 	for i := 1; i <= 10000; i++ {
 		//go func(q dbox.IQuery, i int) {
 		data := user{}
@@ -221,29 +265,29 @@ func TestCRUD(t *testing.T) {
 		}
 
 	}
-	q.Close()
+	q.Close()*/
 
-	/*/// Test slice json
-	var dataArray []user
+	///Test save with same id's
+	q := c.NewQuery().SetConfig("multiexec", true).Save()
 	for i := 1; i <= 10; i++ {
 		//go func(q dbox.IQuery, i int) {
 		data := user{}
-		data.Id = fmt.Sprintf("User-%d", i)
+		data.Id = fmt.Sprintf("User-%d", 4)
 		data.Title = fmt.Sprintf("User-%d's name", i)
 		data.Email = fmt.Sprintf("User-%d@myco.com", i)
 		if i == 10 || i == 20 || i == 30 {
 			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
 		}
-		dataArray = append(dataArray, data)
-	}
 
-	e = q.Exec(toolkit.M{
-		"data": dataArray,
-	})
-	if e != nil {
-		t.Errorf("Unable to save: %s \n", e.Error())
+		e = q.Exec(toolkit.M{
+			"data": data,
+		})
+		if e != nil {
+			t.Errorf("Unable to save: %s \n", e.Error())
+		}
+
 	}
-	q.Close()*/
+	q.Close()
 
 	///insert
 	dataInsert := user{}

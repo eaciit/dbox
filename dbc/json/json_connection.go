@@ -22,10 +22,10 @@ type Connection struct {
 	dbox.Connection
 	// session *os.File
 	filePath, basePath, baseFileName,
-	separator, tempPathFile, dataType string
+	separator, tempPathFile, dataType, sData string
 	openFile, fetchSession *os.File
 	writer                 *json.Encoder
-	isNewSave              bool
+	isNewSave, sameId      bool
 	lines                  int
 	getJsonToMap           toolkit.Ms
 }
@@ -108,6 +108,9 @@ func (c *Connection) OpenSession() error {
 		return errorlib.Error(packageName, modQuery+".Exec", "Cannot Unjson", e.Error())
 	}
 
+	c.lines = 0
+	c.sData = ""
+	c.sameId = false
 	if len(hoomanJson) == 0 {
 		c.isNewSave = true
 	} else {
