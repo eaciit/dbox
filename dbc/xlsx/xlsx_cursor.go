@@ -1,7 +1,6 @@
 package xlsx
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/eaciit/dbox"
@@ -10,7 +9,7 @@ import (
 	"github.com/tealeg/xlsx"
 	// "io"
 	// "os"
-	"reflect"
+	// "reflect"
 )
 
 const (
@@ -107,32 +106,25 @@ func (c *Cursor) ResetFetch() error {
 // 	return nil
 // }
 
-func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
+func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
+	*dbox.DataSet, error) {
 
 	if closeWhenDone {
 		defer c.Close()
 	}
 
-	// if !toolkit.IsPointer(m) {
-	// 	return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
-	// }
-	if n != 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
-		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer of slice")
-	}
-
 	e := c.prepIter()
 	if e != nil {
-		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+		return nil, errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	datas := []toolkit.M{}
+	ds := dbox.NewDataSet(m)
 	// lineCount := 0
 	//=============================
 	maxGetData := c.count
 	if n > 0 {
 		maxGetData = c.fetchRow + n
 	}
-
 	linecount := 0
 
 	for _, row := range c.reader.Sheet[c.sheetname].Rows {
@@ -144,7 +136,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			if i < len(c.headerColumn) {
 				recData.Set(c.headerColumn[i].name, cell.Value)
 
-				if len(c.ConditionVal.Select) == 0 || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
+				if c.ConditionVal.Select == nil || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
 					appendData.Set(c.headerColumn[i].name, cell.Value)
 				} else {
 					if c.ConditionVal.Select.Get(c.headerColumn[i].name, 0).(int) == 1 {
@@ -163,7 +155,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		if isAppend && len(appendData) > 0 {
 			linecount += 1
 			if linecount > c.fetchRow {
-				datas = append(datas, appendData)
+				ds.Data = append(ds.Data, appendData)
 				c.fetchRow += 1
 			}
 		}
@@ -172,9 +164,5 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			break
 		}
 	}
-
-	bs, _ := json.Marshal(datas)
-	_ = json.Unmarshal(bs, m)
-
-	return nil
+	return ds, nil
 }

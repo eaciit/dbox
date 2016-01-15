@@ -2,7 +2,6 @@ package csv
 
 import (
 	"encoding/csv"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/eaciit/dbox"
@@ -10,7 +9,7 @@ import (
 	"github.com/eaciit/toolkit"
 	"io"
 	"os"
-	"reflect"
+	// "reflect"
 )
 
 const (
@@ -96,7 +95,8 @@ func (c *Cursor) ResetFetch() error {
 // 	return nil
 // }
 
-func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
+func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
+	*dbox.DataSet, error) {
 
 	if closeWhenDone {
 		defer c.Close()
@@ -104,35 +104,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	e := c.prepIter()
 	if e != nil {
-		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+		return nil, errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	// if !toolkit.IsPointer(m) {
-	// 	return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
-	// }
-	if n != 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
-		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer of slice")
-	}
-	// fmt.Println("LINE 112 : ", reflect.ValueOf(m).Elem().Kind())
-	// ds := dbox.NewDataSet(m)
-	// rm := reflect.ValueOf(m)
-	// // erm := rm.Elem()
-	// fmt.Println(rm)
-	// var v reflect.Type
-
-	// if n == 1 {
-	// 	v = reflect.TypeOf(m).Elem()
-	// } else {
-	// 	v = reflect.TypeOf(m).Elem().Elem()
-	// }
-
-	// iv := reflect.New(v).Elem()
-	// vdatas := reflect.Indirect(m)
-
-	// fmt.Println("LINE 131 : ", iv.Kind())
-	// vdatas := reflect.MakeSlice(reflect.SliceOf(v), 0, n)
-	// fmt.Println("LINE 133 : ", reflect.TypeOf(vdatas))
-	datas := []toolkit.M{}
+	ds := dbox.NewDataSet(m)
 	lineCount := 0
 
 	//=============================
@@ -147,7 +122,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		for i, val := range dataTemp {
 			recData[c.headerColumn[i].name] = val
 
-			if len(c.ConditionVal.Select) == 0 || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
+			if c.ConditionVal.Select == nil || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
 				appendData[c.headerColumn[i].name] = val
 			} else {
 				if c.ConditionVal.Select.Get(c.headerColumn[i].name, 0).(int) == 1 {
@@ -164,16 +139,16 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 		if e == io.EOF {
 			if isAppend && len(appendData) > 0 {
-				datas = append(datas, appendData)
+				ds.Data = append(ds.Data, appendData)
 				lineCount += 1
 			}
 			break
 		} else if e != nil {
-			return errorlib.Error(packageName, modCursor,
+			return ds, errorlib.Error(packageName, modCursor,
 				"Fetch", e.Error())
 		}
 		if isAppend && len(appendData) > 0 {
-			datas = append(datas, appendData)
+			ds.Data = append(ds.Data, appendData)
 			lineCount += 1
 		}
 
@@ -183,17 +158,5 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			}
 		}
 	}
-
-	// if iv.Kind() == reflect.Map {
-
-	// } else if iv.Kind() == reflect.Struct {
-
-	// }
-
-	bs, _ := json.Marshal(datas)
-	_ = json.Unmarshal(bs, m)
-
-	// reflect.ValueOf(m).Elem().Set(reflect.ValueOf(datas))
-
-	return nil
+	return ds, nil
 }

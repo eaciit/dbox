@@ -177,9 +177,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		if hasUpdate || hasInsert || hasDelete || hasSave {
 			return nil, errorlib.Error(packageName, modQuery, "Cursor",
 				"Valid operation for a cursor is select only")
-		} else {
-			return nil, errorlib.Error(packageName, modQuery, "Cursor",
-				"Invalid operation for a cursor, select syntax not found")
 		}
 	}
 
