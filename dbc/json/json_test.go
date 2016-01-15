@@ -5,12 +5,15 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
 	// "io"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
 func prepareConnection() (dbox.IConnection, error) {
 	config := toolkit.M{"newfile": true} //for create new file, if you dont need just overwrite "config" with "nil"
-	ci := &dbox.ConnectionInfo{"E:\\WORKS\\data_test\\testtables.json", "", "", "", config}
+	wd, _ := os.Getwd()
+	ci := &dbox.ConnectionInfo{filepath.Join(wd, "test.json"), "", "", "", config}
 
 	c, e := dbox.NewConnection("json", ci)
 	if e != nil {
@@ -75,7 +78,7 @@ func TestSelect(t *testing.T) {
 	if e != nil {
 		t.Errorf("Unable to fetch all: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch all OK. Result: %d \n", len(results))
+		fmt.Printf("Fetch all OK. Result: %v \n", len(results))
 	}
 
 	e = csr.ResetFetch()
@@ -84,13 +87,21 @@ func TestSelect(t *testing.T) {
 	}
 
 	//ds, e = csr.Fetch(nil, 3, false)
-	resultToN := make([]toolkit.M, 0)
-	e = csr.Fetch(&resultToN, 3, false)
+	// resultToN := make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 3, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch N OK. Result: %v \n",
-			resultToN)
+		fmt.Printf("Fetch N3 OK. Result: %v \n",
+			results)
+	}
+
+	e = csr.Fetch(&results, 4, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N4 OK. Result: %v \n",
+			results)
 	}
 }
 
@@ -192,7 +203,7 @@ func TestCRUD(t *testing.T) {
 	}
 
 	q := c.NewQuery().SetConfig("multiexec", true).Save()
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 10000; i++ {
 		//go func(q dbox.IQuery, i int) {
 		data := user{}
 		data.Id = fmt.Sprintf("User-%d", i)
