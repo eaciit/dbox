@@ -109,7 +109,7 @@ func Eq(field string, value interface{}) *Filter {
 	return f
 }
 
-func Neq(field string, value interface{}) *Filter {
+func Ne(field string, value interface{}) *Filter {
 	f := new(Filter)
 	f.Field = field
 	f.Op = string(FilterOpNoEqual)
