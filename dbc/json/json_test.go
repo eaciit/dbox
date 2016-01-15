@@ -69,11 +69,13 @@ func TestSelect(t *testing.T) {
 
 	//rets := []toolkit.M{}
 
-	ds, e := csr.Fetch(nil, 0, false)
+	//ds, e := csr.Fetch(nil, 0, false)
+	results := make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 0, false)
 	if e != nil {
 		t.Errorf("Unable to fetch all: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch all OK. Result: %d \n", len(ds.Data))
+		fmt.Printf("Fetch all OK. Result: %d \n", len(results))
 	}
 
 	e = csr.ResetFetch()
@@ -81,12 +83,14 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Unable to reset fetch: %s \n", e.Error())
 	}
 
-	ds, e = csr.Fetch(nil, 3, false)
+	//ds, e = csr.Fetch(nil, 3, false)
+	resultToN := make([]toolkit.M, 0)
+	e = csr.Fetch(&resultToN, 3, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N: %s \n", e.Error())
 	} else {
 		fmt.Printf("Fetch N OK. Result: %v \n",
-			ds.Data)
+			resultToN)
 	}
 }
 
@@ -114,12 +118,14 @@ func TestSelectFilter(t *testing.T) {
 
 	//rets := []toolkit.M{}
 
-	ds, e := csr.Fetch(nil, 0, false)
+	//ds, e := csr.Fetch(nil, 0, false)
+	results := make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 0, false)
 	if e != nil {
 		t.Errorf("Unable to fetch: %s \n", e.Error())
 	} else {
 		fmt.Printf("Fetch OK. Result: %v \n",
-			toolkit.JsonString(ds.Data[0]))
+			toolkit.JsonString(results[0]))
 
 	}
 }
@@ -186,7 +192,7 @@ func TestCRUD(t *testing.T) {
 	}
 
 	q := c.NewQuery().SetConfig("multiexec", true).Save()
-	for i := 1; i <= 10000; i++ {
+	for i := 1; i <= 10; i++ {
 		//go func(q dbox.IQuery, i int) {
 		data := user{}
 		data.Id = fmt.Sprintf("User-%d", i)
