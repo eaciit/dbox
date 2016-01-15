@@ -144,7 +144,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			if i < len(c.headerColumn) {
 				recData.Set(c.headerColumn[i].name, cell.Value)
 
-				if c.ConditionVal.Select == nil || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
+				if len(c.ConditionVal.Select) == 0 || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
 					appendData.Set(c.headerColumn[i].name, cell.Value)
 				} else {
 					if c.ConditionVal.Select.Get(c.headerColumn[i].name, 0).(int) == 1 {

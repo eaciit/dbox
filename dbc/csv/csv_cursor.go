@@ -126,8 +126,12 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	// 	v = reflect.TypeOf(m).Elem().Elem()
 	// }
 
+	// iv := reflect.New(v).Elem()
+	// vdatas := reflect.Indirect(m)
+
+	// fmt.Println("LINE 131 : ", iv.Kind())
 	// vdatas := reflect.MakeSlice(reflect.SliceOf(v), 0, n)
-	// fmt.Println("LINE 122 : ", reflect.TypeOf(vdatas))
+	// fmt.Println("LINE 133 : ", reflect.TypeOf(vdatas))
 	datas := []toolkit.M{}
 	lineCount := 0
 
@@ -143,7 +147,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		for i, val := range dataTemp {
 			recData[c.headerColumn[i].name] = val
 
-			if c.ConditionVal.Select == nil || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
+			if len(c.ConditionVal.Select) == 0 || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
 				appendData[c.headerColumn[i].name] = val
 			} else {
 				if c.ConditionVal.Select.Get(c.headerColumn[i].name, 0).(int) == 1 {
@@ -180,8 +184,16 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 	}
 
+	// if iv.Kind() == reflect.Map {
+
+	// } else if iv.Kind() == reflect.Struct {
+
+	// }
+
 	bs, _ := json.Marshal(datas)
 	_ = json.Unmarshal(bs, m)
+
+	// reflect.ValueOf(m).Elem().Set(reflect.ValueOf(datas))
 
 	return nil
 }
