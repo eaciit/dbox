@@ -25,6 +25,7 @@ type Query struct {
 	session, fetchSession *os.File
 	hasNewSave, hasSave   bool
 	sliceData             toolkit.Ms
+	sliceDataSave         string
 }
 
 func (q *Query) Prepare() error {
@@ -370,8 +371,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 		}
 	} else if commandType == dbox.QueryPartSave {
-		dataType := reflect.ValueOf(data).Kind()
-		fmt.Printf("DataType: %s\nData:\n%v\n", dataType.String(), toolkit.JsonString(data))
+		/*dataType := reflect.ValueOf(data).Kind()
+		//fmt.Printf("DataType: %s\nData:\n%v\n", dataType.String(), toolkit.JsonString(data))
 		if reflect.Slice == dataType {
 			if q.Connection().(*Connection).openFile == nil {
 				q.Connection().(*Connection).OpenSession()
@@ -415,23 +416,39 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modQuery+".Exec", "Write file", e.Error())
 				}
 			}
-		} else {
-			if q.Connection().(*Connection).openFile == nil {
-				q.Connection().(*Connection).OpenSession()
-			}
-			q.dataType = "struct"
-			dataMap, e := toolkit.ToM(data)
-			if e != nil {
-				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
-			}
-			q.sliceData = append(q.sliceData, dataMap)
-
-			if q.Connection().(*Connection).isNewSave {
-				q.hasNewSave = hasSave
-			} else {
-				q.hasSave = hasSave
-			}
+		} else {*/
+		if q.Connection().(*Connection).openFile == nil {
+			q.Connection().(*Connection).OpenSession()
 		}
+		q.dataType = "struct"
+		dataMap, e := toolkit.ToM(data)
+		if e != nil {
+			return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
+		}
+
+		id := toolkit.Id(dataMap)
+		if id != nil {
+			m := (toolkit.M{}).Set("id", id)
+
+			if q.Connection().(*Connection).sData != id {
+				q.Connection().(*Connection).sData = ToString(reflect.ValueOf(m["id"]).Kind(), m["id"])
+				// q.sliceData = append(q.sliceData, dataMap)
+			} else {
+				q.Connection().(*Connection).sameId = true
+				q.Connection().(*Connection).sData = ToString(reflect.ValueOf(m["id"]).Kind(), m["id"])
+			}
+
+		}
+		if !q.Connection().(*Connection).sameId {
+			q.sliceData = append(q.sliceData, dataMap)
+		}
+
+		if q.Connection().(*Connection).isNewSave {
+			q.hasNewSave = hasSave
+		} else {
+			q.hasSave = hasSave
+		}
+		/*}*/
 	}
 
 	if e != nil {
