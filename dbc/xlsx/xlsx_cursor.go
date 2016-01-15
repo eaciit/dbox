@@ -1,7 +1,7 @@
 package xlsx
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	"errors"
 	"fmt"
 	"github.com/eaciit/dbox"
@@ -173,8 +173,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 	}
 
-	bs, _ := json.Marshal(datas)
-	_ = json.Unmarshal(bs, m)
+	e = toolkit.Unjson(toolkit.Jsonify(datas), m)
+	if e != nil {
+		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+	}
 
 	return nil
 }
