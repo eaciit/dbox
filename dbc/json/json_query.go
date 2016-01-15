@@ -21,10 +21,10 @@ const (
 
 type Query struct {
 	dbox.Query
-	filePath, dataType  string
-	session             *os.File
-	hasNewSave, hasSave bool
-	sliceData           toolkit.Ms
+	filePath, dataType    string
+	session, fetchSession *os.File
+	hasNewSave, hasSave   bool
+	sliceData             toolkit.Ms
 }
 
 func (q *Query) Prepare() error {
@@ -99,7 +99,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 
 	if !aggregate {
-		var whereFields, jsonSelect interface{}
+		var whereFields interface{}
 		var dataInterface interface{}
 		json.Unmarshal(t, &dataInterface)
 		count, ok := dataInterface.([]interface{})
@@ -109,23 +109,20 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				modQuery, "Cursor", "the file contains invalid json data")
 		}
 		cursor.(*Cursor).count = len(count)
-		if fields != nil {
+		/*if fields != nil {
 			q.Connection().(*Connection).FetchSession()
-			jsonSelect = fields
-		}
+			// jsonSelect = fields
+		}*/
 		if where != nil {
 			whereFields = where
-			jsonSelect = fields
+			// jsonSelect = fields
 			cursor.(*Cursor).isWhere = true
 		}
-		cursor.(*Cursor).tempPathFile = q.Connection().(*Connection).tempPathFile
-
-		// cursor.(*Cursor).ResultType = QueryResultCursor
+		// cursor.(*Cursor).tempPathFile = q.Connection().(*Connection).tempPathFile
 		cursor.(*Cursor).whereFields = whereFields
-		cursor.(*Cursor).jsonSelect = jsonSelect
+		cursor.(*Cursor).jsonSelect = fields
 	} else {
 
-		// cursor.(*Cursor).ResultType = QueryResultPipe
 	}
 	return cursor, nil
 }
@@ -374,7 +371,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	} else if commandType == dbox.QueryPartSave {
 		dataType := reflect.ValueOf(data).Kind()
-		//fmt.Printf("DataType: %s\nData:\n%v\n", dataType.String(), toolkit.JsonString(data))
+		fmt.Printf("DataType: %s\nData:\n%v\n", dataType.String(), toolkit.JsonString(data))
 		if reflect.Slice == dataType {
 			if q.Connection().(*Connection).openFile == nil {
 				q.Connection().(*Connection).OpenSession()

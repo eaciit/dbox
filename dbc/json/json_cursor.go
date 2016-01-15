@@ -9,7 +9,7 @@ import (
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io"
-	"io/ioutil"
+	// "io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -24,12 +24,13 @@ const (
 
 type Cursor struct {
 	dbox.Cursor
-	count, lines            int
-	whereFields, jsonSelect interface{}
-	readFile                []byte
-	session, fetchSession   *os.File
-	isWhere                 bool
-	tempPathFile            string
+	count, lines          int
+	whereFields           interface{}
+	readFile              []byte
+	session, fetchSession *os.File
+	isWhere               bool
+	tempPathFile          string
+	jsonSelect            []string
 }
 
 func (c *Cursor) Close() {
@@ -66,7 +67,11 @@ func (c *Cursor) ResetFetch() error {
 	// c.Close()
 
 	if c.fetchSession != nil {
-		ioutil.WriteFile(c.tempPathFile, []byte(string("")), 0666)
+		// ioutil.WriteFile(c.tempPathFile, []byte(string("")), 0666)
+		e := os.Remove(c.tempPathFile)
+		if e != nil {
+			errorlib.Error(packageName, modCursor, "Reset Fetch Failed!", e.Error())
+		}
 	}
 
 	return nil
@@ -82,9 +87,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	if c.jsonSelect == nil {
+	/*if c.jsonSelect == nil {
 		return errorlib.Error(packageName, modCursor, "Fetch", "Iter object is not yet initialized")
-	}
+	}*/
 
 	// var mData []interface{}
 	datas := []toolkit.M{}
@@ -113,7 +118,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 						for _, vWhere := range whereFieldsToMap {
 							for _, subWhere := range vWhere.([]interface{}) {
 								for _, subsubWhere := range subWhere.(map[string]interface{}) {
-									if len(c.jsonSelect.([]string)) == 0 {
+									if len(c.jsonSelect) == 0 {
 										if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
 											// ds.Data = append(ds.Data, v)
 											*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), v)
@@ -129,7 +134,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 					}
 				}
 
-				itemToRemove := removeDuplicatesUnordered(getRemField, c.jsonSelect.([]string))
+				itemToRemove := removeDuplicatesUnordered(getRemField, c.jsonSelect)
 
 				if len(foundData) > 0 {
 					var found toolkit.M
@@ -148,7 +153,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 						for _, vWhere := range c.whereFields.(toolkit.M) {
 							if reflect.ValueOf(v2).Kind() == reflect.String {
 								if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
-									if len(c.jsonSelect.([]string)) == 0 {
+									if len(c.jsonSelect) == 0 {
 										// ds.Data = append(ds.Data, v)
 										*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), v)
 									} else {
@@ -167,7 +172,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 					for _, found := range foundData {
 						for i, subData := range found {
-							for _, selected := range c.jsonSelect.([]string) {
+							for _, selected := range c.jsonSelect {
 								if strings.ToLower(selected) == strings.ToLower(i) {
 									foundSelected[i] = subData
 								} else if selected == "*" {
@@ -181,33 +186,42 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				}
 			}
 		} else {
-			if c.jsonSelect.([]string)[0] != "*" {
-				for _, v := range datas {
-					for i, _ := range v {
-						getRemField[i] = i
-					}
-				}
-
-				itemToRemove := removeDuplicatesUnordered(getRemField, c.jsonSelect.([]string))
-				for _, found := range datas {
-					toMap := toolkit.M(found)
-					for _, remitem := range itemToRemove {
-						toMap.Unset(remitem)
-					}
-
-					*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), toMap)
-				}
-			} else {
-				// ds.Data = datas
+			if c.jsonSelect == nil {
 				*(m.(*[]toolkit.M)) = datas
+			} else {
+				isSelectedFields := false
+				for _, selectField := range c.jsonSelect {
+					if selectField == "*" {
+						*(m.(*[]toolkit.M)) = datas
+					} else {
+						isSelectedFields = true
+					}
+				}
+				if isSelectedFields {
+					for _, v := range datas {
+						for i, _ := range v {
+							getRemField[i] = i
+						}
+					}
+					itemToRemove := removeDuplicatesUnordered(getRemField, c.jsonSelect)
+					for _, found := range datas {
+						toMap := toolkit.M(found)
+						for _, remitem := range itemToRemove {
+							toMap.Unset(remitem)
+						}
+
+						*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), toMap)
+					}
+				}
 			}
 		}
 	} else if n > 0 {
 		fetched := 0
 		fetching := true
-
+		c.Connection().(*Connection).FetchSession()
+		c.tempPathFile = c.Connection().(*Connection).tempPathFile
 		///read line
-		fetchFile, e := os.OpenFile(c.tempPathFile, os.O_RDWR, 0)
+		fetchFile, e := os.OpenFile(c.Connection().(*Connection).tempPathFile, os.O_RDWR, 0)
 		defer fetchFile.Close()
 		if e != nil {
 			return errorlib.Error(packageName, modQuery+".Exec", "Fetch file", e.Error())
@@ -223,22 +237,25 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			fetched = lines
 			n = n + lines
 		}
-		// fmt.Println(len(c.jsonSelect.([]string)))
+
 		for fetching {
 			var dataM = toolkit.M{}
 
-			if c.jsonSelect.([]string)[0] != "*" {
-				for i := 0; i < len(c.jsonSelect.([]string)); i++ {
-					// dataM[c.jsonSelect.([]string)[i]] = datas[fetched][c.jsonSelect.([]string)[i]]
-					dataM.Set(c.jsonSelect.([]string)[i], datas[fetched][c.jsonSelect.([]string)[i]])
-
-					if len(dataM) == len(c.jsonSelect.([]string)) {
-						*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), dataM)
+			if c.jsonSelect == nil {
+				*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), datas[fetched])
+			} else {
+				for _, selectField := range c.jsonSelect {
+					if selectField == "*" {
+						*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), datas[fetched])
+					} else {
+						dataM.Set(selectField, datas[fetched][selectField])
+						if len(dataM) == len(c.jsonSelect) {
+							*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), dataM)
+						}
 					}
 				}
-			} else {
-				*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), datas[fetched])
 			}
+
 			io.WriteString(fetchFile, toolkit.JsonString(dataM)+"\n")
 
 			fetched++
@@ -247,7 +264,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			}
 		}
 	}
-	// c.Close()
+
 	fmt.Sprintln("")
 	return nil
 }
