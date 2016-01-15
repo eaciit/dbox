@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	// "errors"
 	"bufio"
-	// "fmt"
+	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
@@ -90,7 +90,11 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	datas := []toolkit.M{}
 	dec := json.NewDecoder(strings.NewReader(string(c.readFile)))
 	dec.Decode(&datas)
-	// ds := dbox.NewDataSet(m)
+
+	if *(m.(*[]toolkit.M)) != nil {
+		*(m.(*[]toolkit.M)) = []toolkit.M{}
+	}
+
 	if n == 0 {
 		whereFieldsToMap, e := toolkit.ToM(c.whereFields)
 		if e != nil {
@@ -192,7 +196,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 					}
 
 					*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), toMap)
-					// *(m.(*[]toolkit.M)) = ds.Data
 				}
 			} else {
 				// ds.Data = datas
@@ -220,16 +223,16 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			fetched = lines
 			n = n + lines
 		}
+		// fmt.Println(len(c.jsonSelect.([]string)))
 		for fetching {
 			var dataM = toolkit.M{}
 
 			if c.jsonSelect.([]string)[0] != "*" {
 				for i := 0; i < len(c.jsonSelect.([]string)); i++ {
-
-					dataM[c.jsonSelect.([]string)[i]] = datas[fetched][c.jsonSelect.([]string)[i]]
+					// dataM[c.jsonSelect.([]string)[i]] = datas[fetched][c.jsonSelect.([]string)[i]]
+					dataM.Set(c.jsonSelect.([]string)[i], datas[fetched][c.jsonSelect.([]string)[i]])
 
 					if len(dataM) == len(c.jsonSelect.([]string)) {
-						// ds.Data = append(ds.Data, dataM)
 						*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), dataM)
 					}
 				}
@@ -240,12 +243,12 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 			fetched++
 			if fetched == n {
-
 				fetching = false
 			}
 		}
 	}
 	// c.Close()
+	fmt.Sprintln("")
 	return nil
 }
 
