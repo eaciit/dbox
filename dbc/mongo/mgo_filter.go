@@ -62,6 +62,7 @@ func (fb *FilterBuilder) CombineFilters(mfs []interface{}) (interface{}, error) 
 		vm := v.(M)
 		filters = append(filters, vm)
 	}
+	//fmt.Println(JsonString(filters))
 	ret.Set("$and", filters)
 	return ret, nil
 }

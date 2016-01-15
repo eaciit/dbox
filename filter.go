@@ -88,6 +88,7 @@ func (fb *FilterBuilder) Build() (interface{}, error) {
 		}
 		mfilters = append(mfilters, fbout)
 	}
+	fb.Filters = []*Filter{}
 	return fb.this().CombineFilters(mfilters)
 }
 

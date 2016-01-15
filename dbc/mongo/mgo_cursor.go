@@ -114,7 +114,16 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 		//ds.Data = datas
 	} else if n == 1 {
-		c.mgoIter.Next(m)
+		bOk := c.mgoIter.Next(m)
+		if !bOk {
+			errtxt := ""
+			if c.mgoIter.Err() == nil {
+				errtxt = "Not found"
+			} else {
+				errtxt = c.mgoIter.Err().Error()
+			}
+			return errorlib.Error(packageName, modCursor, "Fetch", errtxt)
+		}
 	} else if n > 1 {
 		fetched := 0
 		fetching := true
