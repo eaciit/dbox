@@ -171,6 +171,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	} else if hasSave {
 		commandType = dbox.QueryPartSave
 	}
+	//fmt.Printf("Data:\n%v\n", toolkit.JsonString(data))
 
 	if data == nil {
 		//---
@@ -373,7 +374,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	} else if commandType == dbox.QueryPartSave {
 		dataType := reflect.ValueOf(data).Kind()
-
+		//fmt.Printf("DataType: %s\nData:\n%v\n", dataType.String(), toolkit.JsonString(data))
 		if reflect.Slice == dataType {
 			if q.Connection().(*Connection).openFile == nil {
 				q.Connection().(*Connection).OpenSession()
@@ -417,7 +418,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modQuery+".Exec", "Write file", e.Error())
 				}
 			}
-		} else if reflect.Struct == dataType {
+		} else {
 			if q.Connection().(*Connection).openFile == nil {
 				q.Connection().(*Connection).OpenSession()
 			}
