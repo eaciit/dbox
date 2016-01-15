@@ -18,8 +18,10 @@ func prepareConnection() (dbox.IConnection, error) {
 	// mapHeader[5] = toolkit.M{}.Set("F", "int")
 	// mapHeader[6] = toolkit.M{}.Set("G", "int")
 	// mapHeader := []toolkit.M{} //AddMap Header
-	var config = map[string]interface{}{}
+	// var config = map[string]interface{}{}
 	// var config = map[string]interface{}{"mapheader": mapHeader}
+
+	config := toolkit.M{}.Set("rowstart", 6).Set("colsstart", 2).Set("useheader", true)
 	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\IO Price Indices.xlsm", "", "", "", config}
 	c, e := dbox.NewConnection("xlsx", ci)
 	if e != nil {

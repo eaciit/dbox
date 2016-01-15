@@ -109,54 +109,54 @@ func TestHasSelect(t *testing.T) {
 
 }
 
-// func TestSelect(t *testing.T) {
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("Unable to connect %s \n", e.Error())
-// 	}
-// 	defer c.Close()
+func TestSelect(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
 
-// 	csr, e := c.NewQuery().Select("EmployeeId", "FirstName", "LastName").
-// 		Cursor(nil)
-// 	if e != nil {
-// 		t.Errorf("Cursor pre error: %s \n", e.Error())
-// 		return
-// 	}
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized")
-// 		return
-// 	}
-// 	defer csr.Close()
+	csr, e := c.NewQuery().Select("EmployeeId", "FirstName", "LastName").
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
 
-// 	results := make([]map[string]interface{}, 0)
-// 	e = csr.Fetch(&results, 2, false)
-// 	if e != nil {
-// 		t.Errorf("Unable to fetch N1: %s \n", e.Error())
-// 	} else {
-// 		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
-// 	}
+	results := make([]map[string]interface{}, 0)
+	e = csr.Fetch(&results, 2, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
+	}
 
-// 	// results = make([]toolkit.M, 0)
-// 	e = csr.Fetch(&results, 3, false)
-// 	if e != nil {
-// 		t.Errorf("Unable to fetch N2: %s \n", e.Error())
-// 	} else {
-// 		fmt.Printf("Fetch N2 OK. Result: %v \n", results)
-// 	}
+	// results = make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 3, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N2: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N2 OK. Result: %v \n", results)
+	}
 
-// 	e = csr.ResetFetch()
-// 	if e != nil {
-// 		t.Errorf("Unable to reset fetch: %s \n", e.Error())
-// 	}
+	e = csr.ResetFetch()
+	if e != nil {
+		t.Errorf("Unable to reset fetch: %s \n", e.Error())
+	}
 
-// 	resultsstruct := make([]employee, 0)
-// 	e = csr.Fetch(&resultsstruct, 5, false)
-// 	if e != nil {
-// 		t.Errorf("Unable to fetch N3: %s \n", e.Error())
-// 	} else {
-// 		fmt.Printf("Fetch N3 OK. Result: %v \n", resultsstruct)
-// 	}
-// }
+	resultsstruct := make([]employee, 0)
+	e = csr.Fetch(&resultsstruct, 5, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N3: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N3 OK. Result: %v \n", resultsstruct)
+	}
+}
 
 // func TestSelectFilter(t *testing.T) {
 // 	c, e := prepareConnection()
