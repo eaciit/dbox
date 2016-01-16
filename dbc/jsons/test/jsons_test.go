@@ -2,9 +2,10 @@ package jsonstest
 
 import (
 	"github.com/eaciit/dbox"
-	_ "github.com/eaciit/dbox/dbc/jsons"
+	"github.com/eaciit/dbox/dbc/jsons"
 	"github.com/eaciit/toolkit"
 	"os"
+	"time"
 	//"path/filepath"
 	"testing"
 )
@@ -53,6 +54,25 @@ type testUser struct {
 	FullName string
 	Age      int
 	Enable   bool
+}
+
+func TestMatchV(t *testing.T) {
+	var a, b int
+	var d1, d2 time.Time
+
+	a = 1000
+	b = 1500
+	alb := jsons.Compare(a, b, dbox.FilterOpLt)
+	if !alb {
+		t.Errorf("Number comparison fail")
+	}
+
+	d1 = time.Now()
+	d2 = d1.Add(10 * time.Minute)
+	dl := jsons.Compare(d1, d2, dbox.FilterOpLt)
+	if !dl {
+		t.Errorf("Date comparison fail")
+	}
 }
 
 func TestCRUD(t *testing.T) {

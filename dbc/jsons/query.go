@@ -198,8 +198,14 @@ func Compare(v1 interface{}, v2 interface{}, op string) bool {
 	if strings.Contains(k, "int") || strings.Contains(k, "float") {
 		//--- is a number
 		// lets convert all to float64 for simplicity
-		vv1o := vv1.Interface().(float64)
-		vv2o := vv2.Interface().(float64)
+		var vv1o, vv2o float64
+		if strings.Contains(k, "int") {
+			vv1o = float64(vv1.Int())
+			vv2o = float64(vv2.Int())
+		} else {
+			vv1o = vv1.Float()
+			vv2o = vv2.Float()
+		}
 		if op == dbox.FilterOpEqual {
 			return vv1o == vv2o
 		} else if op == dbox.FilterOpNoEqual {
