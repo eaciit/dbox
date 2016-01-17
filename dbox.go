@@ -39,13 +39,18 @@ func Find(ms []toolkit.M, filters []*Filter) (output []int) {
 }
 
 func MatchM(v toolkit.M, filters []*Filter) bool {
-	match := true
+	var match bool
 
 	for _, f := range filters {
 		if f.Field != "" {
 			//--- if has field: $eq, $ne, $gt, $lt, $gte, $lte, $contains
+			//toolkit.Printf("Filter:%s V:%s Has:%s Match:%s", f.Field, toolkit.JsonString(v), v.Has("random"), match)
 			if v.Has(f.Field) {
-				match = match && MatchV(v.Get(f.Field), f)
+				match = MatchV(v.Get(f.Field), f)
+				//toolkit.Printf("Filter:%s Value: %v Match:%s \n", toolkit.JsonString(f), v.Get(f.Field), match)
+				if !match {
+					return false
+				}
 			} else {
 				if f.Op != FilterOpNoEqual && f.Op != FilterOpNin {
 					return false
@@ -53,16 +58,26 @@ func MatchM(v toolkit.M, filters []*Filter) bool {
 			}
 		} else {
 			//-- no field: $and, $or
+			//toolkit.Printf("Filter: %s\n", toolkit.JsonString(f))
 			if f.Op == FilterOpAnd || f.Op == FilterOpOr {
 				filters2 := f.Value.([]*Filter)
-				for _, f2 := range filters2 {
+				for k, f2 := range filters2 {
 					if f.Op == FilterOpAnd {
-						match = match && MatchM(v, []*Filter{f2})
+						if k == 0 {
+							match = MatchM(v, []*Filter{f2})
+						} else {
+							match = match && MatchM(v, []*Filter{f2})
+						}
 					} else {
-						match = match || MatchM(v, []*Filter{f2})
+						if k == 0 {
+							match = MatchM(v, []*Filter{f2})
+						} else {
+							match = match || MatchM(v, []*Filter{f2})
+						}
 					}
 				}
 			}
+			//toolkit.Printf("\n")
 		}
 	}
 	return match

@@ -2,10 +2,9 @@ package jsonstest
 
 import (
 	"github.com/eaciit/dbox"
-	"github.com/eaciit/dbox/dbc/jsons"
+	_ "github.com/eaciit/dbox/dbc/jsons"
 	"github.com/eaciit/toolkit"
 	"os"
-	"time"
 	//"path/filepath"
 	"testing"
 )
@@ -38,13 +37,6 @@ func skipIfConnectionIsNil(t *testing.T) {
 	}
 }
 
-func TestConnect(t *testing.T) {
-	e := connect()
-	if e != nil {
-		t.Errorf("Error connecting to database: %s \n", e.Error())
-	}
-}
-
 const (
 	tableName string = "TestUsers"
 )
@@ -56,22 +48,34 @@ type testUser struct {
 	Enable   bool
 }
 
-func TestMatchV(t *testing.T) {
-	var a, b int
-	var d1, d2 time.Time
-
-	a = 1000
-	b = 1500
-	alb := jsons.Compare(a, b, dbox.FilterOpLt)
-	if !alb {
-		t.Errorf("Number comparison fail")
+func TestFind(t *testing.T) {
+	ms := []toolkit.M{}
+	for i := 1; i <= 10; i++ {
+		m := toolkit.M{}
+		m.Set("_id", i)
+		m.Set("random", toolkit.RandInt(100))
+		ms = append(ms, m)
 	}
+	toolkit.Printf("Original Value\n%s\n", toolkit.JsonString(ms))
 
-	d1 = time.Now()
-	d2 = d1.Add(10 * time.Minute)
-	dl := jsons.Compare(d1, d2, dbox.FilterOpLt)
-	if !dl {
-		t.Errorf("Date comparison fail")
+	indexes := dbox.Find(ms, []*dbox.Filter{
+		//dbox.Or(dbox.Lt("random", 20), dbox.And(dbox.Gte("random", 60), dbox.Lte("random", 70)))})
+		dbox.And(dbox.Gte("random", 30), dbox.Lte("random", 80))})
+
+	records := []toolkit.M{}
+	for _, v := range indexes {
+		records = append(records, ms[v])
+	}
+	for _, r := range records {
+		toolkit.Printf("Record: %s \n", toolkit.JsonString(r))
+	}
+	toolkit.Printf("Find %d records of %d records\n", len(indexes), len(ms))
+}
+
+func TestConnect(t *testing.T) {
+	e := connect()
+	if e != nil {
+		t.Errorf("Error connecting to database: %s \n", e.Error())
 	}
 }
 
@@ -106,6 +110,7 @@ func TestCRUD(t *testing.T) {
 }
 
 func TestQueryAggregate(t *testing.T) {
+	t.Skip()
 	skipIfConnectionIsNil(t)
 	cursor, e := ctx.NewQuery().From(tableName).
 		//Where(dbox.Lte("_id", "user600")).
@@ -128,6 +133,7 @@ func TestQueryAggregate(t *testing.T) {
 }
 
 func TestProcedure(t *testing.T) {
+	t.Skip()
 	skipIfConnectionIsNil(t)
 	inProc := toolkit.M{}.Set("name", "spSelectByFullName").Set("parms", toolkit.M{}.Set("@name", "User 20"))
 	cursor, e := ctx.NewQuery().Command("procedure", inProc).Cursor(nil)

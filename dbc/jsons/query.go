@@ -6,10 +6,8 @@ import (
 	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Query struct {
@@ -71,7 +69,35 @@ func (q *Query) Exec(in toolkit.M) error {
 	}
 
 	hasWhere := in.Has("where")
-	where := in.Get("where", toolkit.M{}).(toolkit.M)
+	where := in.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
+
+	if hasData && hasWhere == false && toolkit.HasMember([]interface{}{dbox.QueryPartInsert, dbox.QueryPartUpdate, dbox.QueryPartSave}, commandType) {
+		hasWhere = true
+		if toolkit.IsSlice(data) {
+			ids := []interface{}{}
+			idField := ""
+			if idField == "" {
+				return err.Error(packageName, modQuery, "Exec:"+commandType, "Data send is a slice, but its element has no ID")
+			}
+			dataCount := toolkit.SliceLen(data)
+			for i := 0; i < dataCount; i++ {
+				dataI := toolkit.SliceItem(data, i)
+				if i == 0 {
+					idField = toolkit.IdField(dataI)
+				}
+				ids = append(ids, toolkit.Id(dataI))
+			}
+			where = []*dbox.Filter{dbox.In(idField, ids)}
+		} else {
+			id := toolkit.Id(data)
+			if toolkit.IsNilOrEmpty(id) {
+				where = []*dbox.Filter{dbox.Eq(toolkit.IdField(id), id)}
+			} else {
+				where = nil
+				hasWhere = false
+			}
+		}
+	}
 
 	q.openFile()
 	if commandType == dbox.QueryPartInsert {
@@ -87,16 +113,70 @@ func (q *Query) Exec(in toolkit.M) error {
 		if !hasData {
 			return err.Error(packageName, modQuery, "Exec:"+commandType, "Data is empty")
 		}
+
+		var indexes []interface{}
 		if hasWhere {
+			toolkit.Serde(dbox.Find(q.data, where), &indexes, "")
+		}
 
-		} else {
+		var dataUpdate toolkit.M
+		var updateDataIndex int
 
+		isDataSlice := toolkit.IsSlice(data)
+		if isDataSlice == false {
+			isDataSlice = false
+			e = toolkit.Serde(data, &dataUpdate, "")
+			if e != nil {
+				return err.Error(packageName, modQuery, "Exec:"+commandType, "Unable to serialize data. "+e.Error())
+			}
+		}
+		var idField string
+		for i, v := range q.data {
+			if toolkit.HasMember(indexes, i) || len(indexes) == 0 {
+				if idField == "" {
+					idField = toolkit.IdField(v)
+					if idField == "" {
+						return err.Error(packageName, modQuery, "Exec:"+commandType, "No ID")
+					}
+				}
+
+				var dataOrigin toolkit.M
+				e = toolkit.Serde(v, &dataOrigin, "")
+				if e != nil {
+					return err.Error(packageName, modQuery, "Exec:"+commandType, "Unable to serialize data origin. "+e.Error())
+				}
+				if isDataSlice {
+					e = toolkit.Serde(toolkit.SliceItem(data, updateDataIndex), &dataUpdate, "")
+					if e != nil {
+						return err.Error(packageName, modQuery, "Exec:"+commandType, "Unable to serialize data. "+e.Error())
+					}
+					updateDataIndex++
+				}
+				for fieldName, fieldValue := range dataUpdate {
+					if fieldName != idField {
+						if dataOrigin.Has(fieldName) {
+							dataOrigin.Set(fieldName, fieldValue)
+						}
+
+					}
+				}
+				toolkit.Serde(dataOrigin, &v, "")
+				q.data[i] = v
+			}
 		}
 	} else if commandType == dbox.QueryPartDelete {
-		if hasData {
-
-		} else if hasWhere {
-			q.data = []toolkit.M{where}
+		if hasWhere {
+			var indexes []interface{}
+			toolkit.Serde(dbox.Find(q.data, where), &indexes, "")
+			if len(indexes) > 0 {
+				newdata := []toolkit.M{}
+				for index, v := range q.data {
+					if toolkit.HasMember(indexes, index) == false {
+						newdata = append(newdata, v)
+					}
+				}
+				q.data = newdata
+			}
 		} else {
 			q.data = []toolkit.M{}
 		}
@@ -238,29 +318,16 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	}
 	output.Set("sort", sort)
 
-	//where := toolkit.M{}
-	var where interface{}
+	var filters []*dbox.Filter
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
-		fb := q.Connection().Fb()
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
-				fb.AddFilter(f)
+				filters = append(filters, f)
 			}
 		}
-		where, e = fb.Build()
-		if e != nil {
-			return nil, err.Error(packageName, modQuery, "prepare",
-				e.Error())
-		} else {
-			//fmt.Printf("Where: %s\n", toolkit.JsonString(where))
-		}
-		//where = iwhere.(toolkit.M)
 	}
-	output.Set("where", where)
-
-	//data := toolkit.ToM(in.Get("data",nil))
-	//output.Set("data",data)
+	output.Set("where", filters)
 	return
 }
