@@ -312,7 +312,7 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	}
 	tablename := fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
 	output.Set("tablename", tablename)
-	q.jsonPath = filepath.Join(q.Connection().(*Connection).Folder, tablename+".json")
+	q.jsonPath = filepath.Join(q.Connection().(*Connection).folder, tablename+".json")
 
 	skip := 0
 	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
