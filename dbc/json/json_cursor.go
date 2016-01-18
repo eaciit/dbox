@@ -97,10 +97,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	dec := json.NewDecoder(strings.NewReader(string(c.readFile)))
 	dec.Decode(&datas)
 
-	/*if *(m.(*[]toolkit.M)) != nil {
-		*(m.(*[]toolkit.M)) = []toolkit.M{}
-	}*/
-
 	if n == 0 {
 		whereFieldsToMap, e := toolkit.ToM(c.whereFields)
 		if e != nil {
@@ -122,7 +118,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 									if len(c.jsonSelect) == 0 {
 										if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
 											dataJson = append(dataJson, v)
-											// *(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), v)
 										}
 									} else {
 										if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
@@ -145,7 +140,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 						}
 
 						dataJson = append(dataJson, found)
-						// *(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), found)
 					}
 				}
 			} else {
@@ -156,7 +150,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 								if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
 									if len(c.jsonSelect) == 0 {
 										dataJson = append(dataJson, v)
-										// *(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), v)
 									} else {
 										foundData = append(foundData, v)
 									}
@@ -181,10 +174,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 						}
 					}
 					dataJson = append(dataJson, foundSelected)
-					// *(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), foundSelected)
 				}
 			}
-			toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+			// toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+			toolkit.Serde(dataJson, m, "json")
 		} else {
 
 			if c.jsonSelect == nil {
@@ -193,8 +186,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				isSelectedFields := false
 				for _, selectField := range c.jsonSelect {
 					if selectField == "*" {
-						toolkit.Unjson(toolkit.Jsonify(datas), m)
-						// *(m.(*[]toolkit.M)) = datas
+						// toolkit.Unjson(toolkit.Jsonify(datas), m)
+						toolkit.Serde(datas, m, "json")
 					} else {
 						isSelectedFields = true
 					}
@@ -215,7 +208,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 						dataJson = append(dataJson, toMap)
 					}
-					toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+					// toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+					toolkit.Serde(dataJson, m, "json")
 				}
 			}
 		}
@@ -259,7 +253,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 					}
 				}
 			}
-			toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+			// toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+			toolkit.Serde(dataJson, m, "json")
 			io.WriteString(fetchFile, toolkit.JsonString(dataM)+"\n")
 
 			fetched++

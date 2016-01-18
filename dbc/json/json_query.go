@@ -19,12 +19,16 @@ const (
 	modQuery = "Query"
 )
 
+var (
+	setId = "_id"
+)
+
 type Query struct {
 	dbox.Query
 	filePath, dataType    string
 	session, fetchSession *os.File
 	hasNewSave, hasSave   bool
-	sliceData             toolkit.Ms
+	sliceData             []toolkit.M
 	sliceDataSave         string
 }
 
@@ -206,11 +210,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 
 	if commandType == dbox.QueryPartInsert {
+
 		var jsonUpdatedValue []byte
 		if reflect.ValueOf(data).Kind() == reflect.Slice {
 			readF, _ := ioutil.ReadFile(filePath)
 
-			var dataMap []map[string]interface{}
+			var dataMap []toolkit.M
 			e := json.Unmarshal(readF, &dataMap)
 			if e != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
@@ -224,10 +229,13 @@ func (q *Query) Exec(parm toolkit.M) error {
 			var jToMap []toolkit.M
 			e = json.Unmarshal(j, &jToMap)
 
-			var sliceData []map[string]interface{}
+			var sliceData []toolkit.M
 			for _, v := range jToMap {
-				// sliceData = append(dataMap, v)
-				_, sliceData = finUpdateObj(dataMap, v, "insert")
+				id := toolkit.Id(v)
+				if id == nil {
+					return errorlib.Error(packageName, modCursor+".Exec", commandType, "Unable to find ID when insert slice data")
+				}
+				sliceData = finUpdateObj(dataMap, v, "insert")
 			}
 
 			jsonUpdatedValue, err = json.MarshalIndent(sliceData, "", "  ")
@@ -240,7 +248,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
 			}
 
-			var dataMap []map[string]interface{}
+			var dataMap []toolkit.M
 			e = json.Unmarshal(readF, &dataMap)
 			if e != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
@@ -250,7 +258,25 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
 			}
 
-			_, updatedValue := finUpdateObj(dataMap, dataToMap, "insert")
+			id := toolkit.Id(dataToMap)
+			if id == nil {
+				return errorlib.Error(packageName, modCursor+".Exec", commandType, "Unable to find ID when insert struct data")
+			}
+			idToS := ToString(reflect.ValueOf(id).Kind(), id)
+
+			for _, vDataMap := range dataMap {
+				idDataMap := toolkit.Id(vDataMap)
+				idToSMap := ToString(reflect.ValueOf(idDataMap).Kind(), idDataMap)
+				if id == nil {
+					return errorlib.Error(packageName, modCursor+".Exec", commandType, "Unable to find ID when insert struct data")
+				}
+
+				if strings.ToLower(idToS) == strings.ToLower(idToSMap) {
+					return errorlib.Error(packageName, modCursor+".Exec", commandType, "ID "+idToSMap+" already exist, unable insert data ")
+				}
+			}
+
+			updatedValue := finUpdateObj(dataMap, dataToMap, "insert")
 			jsonUpdatedValue, e = json.MarshalIndent(updatedValue, "", "  ")
 			if e != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
@@ -276,7 +302,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
 			}
 
-			var dataMap []map[string]interface{}
+			var dataMap []toolkit.M
 			e = json.Unmarshal(readF, &dataMap)
 			if e != nil {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
@@ -286,7 +312,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
 			}
 
-			updatedValue, _ := finUpdateObj(dataMap, a, "update")
+			id := toolkit.Id(a)
+			if id == nil {
+				return errorlib.Error(packageName, modCursor+".Exec", commandType, "Unable to find ID when update data")
+			}
+
+			updatedValue := finUpdateObj(dataMap, a, "update")
 
 			jsonUpdatedValue, err := json.MarshalIndent(updatedValue, "", "  ")
 			if err != nil {
@@ -316,7 +347,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
 				}
 
-				var dataMap []map[string]interface{}
+				var dataMap []toolkit.M
 				e = json.Unmarshal(readF, &dataMap)
 				if e != nil {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
@@ -326,7 +357,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 					return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
 				}
 
-				updatedValue, _ := finUpdateObj(dataMap, a, "deleteMulti")
+				id := toolkit.Id(a)
+				if id == nil {
+					return errorlib.Error(packageName, modCursor+".Exec", commandType, "Unable to find ID when delete data")
+				}
+
+				updatedValue := finUpdateObj(dataMap, a, "deleteMulti")
 
 				jsonUpdatedValue, err := json.MarshalIndent(updatedValue, "", "  ")
 				if err != nil {
@@ -427,19 +463,25 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 
 		id := toolkit.Id(dataMap)
-		if id != nil {
-			m := (toolkit.M{}).Set("id", id)
-
-			if q.Connection().(*Connection).sData != id {
-				q.Connection().(*Connection).sData = ToString(reflect.ValueOf(m["id"]).Kind(), m["id"])
-				// q.sliceData = append(q.sliceData, dataMap)
-			} else {
-				q.Connection().(*Connection).sameId = true
-				q.Connection().(*Connection).sData = ToString(reflect.ValueOf(m["id"]).Kind(), m["id"])
-			}
-
+		if id == nil {
+			return errorlib.Error(packageName, modCursor+".Exec", commandType, "Unable to find ID")
 		}
-		if !q.Connection().(*Connection).sameId {
+
+		idString := ToString(reflect.ValueOf(id).Kind(), id)
+
+		if q.Connection().(*Connection).sData == "" {
+			q.Connection().(*Connection).sData = idString
+		} else if q.Connection().(*Connection).sData == idString {
+			q.Connection().(*Connection).sData = idString
+			updatedValue := finUpdateObj(q.sliceData, dataMap, "update")
+			q.sliceData = updatedValue
+		} else {
+			q.Connection().(*Connection).sData = idString
+			_ = finUpdateObj(q.sliceData, dataMap, "update")
+			q.sliceData = append(q.sliceData, dataMap)
+		}
+
+		if len(q.sliceData) == 0 {
 			q.sliceData = append(q.sliceData, dataMap)
 		}
 
@@ -458,9 +500,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 	return nil
 }
 
-func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isType string) ([]toolkit.M, []map[string]interface{}) {
+func finUpdateObj(jsonData []toolkit.M, replaceData toolkit.M, isType string) []toolkit.M {
 	var (
-		remMap map[string]interface{}
+		remMap toolkit.M
 		mapVal []toolkit.M
 	)
 
@@ -479,6 +521,7 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 				}
 
 			}
+
 			// if len(v) != 0 {
 			var newData = make(map[string]interface{})
 			for i, dataUpt := range replaceData {
@@ -490,12 +533,13 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 			mapVal = append(mapVal, newData)
 			// }
 		}
+
 		// mapVal = append(mapVal, replaceData)
 
-		return mapVal, nil
+		return mapVal
 	} else if isType == "insert" {
 		val := append(jsonData, replaceData)
-		return nil, val
+		return val
 	} else if isType == "deleteMulti" {
 		for _, v := range jsonData {
 			for _, subV := range v {
@@ -535,9 +579,9 @@ func finUpdateObj(jsonData []map[string]interface{}, replaceData toolkit.M, isTy
 			}*/
 
 		}
-		return mapVal, nil
+		return mapVal
 	}
-	return nil, nil
+	return nil
 
 }
 
@@ -556,14 +600,50 @@ func (q *Query) HasPartExec() error {
 	var jsonString []byte
 	var err error
 	if q.hasNewSave {
+		var newData []toolkit.M //interface{}
+		for _, v := range q.sliceData {
+			if len(v) != 0 {
+				newData = append(newData, v)
+			}
+		}
+		q.sliceData = newData
+
 		jsonString, err = json.MarshalIndent(q.sliceData, "", "  ")
 		if err != nil {
 			return errorlib.Error(packageName, modQuery+".Exec", "Has part exec Marshal JSON", err.Error())
 		}
 	} else if q.hasSave {
+		var newData []toolkit.M //interface{}
+		for _, v := range q.sliceData {
+			if len(v) != 0 {
+				newData = append(newData, v)
+			}
+		}
+
 		lastJson := q.Connection().(*Connection).getJsonToMap
-		var allJsonData toolkit.Ms
-		allJsonData = append(lastJson, q.sliceData...)
+		var dataAfterUnset []toolkit.M
+		for _, v := range lastJson {
+			id := toolkit.Id(v)
+			sId := ToString(reflect.ValueOf(id).Kind(), id)
+
+			for _, vSlice := range newData {
+				idLast := toolkit.Id(vSlice)
+				sIdLast := ToString(reflect.ValueOf(idLast).Kind(), idLast)
+
+				if strings.ToLower(sId) == strings.ToLower(sIdLast) {
+					for k, _ := range v {
+						v.Unset(k)
+					}
+				}
+			}
+			if len(v) != 0 {
+				dataAfterUnset = append(dataAfterUnset, v)
+			}
+
+		}
+
+		var allJsonData []toolkit.M
+		allJsonData = append(dataAfterUnset, newData...)
 
 		jsonString, err = json.MarshalIndent(allJsonData, "", "  ")
 		if err != nil {
