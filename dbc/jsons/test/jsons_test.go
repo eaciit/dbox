@@ -127,7 +127,10 @@ func TestSelect(t *testing.T) {
 	if e != nil {
 		t.Fatalf("Fetch error: %s", e.Error())
 	}
-	//toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
+	if len(datas) != cursor.Count() {
+		t.Fatalf("Expect %d records got only %d", cursor.Count(), len(datas))
+	}
+	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
 }
 
 func TestQueryAggregate(t *testing.T) {
