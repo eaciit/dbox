@@ -44,6 +44,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 func (q *Query) Exec(in toolkit.M) error {
 	setting, e := q.prepare(in)
 	commandType := setting["commandtype"].(string)
+	//toolkit.Printf("Command type: %s\n", commandType)
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
 	}
@@ -153,7 +154,7 @@ func (q *Query) Exec(in toolkit.M) error {
 			isDataSlice = false
 			e = toolkit.Serde(data, &dataUpdate, "")
 			if e != nil {
-				return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail. "+e.Error())
+				return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
 			}
 		}
 
@@ -173,7 +174,7 @@ func (q *Query) Exec(in toolkit.M) error {
 				if isDataSlice {
 					e = toolkit.Serde(toolkit.SliceItem(data, updateDataIndex), &dataUpdate, "")
 					if e != nil {
-						return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail. "+e.Error())
+						return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
 					}
 					updateDataIndex++
 				}
@@ -207,18 +208,19 @@ func (q *Query) Exec(in toolkit.M) error {
 
 		var dataMs []toolkit.M
 		var dataM toolkit.M
-		if toolkit.IsSlice(data) {
-			e = toolkit.Serde(&data, &dataM, "")
+		if !toolkit.IsSlice(data) {
+			e = toolkit.Serde(&data, &dataM, "json")
 			if e != nil {
-				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail. ", e.Error())
+				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
 			}
 			dataMs = append(dataMs, dataM)
 		} else {
-			e = toolkit.Serde(&data, &dataMs, "")
+			e = toolkit.Serde(&data, &dataMs, "json")
 			if e != nil {
-				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail. ", e.Error())
+				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
 			}
 		}
+		toolkit.Printf("Saving: %s\n", toolkit.JsonString(dataMs))
 
 		for _, v := range dataMs {
 			idField, idValue := toolkit.IdInfo(v)
@@ -227,6 +229,7 @@ func (q *Query) Exec(in toolkit.M) error {
 				q.data = append(q.data, v)
 			} else {
 				dataOrigin := q.data[indexes[0]]
+				//toolkit.Printf("Copy data %s to %s\n", toolkit.JsonString(v), toolkit.JsonString(dataOrigin))
 				toolkit.CopyM(&v, &dataOrigin, false, []string{idField})
 				q.data[indexes[0]] = dataOrigin
 			}
@@ -234,7 +237,7 @@ func (q *Query) Exec(in toolkit.M) error {
 	}
 	e = q.writeFile()
 	if e != nil {
-		return err.Error(packageName, modQuery, "Exec: "+commandType+" Write fail. ", e.Error())
+		return err.Error(packageName, modQuery, "Exec: "+commandType+" Write fail", e.Error())
 	}
 	return nil
 }

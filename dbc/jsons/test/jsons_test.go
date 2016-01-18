@@ -109,6 +109,15 @@ func TestCRUD(t *testing.T) {
 	}
 }
 
+func TestUpdate(t *testing.T) {
+	skipIfConnectionIsNil(t)
+
+	e := ctx.NewQuery().From(tableName).Save().Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("_id", "user4").Set("Enable", false)))
+	if e != nil {
+		t.Fatalf("Specific update fail: %s", e.Error())
+	}
+}
+
 func TestSelect(t *testing.T) {
 	skipIfConnectionIsNil(t)
 
