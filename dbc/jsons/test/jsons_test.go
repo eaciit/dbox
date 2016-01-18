@@ -5,6 +5,8 @@ import (
 	_ "github.com/eaciit/dbox/dbc/jsons"
 	"github.com/eaciit/toolkit"
 	"os"
+
+	"strings"
 	//"path/filepath"
 	"testing"
 )
@@ -88,7 +90,7 @@ func TestCRUD(t *testing.T) {
 
 	es := []string{}
 	qinsert := ctx.NewQuery().From(tableName).SetConfig("multiexec", true).Insert()
-	for i := 1; i <= 5; i++ {
+	for i := 1; i <= 50; i++ {
 		u := &testUser{
 			toolkit.Sprintf("user%d", i),
 			toolkit.Sprintf("User %d", i),
@@ -112,7 +114,7 @@ func TestCRUD(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	skipIfConnectionIsNil(t)
 
-	e := ctx.NewQuery().From(tableName).Save().Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("_id", "user4").Set("Enable", false)))
+	e := ctx.NewQuery().From(tableName).Save().Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("_id", "user54").Set("Enable", false)))
 	if e != nil {
 		t.Fatalf("Specific update fail: %s", e.Error())
 	}
@@ -121,7 +123,7 @@ func TestUpdate(t *testing.T) {
 func TestSelect(t *testing.T) {
 	skipIfConnectionIsNil(t)
 
-	cursor, e := ctx.NewQuery().From(tableName).Where(dbox.Gte("_id", "user3")).Cursor(nil)
+	cursor, e := ctx.NewQuery().From(tableName).Where(dbox.Eq("Enable", false)).Cursor(nil)
 	if e != nil {
 		t.Fatalf("Cursor error: " + e.Error())
 	}
@@ -139,7 +141,14 @@ func TestSelect(t *testing.T) {
 	if len(datas) != cursor.Count() {
 		t.Fatalf("Expect %d records got %d\n%s\n", cursor.Count(), len(datas), toolkit.JsonString(datas))
 	}
-	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
+	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas),
+		func() string {
+			var ret []string
+			for _, v := range datas {
+				ret = append(ret, v.GetString("_id"))
+			}
+			return strings.Join(ret, ",")
+		}())
 }
 
 func TestQueryAggregate(t *testing.T) {

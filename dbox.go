@@ -161,6 +161,14 @@ func Compare(v1 interface{}, v2 interface{}, op string) bool {
 			return vv1o == vv2o || vv1o.After(vv2o)
 		}
 
+	} else if strings.Contains(t, "bool") {
+		vv1o := vv1.Bool()
+		vv2o := vv2.Bool()
+		if op == FilterOpEqual {
+			return vv1o == vv2o
+		} else if op == FilterOpNoEqual {
+			return vv1o != vv2o
+		}
 	} else {
 		//--- will be string
 		vv1o := vv1.Interface().(string)
