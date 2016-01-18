@@ -42,7 +42,7 @@ const (
 )
 
 type testUser struct {
-	ID       string `bson:"_id",json:"_id"`
+	ID       string `json:"_id"`
 	FullName string
 	Age      int
 	Enable   bool
@@ -88,14 +88,14 @@ func TestCRUD(t *testing.T) {
 
 	es := []string{}
 	qinsert := ctx.NewQuery().From(tableName).SetConfig("multiexec", true).Insert()
-	for i := 1; i <= 500; i++ {
+	for i := 1; i <= 5; i++ {
 		u := &testUser{
 			toolkit.Sprintf("user%d", i),
 			toolkit.Sprintf("User %d", i),
 			toolkit.RandInt(30) + 20, true}
 		e = qinsert.Exec(toolkit.M{}.Set("data", u))
 		if e != nil {
-			es = append(es, toolkit.Sprintf("Insert fail %d: %s", i, e.Error()))
+			es = append(es, toolkit.Sprintf("Insert fail %d: %s \n", i, e.Error()))
 		}
 	}
 
@@ -103,10 +103,31 @@ func TestCRUD(t *testing.T) {
 		t.Fatal(es)
 	}
 
-	e = ctx.NewQuery().Update().From(tableName).Where(dbox.Lte("_id", "user200")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("enable", false)))
+	e = ctx.NewQuery().Update().From(tableName).Where(dbox.Lte("_id", "user2")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("Enable", false)))
 	if e != nil {
 		t.Fatalf("Update fail: %s", e.Error())
 	}
+}
+
+func TestSelect(t *testing.T) {
+	skipIfConnectionIsNil(t)
+
+	cursor, e := ctx.NewQuery().From(tableName).Where(dbox.Gte("_id", 10)).Cursor(nil)
+	if e != nil {
+		t.Fatalf("Cursor error: " + e.Error())
+	}
+	defer cursor.Close()
+
+	if cursor.Count() == 0 {
+		t.Fatalf("No record found")
+	}
+
+	var datas []toolkit.M
+	e = cursor.Fetch(&datas, 0, false)
+	if e != nil {
+		t.Fatalf("Fetch error: %s", e.Error())
+	}
+	//toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
 }
 
 func TestQueryAggregate(t *testing.T) {

@@ -14,7 +14,7 @@ func (c *Cursor) Close() {
 }
 
 func (c *Cursor) Count() int {
-	return 0
+	return len(c.query.data)
 }
 
 func (c *Cursor) ResetFetch() error {
