@@ -246,33 +246,11 @@ func TestCRUD(t *testing.T) {
 	}
 
 	///Test save 10000 datas
-	/*q := c.NewQuery().SetConfig("multiexec", true).Save()
-	for i := 1; i <= 10000; i++ {
-		//go func(q dbox.IQuery, i int) {
-		data := user{}
-		data.Id = fmt.Sprintf("User-%d", i)
-		data.Title = fmt.Sprintf("User-%d's name", i)
-		data.Email = fmt.Sprintf("User-%d@myco.com", i)
-		if i == 10 || i == 20 || i == 30 {
-			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
-		}
-
-		e = q.Exec(toolkit.M{
-			"data": data,
-		})
-		if e != nil {
-			t.Errorf("Unable to save: %s \n", e.Error())
-		}
-
-	}
-	q.Close()*/
-
-	///Test save with same id's
 	q := c.NewQuery().SetConfig("multiexec", true).Save()
 	for i := 1; i <= 10; i++ {
 		//go func(q dbox.IQuery, i int) {
 		data := user{}
-		data.Id = fmt.Sprintf("User-%d", 4)
+		data.Id = fmt.Sprintf("User-%d", i)
 		data.Title = fmt.Sprintf("User-%d's name", i)
 		data.Email = fmt.Sprintf("User-%d@myco.com", i)
 		if i == 10 || i == 20 || i == 30 {
@@ -331,11 +309,11 @@ func TestCRUD(t *testing.T) {
 	}
 	data.MasterDataSource = "master"
 	data.Title = "Test update"*/
-	data := user{}
-	data.Id = fmt.Sprintf("User-10")
-	data.Title = fmt.Sprintf("User sepoloh")
-	data.Email = fmt.Sprintf("user10@yahoo.com")
-	e = c.NewQuery().Update().Exec(toolkit.M{"data": data})
+	dataUpdate := user{}
+	dataUpdate.Id = fmt.Sprintf("User-10")
+	dataUpdate.Title = fmt.Sprintf("User sepoloh")
+	dataUpdate.Email = fmt.Sprintf("user10@yahoo.com")
+	e = c.NewQuery().Update().Exec(toolkit.M{"data": dataUpdate})
 	if e != nil {
 		t.Errorf("Unable to update: %s \n", e.Error())
 	}
@@ -346,4 +324,115 @@ func TestCRUD(t *testing.T) {
 		t.Errorf("Unablet to delete table %s\n", e.Error())
 		return
 	}
+}
+
+func TestCRUDSaveSameId(t *testing.T) {
+	type user struct {
+		Id    string `json:"id"`
+		Title string `json:"title"`
+		Email string `json:"email"`
+	}
+
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	e = c.NewQuery().Delete().Exec(nil)
+	if e != nil {
+		t.Errorf("Unablet to clear table %s\n", e.Error())
+		return
+	}
+	q := c.NewQuery().SetConfig("multiexec", true).Save()
+	for i := 1; i <= 5; i++ {
+		//go func(q dbox.IQuery, i int) {
+		data := user{}
+		data.Id = fmt.Sprintf("User-%d", 1)
+		data.Title = fmt.Sprintf("User-%d's name", i)
+		data.Email = fmt.Sprintf("User-%d@myco.com", i)
+		if i == 5 {
+			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
+		}
+
+		e = q.Exec(toolkit.M{
+			"data": data,
+		})
+		if e != nil {
+			t.Errorf("Unable to save: %s \n", e.Error())
+		}
+
+	}
+
+	for i := 2; i <= 10; i++ {
+		//go func(q dbox.IQuery, i int) {
+		data := user{}
+		data.Id = fmt.Sprintf("User-%d", i)
+		data.Title = fmt.Sprintf("User-%d's name", i)
+		data.Email = fmt.Sprintf("User-%d@myco.com", i)
+		if i == 5 {
+			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
+		}
+
+		e = q.Exec(toolkit.M{
+			"data": data,
+		})
+		if e != nil {
+			t.Errorf("Unable to save: %s \n", e.Error())
+		}
+
+	}
+
+	dataSave := user{}
+	dataSave.Id = fmt.Sprintf("User-%d", 3)
+	dataSave.Title = fmt.Sprintf("User-%d's name", 21)
+	dataSave.Email = fmt.Sprintf("User-%d@myco.com", 21)
+
+	e = q.Exec(toolkit.M{
+		"data": dataSave,
+	})
+	if e != nil {
+		t.Errorf("Unable to save: %s \n", e.Error())
+	}
+	q.Close()
+}
+
+func TestCRUDSaveNotEmpty(t *testing.T) {
+	type user struct {
+		Id    string `json:"id"`
+		Title string `json:"title"`
+		Email string `json:"email"`
+	}
+
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	q := c.NewQuery().SetConfig("multiexec", true).Save()
+	data := user{}
+	data.Id = fmt.Sprintf("User-%d", 4)
+	data.Title = fmt.Sprintf("User-%d's name", 400)
+	data.Email = fmt.Sprintf("User-%d@myco.com", 4)
+	e = q.Exec(toolkit.M{
+		"data": data,
+	})
+	if e != nil {
+		t.Errorf("Unable to save: %s \n", e.Error())
+	}
+
+	data.Id = fmt.Sprintf("User-%d", 99)
+	data.Title = fmt.Sprintf("User-%d's name", 99)
+	data.Email = fmt.Sprintf("User-%d@myco.com", 99)
+
+	e = q.Exec(toolkit.M{
+		"data": data,
+	})
+	if e != nil {
+		t.Errorf("Unable to save: %s \n", e.Error())
+	}
+	q.Close()
 }

@@ -27,7 +27,7 @@ type Connection struct {
 	writer                 *json.Encoder
 	isNewSave, sameId      bool
 	lines                  int
-	getJsonToMap           toolkit.Ms
+	getJsonToMap           []toolkit.M
 }
 
 func init() {
@@ -102,7 +102,7 @@ func (c *Connection) OpenSession() error {
 		return errorlib.Error(packageName, modQuery+".Exec", "Read file", e.Error())
 	}
 
-	var hoomanJson toolkit.Ms
+	var hoomanJson []toolkit.M
 	e = toolkit.Unjson(i, &hoomanJson)
 	if e != nil {
 		return errorlib.Error(packageName, modQuery+".Exec", "Cannot Unjson", e.Error())
