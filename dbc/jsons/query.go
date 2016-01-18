@@ -37,7 +37,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	if e != nil {
 		return nil, err.Error(packageName, modQuery, "Cursor", e.Error())
 	}
+	//toolkit.Printf("Data count: %d \n", len(q.data))
 	cursor = newCursor(q)
+	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
+	if len(where) > 0 {
+		cursor.where = where
+		cursor.indexes = dbox.Find(q.data, where)
+	}
 	return cursor, nil
 }
 
@@ -220,7 +226,7 @@ func (q *Query) Exec(in toolkit.M) error {
 				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
 			}
 		}
-		toolkit.Printf("Saving: %s\n", toolkit.JsonString(dataMs))
+		//toolkit.Printf("Saving: %s\n", toolkit.JsonString(dataMs))
 
 		for _, v := range dataMs {
 			idField, idValue := toolkit.IdInfo(v)

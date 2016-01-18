@@ -121,7 +121,7 @@ func TestUpdate(t *testing.T) {
 func TestSelect(t *testing.T) {
 	skipIfConnectionIsNil(t)
 
-	cursor, e := ctx.NewQuery().From(tableName).Where(dbox.Gte("_id", 10)).Cursor(nil)
+	cursor, e := ctx.NewQuery().From(tableName).Where(dbox.Gte("_id", "user3")).Cursor(nil)
 	if e != nil {
 		t.Fatalf("Cursor error: " + e.Error())
 	}
@@ -137,7 +137,7 @@ func TestSelect(t *testing.T) {
 		t.Fatalf("Fetch error: %s", e.Error())
 	}
 	if len(datas) != cursor.Count() {
-		t.Fatalf("Expect %d records got only %d", cursor.Count(), len(datas))
+		t.Fatalf("Expect %d records got %d\n%s\n", cursor.Count(), len(datas), toolkit.JsonString(datas))
 	}
 	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	//"strings"
 )
 
 type Cursor struct {
@@ -51,7 +52,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			upper = len(c.indexes)
 		}
 	} else if n == 1 {
-		upper = lower
+		upper = lower + 1
 	} else {
 		upper = lower + n
 		if c.where == nil {
@@ -69,16 +70,26 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		source = c.q.data[lower:upper]
 	} else {
 		for _, v := range c.indexes[lower:upper] {
+			/*
+				toolkit.Printf("Add index: %d. Source info now: %s \n", v, func() string {
+					var ret []string
+					for _, id := range source {
+						ret = append(ret, id.Get("_id").(string))
+					}
+					return strings.Join(ret, ",")
+				}())
+			*/
 			if v < len(c.q.data) {
-				source = append(c.q.data, c.q.data[v])
-
+				source = append(source, c.q.data[v])
 			}
 		}
 	}
-	e := toolkit.Serde(&source, &m, "json")
+
+	e := toolkit.Serde(&source, m, "json")
 	if e != nil {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
+	//toolkit.Printf("Data: %s\nLower, Upper = %d, %d\nSource: %s\nResult:%s\n\n", toolkit.JsonString(c.q.data), lower, upper, toolkit.JsonString(source), toolkit.JsonString(m))
 	return nil
 }
 
