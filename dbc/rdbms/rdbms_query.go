@@ -182,43 +182,41 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 		spName := procCommand.(toolkit.M)["name"].(string) + " "
 		params := procCommand.(toolkit.M)["parms"]
-		//var spParam interface{}
-		// paramValue := ""
-		// paramName := ""
 
-		//var parameter interface{}
-		// incParam := 0
-
-		// for key, val := range params.(toolkit.M) {
-		// 	if incParam == 0 {
-		// 		paramValue = "('" + val.(string) + "'"
-		// 		paramName = key
-		// 	} else {
-		// 		paramValue += ",'" + val.(string) + "'"
-		// 	}
-		// 	incParam += 1
-		// }
-		// paramValue += ", " + paramName + ")"
-
-		// ProcStatement = "CALL " + spName + paramValue
-
-		//=========================SQL SERVER=================
-		
-		paramstring := ""
+		paramValue := ""
+		paramName := ""
 		incParam := 0
+
 		for key, val := range params.(toolkit.M) {
 			if incParam == 0 {
-				paramstring = key + " = '" + val.(string) + "'"
+				paramValue = "('" + val.(string) + "'"
+				paramName = key
 			} else {
-				paramstring += ", " + key + " = '" + val.(string) + "'"
+				paramValue += ",'" + val.(string) + "'"
 			}
 			incParam += 1
 		}
-		paramstring += ";"
+		paramValue += ", " + paramName + ")"
 
-		ProcStatement = "EXECUTE " + spName + paramstring
+		ProcStatement = "CALL " + spName + paramValue
 
-		cursor.(*Cursor).QueryString = ProcStatement
+		//=========================SQL SERVER=================
+
+		// paramstring := ""
+		// incParam := 0
+		// for key, val := range params.(toolkit.M) {
+		// 	if incParam == 0 {
+		// 		paramstring = key + " = '" + val.(string) + "'"
+		// 	} else {
+		// 		paramstring += ", " + key + " = '" + val.(string) + "'"
+		// 	}
+		// 	incParam += 1
+		// }
+		// paramstring += ";"
+
+		// ProcStatement = "EXECUTE " + spName + paramstring
+
+		// cursor.(*Cursor).QueryString = ProcStatement
 
 		fmt.Println("Proc Statement : ", ProcStatement)
 	}

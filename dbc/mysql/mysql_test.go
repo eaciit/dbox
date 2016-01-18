@@ -17,6 +17,12 @@ type User struct {
 	Umur    int
 }
 
+type Player struct {
+	Id   string
+	Name string
+	Umur int
+}
+
 func prepareConnection() (dbox.IConnection, error) {
 	ci := &dbox.ConnectionInfo{"localhost:3306", "test", "root", "", nil}
 	c, e := dbox.NewConnection("mysql", ci)
@@ -99,41 +105,42 @@ func TestConnect(t *testing.T) {
 // 	}
 // }
 
-func TestProcedure(t *testing.T) {
-	c, _ := prepareConnection()
-	defer c.Close()
+// func TestProcedure(t *testing.T) {
+// 	c, _ := prepareConnection()
+// 	defer c.Close()
 
-	//csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmur").Set("parms", toolkit.M{}.Set("@name", "Vidal"))).Cursor(nil)
-	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").Set("parms", toolkit.M{}.Set("@umur1", "20").Set("@umur2", "23"))).Cursor(nil)
-	if csr == nil {
-		t.Errorf("Cursor not initialized", e.Error())
-		return
-	}
-	defer csr.Close()
+// 	//csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmur").Set("parms", toolkit.M{}.Set("@name", "Vidal"))).Cursor(nil)
+// 	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").Set("parms", toolkit.M{}.Set("@umur1", "20").Set("@umur2", "23"))).Cursor(nil)
+// 	if csr == nil {
+// 		t.Errorf("Cursor not initialized", e.Error())
+// 		return
+// 	}
+// 	defer csr.Close()
 
-	results := make([]map[string]interface{}, 0)
-	err := csr.Fetch(&results, 0, false)
-	fmt.Println("Hasil Procedure : ", results)
-	if err != nil {
-		t.Errorf("Unable to fetch: %s \n", err.Error())
-	} else {
-		fmt.Println("======================")
-		fmt.Println("Select with FILTER")
-		fmt.Println("======================")
-		for _, val := range results {
-			fmt.Printf("Fetch N OK. Result: %v \n",
-				toolkit.JsonString(val))
-		}
-	}
+// 	results := make([]map[string]interface{}, 0)
 
-	// ds, e := csr.Fetch(nil, 0, false)
-	// if e != nil {
-	// 	t.Errorf("Unable to fetch: %s \n", e.Error())
-	// } else {
-	// 	fmt.Printf("Fetch OK. Result: %v \n",
-	// 		toolkit.JsonString(ds.Data))
-	// }
-}
+// 	err := csr.Fetch(&results, 0, false)
+// 	fmt.Println("Hasil Procedure : ", results)
+// 	if err != nil {
+// 		t.Errorf("Unable to fetch: %s \n", err.Error())
+// 	} else {
+// 		fmt.Println("======================")
+// 		fmt.Println("Select with FILTER")
+// 		fmt.Println("======================")
+// 		for _, val := range results {
+// 			fmt.Printf("Fetch N OK. Result: %v \n",
+// 				toolkit.JsonString(val))
+// 		}
+// 	}
+
+// 	// ds, e := csr.Fetch(nil, 0, false)
+// 	// if e != nil {
+// 	// 	t.Errorf("Unable to fetch: %s \n", e.Error())
+// 	// } else {
+// 	// 	fmt.Printf("Fetch OK. Result: %v \n",
+// 	// 		toolkit.JsonString(ds.Data))
+// 	// }
+// }
 
 func TestSelectFilter(t *testing.T) {
 	c, e := prepareConnection()
@@ -168,7 +175,9 @@ func TestSelectFilter(t *testing.T) {
 	}
 	defer csr.Close()
 
-	results := make([]map[string]interface{}, 0)
+	// results := make([]map[string]interface{}, 0)
+	results := make([]Player, 0)
+
 	err := csr.Fetch(&results, 0, false)
 	if err != nil {
 		t.Errorf("Unable to fetch: %s \n", err.Error())
@@ -176,11 +185,37 @@ func TestSelectFilter(t *testing.T) {
 		fmt.Println("======================")
 		fmt.Println("Select with FILTER")
 		fmt.Println("======================")
-		for _, val := range results {
-			fmt.Printf("Fetch N OK. Result: %v \n",
-				toolkit.JsonString(val))
+
+		fmt.Printf("Fetch N OK. Result:\n")
+		// for _, val := range results {
+		// 	fmt.Printf("%v \n", toolkit.JsonString(val))
+		// }
+		for i := 0; i < len(results); i++ {
+			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
 		}
+
 	}
+
+	// results := new(Player)
+
+	// ms := toolkit.M{}
+	// errSerde := toolkit.FromBytes(toolkit.ToBytes(results, ""), "", &ms)
+	// if errSerde != nil {
+	// 	fmt.Printf("Serde using bytes fail: %s\n", errSerde.Error())
+	// 	return
+	// }
+
+	// err := csr.Fetch(&ms, 0, false)
+	// fmt.Println("Nilai MS : ", ms)
+	// if err != nil {
+	// 	t.Errorf("Unable to fetch: %s \n", err.Error())
+	// } else {
+	// 	fmt.Println("======================")
+	// 	fmt.Println("Select with FILTER")
+	// 	fmt.Println("======================")
+	// 	errSerde = toolkit.FromBytes(toolkit.ToBytes(ms, ""), "", results)
+	// 	fmt.Printf("Object value after serde and be changed on M: \n%s \n\n", toolkit.JsonString(results))
+	// }
 }
 
 // func TestSelectAggregate(t *testing.T) {
@@ -280,15 +315,15 @@ func TestCRUD(t *testing.T) {
 
 	//===============================UPDATE==============================
 
-	// data := User{}
-	// data.Id = "7"
-	// data.Name = "Oscar"
-	// data.Tanggal = time.Now()
-	// data.Umur = 24
-	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "7")).Update().Exec(toolkit.M{"data": data})
-	// if e != nil {
-	// 	t.Errorf("Unable to update: %s \n", e.Error())
-	// }
+	data := User{}
+	data.Id = "7"
+	data.Name = "Oscar"
+	data.Tanggal = time.Now()
+	data.Umur = 24
+	e = c.NewQuery().From("tes").Where(dbox.Eq("id", "7")).Update().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	}
 
 	//===============================DELETE==============================
 	// e = c.NewQuery().From("tes").Where(dbox.And(dbox.Eq("id", "6"),dbox.Eq("name", "Barkley"))).Delete().Exec(nil)
