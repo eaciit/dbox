@@ -46,6 +46,7 @@ func (c *Cursor) ResetFetch() error {
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	fmt.Println(c.QueryString)
 	rows, e := c.session.Query(c.QueryString)
+
 	if e != nil {
 		return e
 	}
@@ -54,6 +55,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	if e != nil {
 		return e
 	}
+	
 	count := len(columns)
 	tableData := make([]map[string]interface{}, 0)
 	values := make([]interface{}, count)
@@ -64,6 +66,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			valuePtrs[i] = &values[i]
 		}
 		rows.Scan(valuePtrs...)
+
 		entry := make(map[string]interface{})
 		for i, col := range columns {
 			var v interface{}

@@ -9,6 +9,9 @@ import (
 
 type FilterBuilder struct {
 	dbox.FilterBuilder
+	//Query
+	//rdbms.Connection
+	//Connection
 }
 
 func StringValues(v interface{}) string {
@@ -51,6 +54,11 @@ func CombineIn(operator string, f *dbox.Filter) string {
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := ""
 	// vals := ""
+	//drivername :=  dbox.Connection
+	// drivername :=  new(Connection)
+	//drivername :=  fb.GetDriver()
+	// drivername := fb.Connection().(*Connection).Drivername
+	// fmt.Println("drivernamenya adalah : ", drivername)
 	if f.Op == dbox.FilterOpEqual {
 		fm = fm + f.Field + "= '" + cast.ToString(f.Value) + "'"
 	} else if f.Op == dbox.FilterOpNoEqual {
