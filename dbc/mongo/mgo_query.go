@@ -366,6 +366,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 		}
 	} else if commandType == dbox.QueryPartSave {
+		//fmt.Println("Saving ", toolkit.JsonString(data))
 		_, e = mgoColl.Upsert(where, data)
 	}
 	if e != nil {

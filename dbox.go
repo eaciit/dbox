@@ -29,6 +29,7 @@ func (d *DBOP) String() string {
 }
 
 func Find(ms []toolkit.M, filters []*Filter) (output []int) {
+	//toolkit.Printf("Find:%s Filter:%s\n", toolkit.JsonString(ms), toolkit.JsonString(filters))
 	for i, v := range ms {
 		match := MatchM(v, filters)
 		if match {
@@ -42,9 +43,9 @@ func MatchM(v toolkit.M, filters []*Filter) bool {
 	var match bool
 
 	for _, f := range filters {
+		//toolkit.Printf("Filter:%s V:%s Has:%s Match:%s\n", toolkit.JsonString(f), toolkit.JsonString(v), v.Has(f.Field), match)
 		if f.Field != "" {
 			//--- if has field: $eq, $ne, $gt, $lt, $gte, $lte, $contains
-			//toolkit.Printf("Filter:%s V:%s Has:%s Match:%s", f.Field, toolkit.JsonString(v), v.Has("random"), match)
 			if v.Has(f.Field) {
 				match = MatchV(v.Get(f.Field), f)
 				//toolkit.Printf("Filter:%s Value: %v Match:%s \n", toolkit.JsonString(f), v.Get(f.Field), match)
@@ -160,6 +161,14 @@ func Compare(v1 interface{}, v2 interface{}, op string) bool {
 			return vv1o == vv2o || vv1o.After(vv2o)
 		}
 
+	} else if strings.Contains(t, "bool") {
+		vv1o := vv1.Bool()
+		vv2o := vv2.Bool()
+		if op == FilterOpEqual {
+			return vv1o == vv2o
+		} else if op == FilterOpNoEqual {
+			return vv1o != vv2o
+		}
 	} else {
 		//--- will be string
 		vv1o := vv1.Interface().(string)
