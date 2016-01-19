@@ -16,7 +16,7 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 		ci.Settings = toolkit.M{}
 	}
 	c := new(Connection)
-	c.Folder = ci.Host
+	c.folder = ci.Host
 	c.SetInfo(ci)
 	c.SetFb(dbox.NewFilterBuilder(new(FilterBuilder)))
 	return c, nil
@@ -25,16 +25,17 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 type Connection struct {
 	dbox.Connection
 
-	Folder      string
+	folder      string
 	defautQuery *Query
 }
 
 func (c *Connection) Connect() error {
-	if c.Folder == "" {
-		return err.Error(packageName, modConnection, "Connect", "Folder path is empty")
+	c.folder = c.Info().Host
+	if c.folder == "" {
+		return err.Error(packageName, modConnection, "Connect", "folder path is empty")
 	}
 
-	_, e := os.Stat(c.Folder)
+	_, e := os.Stat(c.folder)
 	if e != nil {
 		return err.Error(packageName, modConnection, "Connect",
 			e.Error())
@@ -44,7 +45,7 @@ func (c *Connection) Connect() error {
 }
 
 func (c *Connection) NewQuery() dbox.IQuery {
-	pooling := c.Info().Settings.Get("pooling", false).(bool)
+	pooling := c.Info().Settings.Get("pooling", true).(bool)
 
 	if pooling && c.defautQuery != nil {
 		return c.defautQuery
