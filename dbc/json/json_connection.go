@@ -22,12 +22,12 @@ type Connection struct {
 	dbox.Connection
 	// session *os.File
 	filePath, basePath, baseFileName,
-	separator, tempPathFile, dataType string
+	separator, tempPathFile, dataType, sData string
 	openFile, fetchSession *os.File
 	writer                 *json.Encoder
-	isNewSave              bool
+	isNewSave, sameId      bool
 	lines                  int
-	getJsonToMap           toolkit.Ms
+	getJsonToMap           []toolkit.M
 }
 
 func init() {
@@ -102,12 +102,15 @@ func (c *Connection) OpenSession() error {
 		return errorlib.Error(packageName, modQuery+".Exec", "Read file", e.Error())
 	}
 
-	var hoomanJson toolkit.Ms
+	var hoomanJson []toolkit.M
 	e = toolkit.Unjson(i, &hoomanJson)
 	if e != nil {
 		return errorlib.Error(packageName, modQuery+".Exec", "Cannot Unjson", e.Error())
 	}
 
+	c.lines = 0
+	c.sData = ""
+	c.sameId = false
 	if len(hoomanJson) == 0 {
 		c.isNewSave = true
 	} else {

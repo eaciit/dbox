@@ -93,12 +93,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	// var mData []interface{}
 	datas := []toolkit.M{}
+	dataJson := []toolkit.M{}
 	dec := json.NewDecoder(strings.NewReader(string(c.readFile)))
 	dec.Decode(&datas)
-
-	if *(m.(*[]toolkit.M)) != nil {
-		*(m.(*[]toolkit.M)) = []toolkit.M{}
-	}
 
 	if n == 0 {
 		whereFieldsToMap, e := toolkit.ToM(c.whereFields)
@@ -120,8 +117,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 								for _, subsubWhere := range subWhere.(map[string]interface{}) {
 									if len(c.jsonSelect) == 0 {
 										if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
-											// ds.Data = append(ds.Data, v)
-											*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), v)
+											dataJson = append(dataJson, v)
 										}
 									} else {
 										if strings.ToLower(subData.(string)) == strings.ToLower(subsubWhere.(string)) {
@@ -143,8 +139,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 							found.Unset(remitem)
 						}
 
-						// ds.Data = append(ds.Data, found)
-						*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), found)
+						dataJson = append(dataJson, found)
 					}
 				}
 			} else {
@@ -154,11 +149,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 							if reflect.ValueOf(v2).Kind() == reflect.String {
 								if strings.ToLower(v2.(string)) == strings.ToLower(vWhere.(string)) {
 									if len(c.jsonSelect) == 0 {
-										// ds.Data = append(ds.Data, v)
-										*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), v)
+										dataJson = append(dataJson, v)
 									} else {
-										// fmt.Println(c.jsonSelect.([]string)[0])
-										// fmt.Println(v.(map[string]interface{}))
 										foundData = append(foundData, v)
 									}
 								}
@@ -181,18 +173,21 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 							}
 						}
 					}
-					// ds.Data = append(ds.Data, foundSelected)
-					*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), foundSelected)
+					dataJson = append(dataJson, foundSelected)
 				}
 			}
+			// toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+			toolkit.Serde(dataJson, m, "json")
 		} else {
+
 			if c.jsonSelect == nil {
-				*(m.(*[]toolkit.M)) = datas
+				toolkit.Unjson(toolkit.Jsonify(datas), m)
 			} else {
 				isSelectedFields := false
 				for _, selectField := range c.jsonSelect {
 					if selectField == "*" {
-						*(m.(*[]toolkit.M)) = datas
+						// toolkit.Unjson(toolkit.Jsonify(datas), m)
+						toolkit.Serde(datas, m, "json")
 					} else {
 						isSelectedFields = true
 					}
@@ -203,6 +198,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 							getRemField[i] = i
 						}
 					}
+
 					itemToRemove := removeDuplicatesUnordered(getRemField, c.jsonSelect)
 					for _, found := range datas {
 						toMap := toolkit.M(found)
@@ -210,8 +206,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 							toMap.Unset(remitem)
 						}
 
-						*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), toMap)
+						dataJson = append(dataJson, toMap)
 					}
+					// toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+					toolkit.Serde(dataJson, m, "json")
 				}
 			}
 		}
@@ -242,20 +240,21 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			var dataM = toolkit.M{}
 
 			if c.jsonSelect == nil {
-				*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), datas[fetched])
+				dataJson = append(dataJson, datas[fetched])
 			} else {
 				for _, selectField := range c.jsonSelect {
 					if selectField == "*" {
-						*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), datas[fetched])
+						dataJson = append(dataJson, datas[fetched])
 					} else {
 						dataM.Set(selectField, datas[fetched][selectField])
 						if len(dataM) == len(c.jsonSelect) {
-							*(m.(*[]toolkit.M)) = append(*(m.(*[]toolkit.M)), dataM)
+							dataJson = append(dataJson, dataM)
 						}
 					}
 				}
 			}
-
+			// toolkit.Unjson(toolkit.Jsonify(dataJson), m)
+			toolkit.Serde(dataJson, m, "json")
 			io.WriteString(fetchFile, toolkit.JsonString(dataM)+"\n")
 
 			fetched++

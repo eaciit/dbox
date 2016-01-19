@@ -64,7 +64,10 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	aggregate := false
 	dbname := q.Connection().Info().Database
-	tablename := ""
+	session := q.Session()
+	cursor := dbox.NewCursor(new(Cursor))
+	cursor.(*Cursor).session = session
+	ProcStatement := ""
 
 	/*
 		parts will return E - map{interface{}}interface{}
@@ -76,106 +79,146 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}, nil).Data
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
-	if hasFrom == false {
-		return nil, errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
-	}
-	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+	procedureParts, hasProcedure := parts["procedure"]
 
-	skip := 0
-	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-		skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
-			Value.(int)
-	}
+	if hasFrom {
+		tablename := ""
+		tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
 
-	take := 0
-	if takeParts, has := parts[dbox.QueryPartTake]; has {
-		take = takeParts.([]interface{})[0].(*dbox.QueryPart).
-			Value.(int)
-	}
+		skip := 0
+		if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
+			skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
+				Value.(int)
+		}
 
-	var fields toolkit.M
-	selectParts, hasSelect := parts[dbox.QueryPartSelect]
-	var attribute string
-	incAtt := 0
-	if hasSelect {
-		fields = toolkit.M{}
-		for _, sl := range selectParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
-				if incAtt == 0 {
-					attribute = fid
-				} else {
-					attribute = attribute + "," + fid
+		take := 0
+		if takeParts, has := parts[dbox.QueryPartTake]; has {
+			take = takeParts.([]interface{})[0].(*dbox.QueryPart).
+				Value.(int)
+		}
+
+		var fields toolkit.M
+		selectParts, hasSelect := parts[dbox.QueryPartSelect]
+		var attribute string
+		incAtt := 0
+		if hasSelect {
+			fields = toolkit.M{}
+			for _, sl := range selectParts.([]interface{}) {
+				qp := sl.(*dbox.QueryPart)
+				for _, fid := range qp.Value.([]string) {
+					if incAtt == 0 {
+						attribute = fid
+					} else {
+						attribute = attribute + "," + fid
+					}
+					incAtt++
+					fields.Set(fid, 1)
 				}
-				incAtt++
-				fields.Set(fid, 1)
 			}
-		}
-	} else {
-		_, hasUpdate := parts[dbox.QueryPartUpdate]
-		_, hasInsert := parts[dbox.QueryPartInsert]
-		_, hasDelete := parts[dbox.QueryPartDelete]
-		_, hasSave := parts[dbox.QueryPartSave]
-
-		if hasUpdate || hasInsert || hasDelete || hasSave {
-			return nil, errorlib.Error(packageName, modQuery, "Cursor",
-				"Valid operation for a cursor is select only")
-		}
-	}
-	//fmt.Printf("Result: %s \n", toolkit.JsonString(fields))
-	//fmt.Printf("Database:%s table:%s \n", dbname, tablename)
-	var sort []string
-	sortParts, hasSort := parts[dbox.QueryPartSelect]
-	if hasSort {
-		sort = []string{}
-		for _, sl := range sortParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
-				sort = append(sort, fid)
-			}
-		}
-	}
-
-	//where := toolkit.M{}
-	var where interface{}
-	whereParts, hasWhere := parts[dbox.QueryPartWhere]
-	if hasWhere {
-		fb := q.Connection().Fb()
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
-			for _, f := range fs {
-				fb.AddFilter(f)
-			}
-		}
-		where, e = fb.Build()
-		if e != nil {
-			return nil, errorlib.Error(packageName, modQuery, "Cursor",
-				e.Error())
 		} else {
-			//fmt.Printf("Where: %s", toolkit.JsonString(where))
-		}
-		//where = iwhere.(toolkit.M)
-	}
+			_, hasUpdate := parts[dbox.QueryPartUpdate]
+			_, hasInsert := parts[dbox.QueryPartInsert]
+			_, hasDelete := parts[dbox.QueryPartDelete]
+			_, hasSave := parts[dbox.QueryPartSave]
 
-	session := q.Session()
-	cursor := dbox.NewCursor(new(Cursor))
-	cursor.(*Cursor).session = session
-	if dbname != "" && tablename != "" && e != nil && skip == 0 && take == 0 && where == nil {
-
-	}
-	if !aggregate {
-		QueryString := ""
-		if attribute == "" {
-			QueryString = "SELECT * FROM " + tablename
-		} else {
-			QueryString = "SELECT " + attribute + " FROM " + tablename
+			if hasUpdate || hasInsert || hasDelete || hasSave {
+				return nil, errorlib.Error(packageName, modQuery, "Cursor",
+					"Valid operation for a cursor is select only")
+			}
 		}
-		if cast.ToString(where) != "" {
-			QueryString = QueryString + " WHERE " + cast.ToString(where)
+		//fmt.Printf("Result: %s \n", toolkit.JsonString(fields))
+		//fmt.Printf("Database:%s table:%s \n", dbname, tablename)
+		var sort []string
+		sortParts, hasSort := parts[dbox.QueryPartSelect]
+		if hasSort {
+			sort = []string{}
+			for _, sl := range sortParts.([]interface{}) {
+				qp := sl.(*dbox.QueryPart)
+				for _, fid := range qp.Value.([]string) {
+					sort = append(sort, fid)
+				}
+			}
 		}
-		cursor.(*Cursor).QueryString = QueryString
-	} else {
 
+		//where := toolkit.M{}
+		var where interface{}
+		whereParts, hasWhere := parts[dbox.QueryPartWhere]
+		if hasWhere {
+			fb := q.Connection().Fb()
+			for _, p := range whereParts.([]interface{}) {
+				fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+				for _, f := range fs {
+					fb.AddFilter(f)
+				}
+			}
+			where, e = fb.Build()
+			if e != nil {
+				return nil, errorlib.Error(packageName, modQuery, "Cursor",
+					e.Error())
+			} else {
+				//fmt.Printf("Where: %s", toolkit.JsonString(where))
+			}
+			//where = iwhere.(toolkit.M)
+		}
+
+		if dbname != "" && tablename != "" && e != nil && skip == 0 && take == 0 && where == nil {
+
+		}
+		if !aggregate {
+			QueryString := ""
+			if attribute == "" {
+				QueryString = "SELECT * FROM " + tablename
+			} else {
+				QueryString = "SELECT " + attribute + " FROM " + tablename
+			}
+			if cast.ToString(where) != "" {
+				QueryString = QueryString + " WHERE " + cast.ToString(where)
+			}
+			cursor.(*Cursor).QueryString = QueryString
+		}
+	} else if hasProcedure {
+		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
+		fmt.Println("Isi Proc command : ", procCommand)
+
+		spName := procCommand.(toolkit.M)["name"].(string) + " "
+		params := procCommand.(toolkit.M)["parms"]
+
+		paramValue := ""
+		paramName := ""
+		incParam := 0
+
+		for key, val := range params.(toolkit.M) {
+			if incParam == 0 {
+				paramValue = "('" + val.(string) + "'"
+				paramName = key
+			} else {
+				paramValue += ",'" + val.(string) + "'"
+			}
+			incParam += 1
+		}
+		paramValue += ", " + paramName + ")"
+
+		ProcStatement = "CALL " + spName + paramValue
+
+		//=========================SQL SERVER=================
+
+		// paramstring := ""
+		// incParam := 0
+		// for key, val := range params.(toolkit.M) {
+		// 	if incParam == 0 {
+		// 		paramstring = key + " = '" + val.(string) + "'"
+		// 	} else {
+		// 		paramstring += ", " + key + " = '" + val.(string) + "'"
+		// 	}
+		// 	incParam += 1
+		// }
+		// paramstring += ";"
+
+		// ProcStatement = "EXECUTE " + spName + paramstring
+
+		// cursor.(*Cursor).QueryString = ProcStatement
+
+		fmt.Println("Proc Statement : ", ProcStatement)
 	}
 	return cursor, nil
 }
