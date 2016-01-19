@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	//"github.com/eaciit/errorlib"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/toolkit"
-	// "reflect"
-	"strconv"
+	"reflect"
+	"strings"
+	// "strconv"
 )
 
 const (
@@ -50,6 +52,14 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	rows, e := c.session.Query(c.QueryString)
 
+	var valueType reflect.Type
+
+	if n == 1 {
+		valueType = reflect.TypeOf(m).Elem()
+	} else {
+		valueType = reflect.TypeOf(m).Elem().Elem()
+	}
+
 	if e != nil {
 		return e
 	}
@@ -65,41 +75,56 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
 
+	// valueint := values
 	for rows.Next() {
 		for i := 0; i < count; i++ {
 			valuePtrs[i] = &values[i]
 		}
+		// rows.Scan(valuePtrs...)
+
 		rows.Scan(valuePtrs...)
 		entry := toolkit.M{}
+
 		for i, col := range columns {
 			var v interface{}
 			val := values[i]
-			// fmt.Println("Nilai val : ", val)
 
+			// fmt.Println("Nilai val : ", val)
 			b, ok := val.([]byte)
 			if ok {
 				v = string(b)
-				integer, err := strconv.Atoi(v.(string))
-				if err == nil {
-					v = integer
-				}
-				// b, err := strconv.ParseBool(v)
-				// f, err := strconv.ParseFloat(v, 64)
-				// i, err := strconv.ParseInt(v, 10, 64)
-				// u, err := strconv.ParseUint(v, 10, 64)
-				// fmt.Println("Hasil string convert : ", b, f, i, u)
-
 			} else {
 				v = val
 			}
-			entry.Set(col, v)
+			entry.Set(strings.ToLower(col), v)
+			// entry.Set(col, values[i])
 			// e = toolkit.DecodeByte(val.([]byte), v)
 			// toolkit.FromBytes(toolkit.ToBytes(val, ""), "", v)
 
 			// entry.Set(col, v)
 		}
+
+		if valueType.Kind() == reflect.Struct {
+			for i := 0; i < valueType.NumField(); i++ {
+				namaField := strings.ToLower(valueType.Field(i).Name)
+				dataType := strings.ToLower(valueType.Field(i).Type.String())
+
+				if entry.Has(namaField) {
+					fmt.Println("isi entry : ", entry[namaField], dataType)
+					if strings.Contains(dataType, "int") {
+						entry.Set(namaField,
+							cast.ToInt(entry[namaField], cast.RoundingAuto))
+					} else if strings.Contains(dataType, "time.time") {
+						entry.Set(namaField,
+							cast.String2Date(cast.ToString(entry[namaField]), "2006-01-02 15:04:05"))
+					}
+				}
+			}
+		}
+
 		tableData = append(tableData, entry)
 	}
+
 	fmt.Println("Nilai table data : ", tableData)
 	if e != nil {
 		return e
