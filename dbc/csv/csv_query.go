@@ -12,6 +12,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	// "time"
 )
 
 const (
@@ -21,10 +22,11 @@ const (
 type Query struct {
 	dbox.Query
 
-	file     *os.File
-	tempFile *os.File
-	reader   *csv.Reader
-	save     bool
+	file        *os.File
+	tempFile    *os.File
+	reader      *csv.Reader
+	save        bool
+	updatessave bool
 }
 
 type QueryCondition struct {
@@ -178,10 +180,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			return nil, errorlib.Error(packageName, modQuery, "Cursor",
 				"Valid operation for a cursor is select only")
 		}
-		// else {
-		// 	return nil, errorlib.Error(packageName, modQuery, "Cursor",
-		// 		"Invalid operation for a cursor, select syntax not found")
-		// }
 	}
 
 	var sort []string
@@ -223,13 +221,11 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	cursor.(*Cursor).reader = q.Reader()
 	cursor.(*Cursor).headerColumn = q.Connection().(*Connection).headerColumn
 	cursor.(*Cursor).count = 0
-	// fmt.Println(cursor.(*Cursor).headerColumn)
 	if e != nil {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", e.Error())
 	}
 
 	if !aggregate {
-		// fmt.Println("Query 173 : ", where)
 		cursor.(*Cursor).ConditionVal.Find, _ = toolkit.ToM(where)
 
 		if fields != nil {
@@ -265,7 +261,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 		parm = toolkit.M{}
 	}
 
-	data := parm.Get("data", nil)
+	data := toolkit.M{}
+	if parm.Has("data") {
+		data, _ = toolkit.ToM(parm["data"])
+	}
 
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
@@ -336,36 +335,104 @@ func (q *Query) Exec(parm toolkit.M) error {
 		return errorlib.Error(packageName, "Query", modQuery, e.Error())
 	}
 
-	writer := q.Connection().(*Connection).writer
-	reader := q.Connection().(*Connection).reader
-
 	var execCond QueryCondition
 	execCond.Find, _ = toolkit.ToM(where)
 
 	switch commandType {
-	case dbox.QueryPartInsert, dbox.QueryPartSave:
-		var dataTemp []string
-		dataMformat, _ := toolkit.ToM(data)
-		// fmt.Println("LINE338:", q.Connection().(*Connection).setNewHeader)
-		if q.Connection().(*Connection).setNewHeader {
-			q.Connection().(*Connection).SetHeaderToolkitM(dataMformat)
-			q.Connection().(*Connection).setNewHeader = false
+	case dbox.QueryPartSave:
+		q.updatessave = false
+		e = q.execQueryPartSave(data)
+	case dbox.QueryPartInsert:
+		e = q.execQueryPartInsert(data)
+	case dbox.QueryPartDelete:
+		e = q.execQueryPartDelete(execCond)
+	case dbox.QueryPartUpdate:
+		e = q.execQueryPartUpdate(data, execCond)
+	}
 
-			for _, v := range q.Connection().(*Connection).headerColumn {
-				dataTemp = append(dataTemp, v.name)
-			}
+	if e != nil {
+		return e
+	}
 
-			if len(dataTemp) > 0 {
-				writer.Write(dataTemp)
-				writer.Flush()
+	q.Connection().(*Connection).ExecOpr = true
+	if commandType != dbox.QueryPartSave || q.updatessave {
+		e = q.Connection().(*Connection).EndSessionWrite()
+		q.Connection().(*Connection).TypeOpenFile = TypeOpenFile_Append
+	}
+
+	if e != nil {
+		return errorlib.Error(packageName, "Query", modQuery, e.Error())
+	}
+
+	return nil
+}
+
+func (q *Query) execQueryPartSave(dt toolkit.M) error {
+	if len(dt) == 0 {
+		return errorlib.Error(packageName, modQuery, "save", "data to insert is not found")
+	}
+
+	writer := q.Connection().(*Connection).writer
+	reader := q.Connection().(*Connection).reader
+	tempHeader := []string{}
+
+	for _, val := range q.Connection().(*Connection).headerColumn {
+		tempHeader = append(tempHeader, val.name)
+	}
+
+	// Check ID Before Insert
+	checkidfound := false
+	if nameid := toolkit.IdField(dt); nameid != "" {
+		q.updatessave = true
+
+		var colsid int
+		for i, val := range q.Connection().(*Connection).headerColumn {
+			if val.name == nameid {
+				colsid = i
 			}
-			// fmt.Println("LINE342:", q.Connection().(*Connection).headerColumn)
-			dataTemp = []string{}
 		}
 
+		for {
+			dataTempSearch, e := reader.Read()
+			for i, val := range dataTempSearch {
+				if i == colsid && val == dt[nameid] {
+					checkidfound = true
+					break
+				}
+			}
+			if e == io.EOF {
+				break
+			} else if e != nil {
+				return errorlib.Error(packageName, modQuery, "Save", e.Error())
+			}
+		}
+	}
+
+	if checkidfound {
+		e := q.Connection().(*Connection).EndSessionWrite()
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Save", e.Error())
+		}
+
+		q.Connection().(*Connection).TypeOpenFile = TypeOpenFile_Create
+
+		e = q.Connection().(*Connection).StartSessionWrite()
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Save", e.Error())
+		}
+
+		e = q.execQueryPartUpdate(dt, QueryCondition{})
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Save", e.Error())
+		}
+		// time.Sleep(1000 * time.Millisecond)
+	} else {
+		//Change to Do Insert
+		dataTemp := []string{}
+
 		for _, v := range q.Connection().(*Connection).headerColumn {
-			if dataMformat.Has(v.name) {
-				dataTemp = append(dataTemp, cast.ToString(dataMformat[v.name]))
+			if dt.Has(v.name) {
+				dataTemp = append(dataTemp, cast.ToString(dt[v.name]))
 			} else {
 				dataTemp = append(dataTemp, "")
 			}
@@ -375,89 +442,172 @@ func (q *Query) Exec(parm toolkit.M) error {
 			writer.Write(dataTemp)
 			writer.Flush()
 		}
-	case dbox.QueryPartDelete:
-		var tempHeader []string
+	}
 
-		for _, val := range q.Connection().(*Connection).headerColumn {
-			tempHeader = append(tempHeader, val.name)
+	return nil
+}
+
+func (q *Query) execQueryPartInsert(dt toolkit.M) error {
+
+	if len(dt) == 0 {
+		return errorlib.Error(packageName, "Query", modQuery, "data to insert is not found")
+	}
+
+	writer := q.Connection().(*Connection).writer
+	reader := q.Connection().(*Connection).reader
+	dataTemp := []string{}
+
+	if q.Connection().(*Connection).setNewHeader {
+		q.Connection().(*Connection).SetHeaderToolkitM(dt)
+		q.Connection().(*Connection).setNewHeader = false
+
+		for _, v := range q.Connection().(*Connection).headerColumn {
+			dataTemp = append(dataTemp, v.name)
+		}
+
+		if len(dataTemp) > 0 {
+			writer.Write(dataTemp)
+			writer.Flush()
+		}
+		dataTemp = []string{}
+	}
+
+	// Check ID Before Insert
+	if nameid := toolkit.IdField(dt); nameid != "" {
+		var colsid int
+		for i, val := range q.Connection().(*Connection).headerColumn {
+			if val.name == nameid {
+				colsid = i
+			}
 		}
 
 		for {
-			foundDelete := true
-			recData := toolkit.M{}
-
-			dataTemp, e := reader.Read()
-			for i, val := range dataTemp {
-				recData.Set(tempHeader[i], val)
-			}
-
-			foundDelete = execCond.getCondition(recData)
-
-			if e == io.EOF {
-				if !foundDelete && dataTemp != nil {
-					writer.Write(dataTemp)
-					writer.Flush()
+			dataTempSearch, e := reader.Read()
+			for i, val := range dataTempSearch {
+				if i == colsid && val == dt[nameid] {
+					return errorlib.Error(packageName, modQuery, "Insert", "Unique id is found")
 				}
+			}
+			if e == io.EOF {
 				break
 			} else if e != nil {
-				return errorlib.Error(packageName, modQuery, "Delete", e.Error())
-			}
-
-			if !foundDelete && dataTemp != nil {
-				writer.Write(dataTemp)
-				writer.Flush()
-			}
-		}
-	case dbox.QueryPartUpdate:
-		var tempHeader []string
-
-		if data == nil {
-			break
-		}
-
-		dataMformat, _ := toolkit.ToM(data)
-
-		for _, val := range q.Connection().(*Connection).headerColumn {
-			tempHeader = append(tempHeader, val.name)
-		}
-
-		for {
-			foundChange := false
-
-			recData := toolkit.M{}
-			dataTemp, e := reader.Read()
-			for i, val := range dataTemp {
-				recData.Set(tempHeader[i], val)
-			}
-
-			foundChange = execCond.getCondition(recData)
-			if foundChange && len(dataTemp) > 0 {
-				for n, v := range tempHeader {
-					if dataMformat.Has(v) {
-						dataTemp[n] = cast.ToString(dataMformat[v])
-					}
-				}
-			}
-
-			if e == io.EOF {
-				if dataTemp != nil {
-					writer.Write(dataTemp)
-					writer.Flush()
-				}
-				break
-			} else if e != nil {
-				return errorlib.Error(packageName, modQuery, "Update", e.Error())
-			}
-			if dataTemp != nil {
-				writer.Write(dataTemp)
-				writer.Flush()
+				return errorlib.Error(packageName, modQuery, "Insert", e.Error())
 			}
 		}
 	}
 
-	q.Connection().(*Connection).ExecOpr = true
-	if commandType != dbox.QueryPartSave {
-		e = q.Connection().(*Connection).EndSessionWrite()
+	for _, v := range q.Connection().(*Connection).headerColumn {
+		if dt.Has(v.name) {
+			dataTemp = append(dataTemp, cast.ToString(dt[v.name]))
+		} else {
+			dataTemp = append(dataTemp, "")
+		}
+	}
+
+	if len(dataTemp) > 0 {
+		writer.Write(dataTemp)
+		writer.Flush()
+	}
+
+	return nil
+}
+
+func (q *Query) execQueryPartDelete(Cond QueryCondition) error {
+
+	writer := q.Connection().(*Connection).writer
+	reader := q.Connection().(*Connection).reader
+	tempHeader := []string{}
+
+	for _, val := range q.Connection().(*Connection).headerColumn {
+		tempHeader = append(tempHeader, val.name)
+	}
+
+	for {
+		foundDelete := true
+		recData := toolkit.M{}
+
+		dataTemp, e := reader.Read()
+		for i, val := range dataTemp {
+			recData.Set(tempHeader[i], val)
+		}
+
+		foundDelete = Cond.getCondition(recData)
+
+		if e == io.EOF {
+			if !foundDelete && dataTemp != nil {
+				writer.Write(dataTemp)
+				writer.Flush()
+			}
+			break
+		} else if e != nil {
+			return errorlib.Error(packageName, modQuery, "Delete", e.Error())
+		}
+
+		if !foundDelete && dataTemp != nil {
+			writer.Write(dataTemp)
+			writer.Flush()
+		}
+	}
+
+	return nil
+
+}
+
+func (q *Query) execQueryPartUpdate(dt toolkit.M, Cond QueryCondition) error {
+
+	if len(dt) == 0 {
+		return errorlib.Error(packageName, "Query", modQuery, "data to update is not found")
+	}
+
+	writer := q.Connection().(*Connection).writer
+	reader := q.Connection().(*Connection).reader
+	tempHeader := []string{}
+
+	for _, val := range q.Connection().(*Connection).headerColumn {
+		tempHeader = append(tempHeader, val.name)
+	}
+
+	for {
+		foundChange := false
+
+		recData := toolkit.M{}
+		dataTemp, e := reader.Read()
+		for i, val := range dataTemp {
+			recData.Set(tempHeader[i], val)
+		}
+
+		if len(Cond.Find) > 0 || (len(Cond.Find) == 0 && toolkit.IdField(dt) == "") {
+			foundChange = Cond.getCondition(recData)
+		}
+
+		// Check ID IF Condition Not Found
+		if nameid := toolkit.IdField(dt); nameid != "" && !foundChange {
+			if recData.Has(nameid) && dt[nameid] == recData[nameid] {
+				foundChange = true
+			}
+		}
+
+		if foundChange && len(dataTemp) > 0 {
+			for n, v := range tempHeader {
+				if dt.Has(v) {
+					dataTemp[n] = cast.ToString(dt[v])
+				}
+			}
+		}
+
+		if e == io.EOF {
+			if dataTemp != nil {
+				writer.Write(dataTemp)
+				writer.Flush()
+			}
+			break
+		} else if e != nil {
+			return errorlib.Error(packageName, modQuery, "Update", e.Error())
+		}
+		if dataTemp != nil {
+			writer.Write(dataTemp)
+			writer.Flush()
+		}
 	}
 
 	return nil

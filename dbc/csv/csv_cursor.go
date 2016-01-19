@@ -5,6 +5,7 @@ import (
 	// "encoding/json"
 	"errors"
 	"fmt"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
@@ -107,31 +108,25 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	// if !toolkit.IsPointer(m) {
-	// 	return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
-	// }
+	if !toolkit.IsPointer(m) {
+		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
+	}
+
 	if n != 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
 		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer of slice")
 	}
-	// fmt.Println("LINE 112 : ", reflect.ValueOf(m).Elem().Kind())
-	// ds := dbox.NewDataSet(m)
-	// rm := reflect.ValueOf(m)
-	// // erm := rm.Elem()
-	// fmt.Println(rm)
-	// var v reflect.Type
 
-	// if n == 1 {
-	// 	v = reflect.TypeOf(m).Elem()
-	// } else {
-	// 	v = reflect.TypeOf(m).Elem().Elem()
-	// }
+	var v reflect.Type
 
-	// iv := reflect.New(v).Elem()
-	// vdatas := reflect.Indirect(m)
+	if n == 1 {
+		v = reflect.TypeOf(m).Elem()
+	} else {
+		v = reflect.TypeOf(m).Elem().Elem()
+	}
 
-	// fmt.Println("LINE 131 : ", iv.Kind())
-	// vdatas := reflect.MakeSlice(reflect.SliceOf(v), 0, n)
-	// fmt.Println("LINE 133 : ", reflect.TypeOf(vdatas))
+	iv := reflect.New(v).Interface()
+	ivs := reflect.MakeSlice(reflect.SliceOf(v), 0, 0)
+
 	datas := []toolkit.M{}
 	lineCount := 0
 
@@ -162,9 +157,22 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			isAppend = false
 		}
 
+		if v.Kind() == reflect.Struct {
+			for i := 0; i < v.NumField(); i++ {
+				if appendData.Has(v.Field(i).Name) {
+					switch v.Field(i).Type.Kind() {
+					case reflect.Int:
+						appendData.Set(v.Field(i).Name, cast.ToInt(appendData[v.Field(i).Name], cast.RoundingAuto))
+					}
+				}
+			}
+		}
+
 		if e == io.EOF {
 			if isAppend && len(appendData) > 0 {
 				datas = append(datas, appendData)
+				toolkit.Serde(appendData, iv, "json")
+				ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
 				lineCount += 1
 			}
 			break
@@ -172,8 +180,11 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			return errorlib.Error(packageName, modCursor,
 				"Fetch", e.Error())
 		}
+
 		if isAppend && len(appendData) > 0 {
 			datas = append(datas, appendData)
+			toolkit.Serde(appendData, iv, "json")
+			ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
 			lineCount += 1
 		}
 
@@ -184,20 +195,15 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 	}
 
-	// if iv.Kind() == reflect.Map {
-
-	// } else if iv.Kind() == reflect.Struct {
-
-	// }
-
-	e = toolkit.Unjson(toolkit.Jsonify(datas), m)
 	if e != nil {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	// bs, _ := json.Marshal(datas)
-	// _ = json.Unmarshal(bs, m)
-	// reflect.ValueOf(m).Elem().Set(reflect.ValueOf(datas))
+	if n == 1 {
+		reflect.ValueOf(m).Elem().Set(ivs.Index(0))
+	} else {
+		reflect.ValueOf(m).Elem().Set(ivs)
+	}
 
 	return nil
 }
