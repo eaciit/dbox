@@ -62,8 +62,10 @@ func (c *Cursor) prepIter() error {
 	}
 	if c.mgoIter == nil {
 		if c.ResultType == QueryResultPipe {
+			//fmt.Println("Preparing Pipe Iter")
 			c.mgoIter = c.mgoPipe.Iter()
 		} else if c.ResultType == QueryResultCursor {
+			//fmt.Println("Preparing Query Iter")
 			c.mgoIter = c.mgoCursor.Iter()
 		}
 	}
@@ -114,6 +116,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 		//ds.Data = datas
 	} else if n == 1 {
+		//dataBuf := M{}
+		//Printf("Record count: %d\n", func() int { count, _ := c.mgoCursor.Count(); return count }())
 		bOk := c.mgoIter.Next(m)
 		if !bOk {
 			errtxt := ""
@@ -124,6 +128,12 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			}
 			return errorlib.Error(packageName, modCursor, "Fetch", errtxt)
 		}
+		/*
+			e := Serde(dataBuf, m, "json")
+			if e != nil {
+				return errorlib.Error(packageName, modCursor, "Fetch", "Fetch serde fail. "+e.Error())
+			}
+		*/
 	} else if n > 1 {
 		fetched := 0
 		fetching := true
