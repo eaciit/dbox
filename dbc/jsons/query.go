@@ -29,8 +29,9 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		return nil, err.Error(packageName, modQuery, "Cursor", e.Error())
 	}
 
-	if setting.GetString("commandtype") != dbox.QueryPartSelect {
-		return nil, err.Error(packageName, modQuery, "Cursor", "Cursor is only working with select command, please use .Exec instead")
+	commandtype := setting.GetString("commandtype")
+	if commandtype != dbox.QueryPartSelect {
+		return nil, err.Error(packageName, modQuery, "Cursor", "Cursor is only working with select command, for "+commandtype+" please use .Exec instead")
 	}
 
 	e = q.openFile()
