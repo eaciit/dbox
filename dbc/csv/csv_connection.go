@@ -332,15 +332,21 @@ func (c *Connection) StartSessionWrite() error {
 			return errorlib.Error(packageName, modConnection, "SessionWrite", "Cannot Open File")
 		}
 
+		c.reader = csv.NewReader(c.file)
+		c.SetReaderParam()
+		dataTemp := make([]string, 0)
+
+		if c.isUseHeader {
+			dataTemp, _ = c.reader.Read()
+		}
+
 		if c.TypeOpenFile == TypeOpenFile_Create {
-			c.reader = csv.NewReader(c.file)
-			c.SetReaderParam()
 
 			c.tempfile, err = os.OpenFile(filePath+".temp", os.O_CREATE, 0)
 			c.writer = csv.NewWriter(c.tempfile)
 
 			if c.isUseHeader {
-				dataTemp, _ := c.reader.Read()
+				// dataTemp, _ := c.reader.Read()
 				c.writer.Write(dataTemp)
 				c.writer.Flush()
 			}
