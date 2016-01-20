@@ -85,9 +85,24 @@ func (q *Query) Exec(in toolkit.M) error {
 
 	hasWhere := setting.Has("where")
 	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
+	if hasWhere && len(where) == 0 {
+		inWhere := in.Get("where")
+		if inWhere == nil {
+			hasWhere = false
+			where = nil
+		} else {
+			if !toolkit.IsSlice(inWhere) {
+				where = append(where, inWhere.(*dbox.Filter))
+			} else {
+				where = inWhere.([]*dbox.Filter)
+			}
+		}
+	}
 
-	if hasData && hasWhere == false && toolkit.HasMember([]interface{}{dbox.QueryPartInsert, dbox.QueryPartUpdate, dbox.QueryPartSave}, commandType) {
+	if hasData && hasWhere == false && toolkit.HasMember([]interface{}{dbox.QueryPartInsert, dbox.QueryPartDelete,
+		dbox.QueryPartUpdate, dbox.QueryPartSave}, commandType) {
 		hasWhere = true
+		//toolkit.Println("check where")
 		if toolkit.IsSlice(data) {
 			ids := []interface{}{}
 			idField := ""
@@ -104,16 +119,20 @@ func (q *Query) Exec(in toolkit.M) error {
 			}
 			where = []*dbox.Filter{dbox.In(idField, ids)}
 		} else {
+			idfield := "_id"
 			id := toolkit.Id(data)
-			if toolkit.IsNilOrEmpty(id) {
-				where = []*dbox.Filter{dbox.Eq(toolkit.IdField(id), id)}
+			if !toolkit.IsNilOrEmpty(id) {
+				where = []*dbox.Filter{dbox.Eq(idfield, id)}
 			} else {
 				where = nil
 				hasWhere = false
 			}
 		}
 	}
-	//toolkit.Printf("Where: %s\n", toolkit.JsonString(where))
+	/*
+		toolkit.Printf("CommandType: %s HasData: %v HasWhere: %v Where: %s\n",
+			commandType, hasData, hasWhere, toolkit.JsonString(where))
+	*/
 	e = q.openFile()
 	//toolkit.Printf(commandType+" Open File, found record: %d\nData:%s\n", len(q.data), toolkit.JsonString(q.data))
 	if e != nil {
@@ -181,7 +200,7 @@ func (q *Query) Exec(in toolkit.M) error {
 				if isDataSlice {
 					e = toolkit.Serde(toolkit.SliceItem(data, updateDataIndex), &dataUpdate, "")
 					if e != nil {
-						return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
+						return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail "+e.Error())
 					}
 					updateDataIndex++
 				}
@@ -193,14 +212,15 @@ func (q *Query) Exec(in toolkit.M) error {
 		}
 	} else if commandType == dbox.QueryPartDelete {
 		if hasWhere && len(where) > 0 {
-			var indexes []interface{}
-			toolkit.Serde(dbox.Find(q.data, where), &indexes, "")
+			indexes := dbox.Find(q.data, where)
 			if len(indexes) > 0 {
 				newdata := []toolkit.M{}
 				for index, v := range q.data {
-					if toolkit.HasMember(indexes, index) == false {
+					partOfIndex := toolkit.HasMember(indexes, index)
+					if partOfIndex == false {
 						newdata = append(newdata, v)
 					}
+					//toolkit.Println("i:", indexes, ", index:", index, ", p.ofIndex: ", partOfIndex, ", data: ", toolkit.JsonString(newdata))
 				}
 				q.data = newdata
 			}

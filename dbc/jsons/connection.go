@@ -45,7 +45,7 @@ func (c *Connection) Connect() error {
 }
 
 func (c *Connection) NewQuery() dbox.IQuery {
-	pooling := c.Info().Settings.Get("pooling", true).(bool)
+	pooling := c.Info().Settings.Get("pooling", false).(bool)
 
 	if pooling && c.defautQuery != nil {
 		return c.defautQuery
