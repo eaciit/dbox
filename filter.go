@@ -28,9 +28,10 @@ const (
 )
 
 type Filter struct {
-	Field string
-	Op    string
-	Value interface{}
+	Field      string
+	Op         string
+	Value      interface{}
+	DriverName string
 }
 
 type IFilterBuilder interface {
