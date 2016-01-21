@@ -90,8 +90,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	session := q.Session()
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.(*Cursor).session = session
-	driverName := q.GetDriverDB()
-	//driverName := "mssql"
+	// driverName := q.GetDriverDB()
+	driverName := "oracle"
 
 	/*
 		parts will return E - map{interface{}}interface{}
@@ -171,7 +171,17 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			fb := q.Connection().Fb()
 			for _, p := range whereParts.([]interface{}) {
 				fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
-				for _, f := range fs {
+				for _, f := range fs { //get each element of 'Filter' Struct
+					f.DriverName = driverName
+					// if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
+					// 	fSlice := f.Value.([]interface{}) //get 'Value' field of 'Filter' Struct
+					// 	for i, fv := range fSlice {       // get each value from [] interface
+					// 		fSlice[i] = StringValue(fv, driverName)
+					// 	}
+					// 	f.Value = fSlice
+					// } else {
+					// 	f.Value = StringValue(f.Value, driverName)
+					// }
 					fb.AddFilter(f)
 				}
 			}
