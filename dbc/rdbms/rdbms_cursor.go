@@ -75,12 +75,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	values := make([]interface{}, count)
 	valuePtrs := make([]interface{}, count)
 
-	// valueint := values
 	for rows.Next() {
 		for i := 0; i < count; i++ {
 			valuePtrs[i] = &values[i]
 		}
-		// rows.Scan(valuePtrs...)
 
 		rows.Scan(valuePtrs...)
 		entry := toolkit.M{}
@@ -88,8 +86,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		for i, col := range columns {
 			var v interface{}
 			val := values[i]
-
-			// fmt.Println("Nilai val : ", val)
 			b, ok := val.([]byte)
 			if ok {
 				v = string(b)
@@ -97,11 +93,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				v = val
 			}
 			entry.Set(strings.ToLower(col), v)
-			// entry.Set(col, values[i])
-			// e = toolkit.DecodeByte(val.([]byte), v)
-			// toolkit.FromBytes(toolkit.ToBytes(val, ""), "", v)
-
-			// entry.Set(col, v)
 		}
 
 		if valueType.Kind() == reflect.Struct {
@@ -110,7 +101,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				dataType := strings.ToLower(valueType.Field(i).Type.String())
 
 				if entry.Has(namaField) {
-					fmt.Println("isi entry : ", entry[namaField], dataType)
 					if strings.Contains(dataType, "int") {
 						entry.Set(namaField,
 							cast.ToInt(entry[namaField], cast.RoundingAuto))
@@ -125,22 +115,18 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		tableData = append(tableData, entry)
 	}
 
-	fmt.Println("Nilai table data : ", tableData)
+	// fmt.Println("Nilai table data : ", tableData)
 	if e != nil {
 		return e
 	}
 	if n == 0 {
-		// *m.(*[]map[string]interface{}) = tableData
-		// toolkit.Unjson(toolkit.Jsonify(tableData), m)
 		e = toolkit.Serde(tableData, m, "json")
-		fmt.Println("Nilai Model : ", m)
+		// fmt.Println("Nilai Model : ", m)
 	} else {
 		end := c.start + n
 		if end > len(tableData) {
 			e = errors.New("index out of range")
 		} else {
-			// *m.(*[]map[string]interface{}) = tableData[0:n]
-			//toolkit.Unjson(toolkit.Jsonify(tableData[0:n]), m)
 			e = toolkit.Serde(tableData[0:n], m, "json")
 		}
 	}

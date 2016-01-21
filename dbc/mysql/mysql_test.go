@@ -110,7 +110,10 @@ func TestProcedure(t *testing.T) {
 	defer c.Close()
 
 	//csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmur").Set("parms", toolkit.M{}.Set("@name", "Vidal"))).Cursor(nil)
-	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").Set("parms", toolkit.M{}.Set("@umur1", "20").Set("@umur2", "23"))).Cursor(nil)
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").Set("parms", toolkit.M{}.Set("@umur1", "20").Set("@umur2", "23"))).Cursor(nil)
+	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").
+		Set("parms", toolkit.M{}.Set("@p_umur1", "20").Set("@p_umur2", "23").
+		Set("@@o_nama", "varchar2").Set("@@o_umur", "number"))).Cursor(nil)
 	if csr == nil {
 		t.Errorf("Cursor not initialized", e.Error())
 		return
@@ -150,20 +153,30 @@ func TestSelectFilter(t *testing.T) {
 	}
 	defer c.Close()
 
+	layoutFormat := "2006-01-02 15:04:05"
+	dateValue1 := "2016-01-12 14:35:54"
+	dateValue2 := "2016-01-12 14:36:15"
+	var tanggal1 time.Time
+	var tanggal2 time.Time
+	tanggal1, _ = time.Parse(layoutFormat, dateValue1)
+	tanggal2, _ = time.Parse(layoutFormat, dateValue2)
+	fmt.Println(tanggal1, tanggal2)
+
 	csr, e := c.NewQuery().
 		Select("id", "name", "tanggal", "umur").
 		From("tes").
-		//Where(dbox.Eq("name", "Bourne")).
-		//Where(dbox.Ne("name", "Bourne")).
-		//Where(dbox.Gt("umur", 25)).
-		//Where(dbox.Gte("umur", 25)).
-		Where(dbox.Lt("umur", 25)).
-		//Where(dbox.Lte("umur", 25)).
-		//Where(dbox.In("name", "vidal", "bourne")).
-		//Where(dbox.In("umur", "25", "30")).
-		//Where(dbox.Nin("umur", "25", "30")).
-		//Where(dbox.In("tanggal", "2016-01-12 14:35:54", "2016-01-12 14:36:15")).
-		//Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
+		// Where(dbox.Eq("name", "Bourne")).
+		// Where(dbox.Ne("name", "Bourne")).
+		// Where(dbox.Gt("umur", 25)).
+		// Where(dbox.Gte("umur", 25)).
+		// Where(dbox.Lt("umur", 25)).
+		// Where(dbox.Lte("tanggal", tanggal1)).
+		// Where(dbox.Lte("umur", 25)).
+		// Where(dbox.In("name", "vidal", "bourne")).
+		// Where(dbox.In("umur", 25, 30)).
+		// Where(dbox.Nin("umur", 25, 30)).
+		// Where(dbox.In("tanggal", tanggal1, tanggal2)).
+		Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
