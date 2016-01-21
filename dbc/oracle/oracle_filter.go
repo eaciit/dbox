@@ -1,8 +1,11 @@
-package rdbms
+package oracle
 
 import (
 	// "github.com/eaciit/cast"
+	// "fmt"
 	"github.com/eaciit/dbox"
+	"github.com/eaciit/dbox/dbc/rdbms"
+	// "time"
 )
 
 type FilterBuilder struct {
@@ -13,9 +16,9 @@ func CombineIn(operator string, f *dbox.Filter) string {
 	values := ""
 	for i, val := range f.Value.([]interface{}) {
 		if i == 0 {
-			values = f.Field + " " + operator + " (" + StringValue(val, "non")
+			values = f.Field + " " + operator + " (" + rdbms.StringValue(val, "oracle")
 		} else {
-			values += "," + StringValue(val, "non")
+			values += "," + rdbms.StringValue(val, "oracle")
 		}
 	}
 	values += ")"
@@ -25,17 +28,17 @@ func CombineIn(operator string, f *dbox.Filter) string {
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := ""
 	if f.Op == dbox.FilterOpEqual {
-		fm = fm + f.Field + "= " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + "= " + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpNoEqual {
-		fm = fm + f.Field + "<>" + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + "<>" + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpGt {
-		fm = fm + f.Field + " > " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " > " + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpGte {
-		fm = fm + f.Field + " >= " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " >= " + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpLt {
-		fm = fm + f.Field + " < " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " < " + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpLte {
-		fm = fm + f.Field + " <= " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " <= " + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpIn {
 		fm = CombineIn("IN", f)
 	} else if f.Op == dbox.FilterOpNin {
@@ -47,12 +50,12 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 		for _, ff := range fs {
 			bf, _ := fb.BuildFilter(ff)
 			if fm == "" {
-				fm = StringValue(bf, "non")
+				fm = rdbms.StringValue(bf, "oracle")
 			} else {
 				if f.Op == dbox.FilterOpOr {
-					fm = fm + " OR " + StringValue(bf, "non")
+					fm = fm + " OR " + rdbms.StringValue(bf, "oracle")
 				} else {
-					fm = fm + " AND " + StringValue(bf, "non")
+					fm = fm + " AND " + rdbms.StringValue(bf, "oracle")
 				}
 			}
 		}
