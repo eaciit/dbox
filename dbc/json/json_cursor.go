@@ -53,7 +53,11 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			first = c.lastFeteched
 			last = c.lastFeteched + n
 			c.lastFeteched = last
+
 			if c.lastFeteched > c.count {
+				if first > c.count {
+					return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+				}
 				last = c.count
 			}
 			// toolkit.Printf("first>%v last>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)

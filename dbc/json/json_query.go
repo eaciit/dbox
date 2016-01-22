@@ -21,6 +21,7 @@ type Query struct {
 	dataType            string
 	hasNewSave, hasSave bool
 	sliceData           []toolkit.M
+	whereData           []*dbox.Filter
 }
 
 func (q *Query) Prepare() error {
@@ -214,34 +215,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 
 		q.dataType = "save"
-
-		var r []toolkit.M
-		toolkit.UnjsonFromString(toolkit.JsonString(getWhere), &r)
-		for idx, _ := range r {
-			// toolkit.Printf("idx>%v v>%v\n", idx, v)
-			i := toolkit.SliceItem(r, idx)
-			val, e := toolkit.ToM(i)
-			if e != nil {
-				return errorlib.Error(packageName, modCursor+".Exec", commandType, e.Error())
-			}
-
-			idString := ToString(reflect.ValueOf(val.Get("Value")).Kind(), val.Get("Value"))
-			if q.Connection().(*Connection).sData == "" {
-				q.Connection().(*Connection).sData = idString
-			} else if q.Connection().(*Connection).sData == idString {
-				q.Connection().(*Connection).sData = idString
-				updatedValue = finUpdateObj(q.sliceData, dataM, "update")
-				q.sliceData = updatedValue
-			} else {
-				q.Connection().(*Connection).sData = idString
-				_ = finUpdateObj(q.sliceData, dataM, "update")
-				q.sliceData = append(q.sliceData, dataM)
-			}
-
-			if len(q.sliceData) == 0 {
-				q.sliceData = append(q.sliceData, dataM)
-			}
-		}
+		q.whereData = append(q.whereData, getWhere...)
+		q.sliceData = append(q.sliceData, dataM)
 	}
 
 	if hasCmdType.Has("hasInsert") || hasCmdType.Has("hasUpdate") || hasCmdType.Has("hasDelete") {
@@ -338,44 +313,27 @@ func (q *Query) HasPartExec() error {
 
 	q.ReadFile(&lastJson, q.Connection().(*Connection).filePath)
 	if toolkit.SliceLen(lastJson) > 0 {
-		var newData []toolkit.M //interface{}
-		for _, v := range q.sliceData {
-			if len(v) != 0 {
-				newData = append(newData, v)
-			}
-		}
+		getWhere := []*dbox.Filter{}
+		for _, v := range q.whereData {
+			getWhere = []*dbox.Filter{v}
+			i := dbox.Find(q.sliceData, getWhere)
 
-		var dataAfterUnset []toolkit.M
-		for _, v := range lastJson {
-			id := toolkit.Id(v)
-			sId := ToString(reflect.ValueOf(id).Kind(), id)
-
-			for _, vSlice := range newData {
-				idLast := toolkit.Id(vSlice)
-				sIdLast := ToString(reflect.ValueOf(idLast).Kind(), idLast)
-
-				if strings.ToLower(sId) == strings.ToLower(sIdLast) {
-					for k, _ := range v {
-						v.Unset(k)
+			for idSlice, _ := range q.sliceData {
+				if toolkit.HasMember(i, idSlice) {
+					idata := dbox.Find(lastJson, getWhere)
+					for idx, _ := range lastJson {
+						if toolkit.HasMember(idata, idx) {
+							lastJson[idx] = q.sliceData[idSlice]
+						}
+					}
+					if toolkit.SliceLen(idata) == 0 {
+						lastJson = append(lastJson, q.sliceData[idSlice])
+						// toolkit.Printf("idata>%v\n", q.sliceData[idSlice])
 					}
 				}
 			}
-			if len(v) != 0 {
-				dataAfterUnset = append(dataAfterUnset, v)
-			}
 		}
-
-		var allJsonData []toolkit.M
-		allJsonData = append(dataAfterUnset, newData...)
-		q.sliceData = allJsonData
-	} else if q.hasSave {
-		var newData []toolkit.M //interface{}
-		for _, v := range q.sliceData {
-			if len(v) != 0 {
-				newData = append(newData, v)
-			}
-		}
-		q.sliceData = newData
+		q.sliceData = lastJson
 	}
 
 	e = q.WriteFile(q.sliceData)
