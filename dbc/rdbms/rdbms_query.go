@@ -76,6 +76,27 @@ func StringValue(v interface{}, db string) string {
 	return ret
 }
 
+func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
+	if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
+		fSlice := f.Value.([]interface{}) //get 'Value' field of 'Filter' Struct
+		for i, fv := range fSlice {       // get each value from [] interface
+			fSlice[i] = StringValue(fv, driverName)
+		}
+		f.Value = fSlice
+		return f
+	} else if strings.Contains(reflect.TypeOf(f.Value).Kind().String(), "[]*dbox.Filter") {
+		fs := f.Value.([]*dbox.Filter)
+		for _, ff := range fs {
+			bf, _ := fb.ReadVariable(ff)
+			f = bf
+		}
+	} else {
+		// f.Value = StringValue(f.Value, driverName)
+		return f
+	}
+	return f
+}
+
 func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	var e error
 	/*
@@ -171,20 +192,12 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			fb := q.Connection().Fb()
 			for _, p := range whereParts.([]interface{}) {
 				fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
-				for _, f := range fs { //get each element of 'Filter' Struct
-					f.DriverName = driverName
-					// if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
-					// 	fSlice := f.Value.([]interface{}) //get 'Value' field of 'Filter' Struct
-					// 	for i, fv := range fSlice {       // get each value from [] interface
-					// 		fSlice[i] = StringValue(fv, driverName)
-					// 	}
-					// 	f.Value = fSlice
-					// } else {
-					// 	f.Value = StringValue(f.Value, driverName)
-					// }
-					fb.AddFilter(f)
-				}
-			}
+					for _, f := range fs {
+						if in != nil {
+							f = ReadVariable(f, in)
+						}
+						fb.AddFilter(f)
+					}
 			where, e = fb.Build()
 			if e != nil {
 				return nil, errorlib.Error(packageName, modQuery, "Cursor",
@@ -254,13 +267,21 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			incParam := 0
 			for key, val := range params.(toolkit.M) {
 				if incParam == 0 {
-					paramstring = key + " = '" + val.(string) + "'"
+					if strings.Contains(key, "@@") {
+						paramstring = "(" + strings.Replace(key, "@@", ":", 1)
+					} else {
+						paramstring = "('" + val.(string) + "'"
+					}
 				} else {
-					paramstring += ", " + key + " = '" + val.(string) + "'"
+					if strings.Contains(key, "@@") {
+						paramstring += "," + strings.Replace(key, "@@", ":", 1)
+					} else {
+						paramstring += ",'" + val.(string) + "'"
+					}
 				}
 				incParam += 1
 			}
-			paramstring += ";"
+			paramstring += ");"
 
 			ProcStatement = "EXECUTE " + spName + paramstring
 

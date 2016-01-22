@@ -176,8 +176,12 @@ func TestSelectFilter(t *testing.T) {
 		// Where(dbox.In("umur", 25, 30)).
 		// Where(dbox.Nin("umur", 25, 30)).
 		// Where(dbox.In("tanggal", tanggal1, tanggal2)).
-		Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
-		Cursor(nil)
+		// Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
+		// Cursor(nil)
+		Where(dbox.Eq("umur", "@age")).
+		Cursor(toolkit.M{}.Set("age", 25))
+	// Where(dbox.And(dbox.Gt("umur", "@age"), dbox.Eq("name", "@nama"))).
+	// Cursor(toolkit.M{}.Set("age", 25).Set("nama", "clyne"))
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
