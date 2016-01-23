@@ -178,10 +178,25 @@ func TestSelectFilter(t *testing.T) {
 		// Where(dbox.In("tanggal", tanggal1, tanggal2)).
 		// Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
 		// Cursor(nil)
-		Where(dbox.Eq("umur", "@age")).
-		Cursor(toolkit.M{}.Set("age", 25))
-	// Where(dbox.And(dbox.Gt("umur", "@age"), dbox.Eq("name", "@nama"))).
-	// Cursor(toolkit.M{}.Set("age", 25).Set("nama", "clyne"))
+		// Where(dbox.In("name", "@name1", "@name2")).
+		// Cursor(toolkit.M{}.Set("name1", "clyne").Set("name2", "Kane"))
+		// Where(dbox.Lte("tanggal", "@date")).
+		// Cursor(toolkit.M{}.Set("date", tanggal1))
+		// Where(dbox.Eq("name", "@nama")).
+		// Cursor(toolkit.M{}.Set("nama", "clyne"))
+		// Where(dbox.Eq("umur", "@age")).
+		// Cursor(toolkit.M{}.Set("age", 25))
+		// Where(dbox.And(dbox.Gt("umur", "@age"), dbox.Eq("name", "@nama"))).
+		// Cursor(toolkit.M{}.Set("age", 25).Set("nama", "Kane"))
+		// Where(dbox.And(dbox.Or(dbox.Eq("name", "@name1"), dbox.Eq("name", "@name2"),
+		// dbox.Eq("name", "@name3")), dbox.Lt("umur", "@age"))).
+		// Cursor(toolkit.M{}.Set("name1", "Kane").Set("name2", "Roy").
+		// Set("name3", "Oscar").Set("age", 30))
+		Where(dbox.And(dbox.Or(dbox.Eq("name", "@name1"), dbox.Eq("name", "@name2"),
+		dbox.Eq("name", "@name3")), dbox.Lt("umur", "@age"))).
+		Cursor(toolkit.M{}.Set("name1", "Kane").Set("name2", "Roy").
+		Set("name3", "Oscar").Set("age", 30))
+
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return

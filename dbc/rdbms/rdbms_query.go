@@ -77,22 +77,44 @@ func StringValue(v interface{}, db string) string {
 }
 
 func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
-	if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
-		fSlice := f.Value.([]interface{}) //get 'Value' field of 'Filter' Struct
-		for i, fv := range fSlice {       // get each value from [] interface
-			fSlice[i] = StringValue(fv, driverName)
-		}
-		f.Value = fSlice
-		return f
-	} else if strings.Contains(reflect.TypeOf(f.Value).Kind().String(), "[]*dbox.Filter") {
+	if (f.Op == "$and" || f.Op == "$or") &&
+		strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
 		fs := f.Value.([]*dbox.Filter)
-		for _, ff := range fs {
-			bf, _ := fb.ReadVariable(ff)
-			f = bf
+		// nilai fs :  [0xc082059590 0xc0820595c0]
+		for i, ff := range fs {
+			// nilai ff[0] : &{umur $gt @age} && ff[1] : &{name $eq @nama}
+			bf := ReadVariable(ff, in)
+			// nilai bf[0] :  &{umur $gt 25} && bf[1] : &{name $eq Kane}
+			fs[i] = bf
 		}
-	} else {
-		// f.Value = StringValue(f.Value, driverName)
+		f.Value = fs
 		return f
+	} else {
+		if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
+			fSlice := f.Value.([]interface{})
+			// nilai fSlice : [@name1 @name2]
+			for i := 0; i < len(fSlice); i++ {
+				// nilai fSlice [i] : @name1
+				if string(cast.ToString(fSlice[i])[0]) == "@" {
+					for key, val := range in {
+						if strings.Replace(cast.ToString(fSlice[i]), "@", "", 1) == key {
+							fSlice[i] = val
+						}
+					}
+				}
+			}
+			f.Value = fSlice
+			return f
+		} else {
+			if string(cast.ToString(f.Value)[0]) == "@" {
+				for key, val := range in {
+					if strings.Replace(cast.ToString(f.Value), "@", "", 1) == key {
+						f.Value = val
+					}
+				}
+			}
+			return f
+		}
 	}
 	return f
 }
@@ -192,12 +214,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			fb := q.Connection().Fb()
 			for _, p := range whereParts.([]interface{}) {
 				fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
-					for _, f := range fs {
-						if in != nil {
-							f = ReadVariable(f, in)
-						}
-						fb.AddFilter(f)
+				for _, f := range fs {
+					if in != nil {
+						f = ReadVariable(f, in)
 					}
+					fb.AddFilter(f)
+				}
+			}
 			where, e = fb.Build()
 			if e != nil {
 				return nil, errorlib.Error(packageName, modQuery, "Cursor",

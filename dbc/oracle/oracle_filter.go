@@ -46,19 +46,21 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	} else if f.Op == dbox.FilterOpContains {
 		fm = CombineIn("NOT IN", f)
 	} else if f.Op == dbox.FilterOpOr || f.Op == dbox.FilterOpAnd {
+		f
 		fs := f.Value.([]*dbox.Filter)
 		for _, ff := range fs {
 			bf, _ := fb.BuildFilter(ff)
 			if fm == "" {
-				fm = rdbms.StringValue(bf, "oracle")
+				fm = "(" + cast.ToString(bf)
 			} else {
 				if f.Op == dbox.FilterOpOr {
-					fm = fm + " OR " + rdbms.StringValue(bf, "oracle")
+					fm += " OR " + cast.ToString(bf)
 				} else {
-					fm = fm + " AND " + rdbms.StringValue(bf, "oracle")
+					fm += " AND " + cast.ToString(bf)
 				}
 			}
 		}
+		fm += ")"
 	} else {
 		//return nil, fmt.Errorf("Filter Op %s is not defined", f.Op)
 	}
