@@ -12,6 +12,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strings"
 	// "time"
 )
 
@@ -167,7 +168,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		for _, sl := range selectParts.([]interface{}) {
 			qp := sl.(*dbox.QueryPart)
 			for _, fid := range qp.Value.([]string) {
-				fields.Set(fid, 1)
+				fields.Set(strings.ToLower(fid), 1)
 			}
 		}
 	} else {
