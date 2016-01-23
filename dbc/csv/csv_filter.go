@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	. "github.com/eaciit/toolkit"
+	"strings"
 )
 
 type FilterBuilder struct {
@@ -12,6 +13,7 @@ type FilterBuilder struct {
 
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := M{}
+	f.Field = strings.ToLower(f.Field)
 	if f.Op == dbox.FilterOpEqual {
 		fm.Set(f.Field, f.Value)
 	} else if f.Op == dbox.FilterOpNoEqual {
