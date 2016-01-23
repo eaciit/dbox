@@ -28,12 +28,27 @@ func (d *DBOP) String() string {
 	return string(*d)
 }
 
-func Find(ms []toolkit.M, filters []*Filter) (output []int) {
+//func Find(ms []toolkit.M, filters []*Filter) (output []int) {
+func Find(ms interface{}, filters []*Filter) (output []int) {
+	//-- is not a slice
+	if !toolkit.IsSlice(ms) {
+		toolkit.Println("Data is not slice")
+		return []int{}
+	}
+
 	//toolkit.Printf("Find:%s Filter:%s\n", toolkit.JsonString(ms), toolkit.JsonString(filters))
-	for i, v := range ms {
-		match := MatchM(v, filters)
-		if match {
-			output = append(output, i)
+	sliceLen := toolkit.SliceLen(ms)
+	for i := 0; i < sliceLen; i++ {
+		var v toolkit.M
+		item := toolkit.SliceItem(ms, i)
+		e := toolkit.Serde(item, &v, "json")
+		if e == nil {
+			match := MatchM(v, filters)
+			if match {
+				output = append(output, i)
+			}
+		} else {
+			//toolkit.Println("Serde Fail: ", e.Error(), " Data: ", item)
 		}
 	}
 	return
@@ -96,7 +111,8 @@ func MatchV(v interface{}, f *Filter) bool {
 			rv1=reflect.Indirect(rv1)
 		}
 	*/
-	if toolkit.HasMember([]interface{}{FilterOpEqual, FilterOpNoEqual, FilterOpGt, FilterOpGte, FilterOpLt, FilterOpLte}, f.Op) {
+	//toolkit.Println("MatchV: ", f.Op, v, f.Value)
+	if toolkit.HasMember([]string{FilterOpEqual, FilterOpNoEqual, FilterOpGt, FilterOpGte, FilterOpLt, FilterOpLte}, f.Op) {
 		return toolkit.Compare(v, f.Value, f.Op)
 	} else if f.Op == FilterOpIn {
 		var values []interface{}
