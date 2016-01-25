@@ -360,7 +360,7 @@ func TestUpdateFilter(t *testing.T) {
 		t.Errorf("Unable to update filter: %s \n", e.Error())
 	}
 
-	///update $lte = Less than or equal (<=)
+	/*///update $lte = Less than or equal (<=)
 	e = c.NewQuery().Update().Where(dbox.Lte("id", "User-2")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("title", false)))
 	if e != nil {
 		t.Errorf("Unable to update filter: %s \n", e.Error())
@@ -376,7 +376,7 @@ func TestUpdateFilter(t *testing.T) {
 	e = c.NewQuery().Update().Where(dbox.Gt("id", "User-4")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("title", "Unknown")))
 	if e != nil {
 		t.Errorf("Unable to update filter: %s \n", e.Error())
-	}
+	}*/
 }
 
 func TestUpdateNoFilter(t *testing.T) {
@@ -446,7 +446,7 @@ func TestSaveSameId(t *testing.T) {
 		data.Id = fmt.Sprintf("User-%d", i)
 		data.Title = fmt.Sprintf("User-%d's name", i)
 		data.Email = fmt.Sprintf("User-%d@myco.com", i)
-		if i == 5 {
+		if i == 7 {
 			data.Email = fmt.Sprintf("User-%d@myholding.com", i)
 		}
 

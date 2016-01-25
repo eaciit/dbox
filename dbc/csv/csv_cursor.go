@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 )
 
 const (
@@ -124,14 +125,15 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		v = reflect.TypeOf(m).Elem().Elem()
 	}
 
-	iv := reflect.New(v).Interface()
 	ivs := reflect.MakeSlice(reflect.SliceOf(v), 0, 0)
 
-	datas := []toolkit.M{}
 	lineCount := 0
 
 	//=============================
+	// fmt.Println("Qursor 133 : ", c.ConditionVal.Find)
 	for {
+		iv := reflect.New(v).Interface()
+
 		isAppend := true
 		c.count += 1
 		recData := toolkit.M{}
@@ -140,13 +142,23 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		dataTemp, e := c.reader.Read()
 
 		for i, val := range dataTemp {
-			recData[c.headerColumn[i].name] = val
+			orgname := c.headerColumn[i].name
+			lowername := strings.ToLower(c.headerColumn[i].name)
+
+			switch c.headerColumn[i].dataType {
+			case "int":
+				recData[lowername] = cast.ToInt(val, cast.RoundingAuto)
+			case "float":
+				recData[lowername] = cast.ToF64(val, 2, cast.RoundingAuto)
+			default:
+				recData[lowername] = val
+			}
 
 			if len(c.ConditionVal.Select) == 0 || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
-				appendData[c.headerColumn[i].name] = val
+				appendData[orgname] = recData[lowername]
 			} else {
-				if c.ConditionVal.Select.Get(c.headerColumn[i].name, 0).(int) == 1 {
-					appendData[c.headerColumn[i].name] = val
+				if c.ConditionVal.Select.Get(strings.ToLower(c.headerColumn[i].name), 0).(int) == 1 {
+					appendData[orgname] = recData[lowername]
 				}
 			}
 		}
@@ -170,7 +182,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 		if e == io.EOF {
 			if isAppend && len(appendData) > 0 {
-				datas = append(datas, appendData)
 				toolkit.Serde(appendData, iv, "json")
 				ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
 				lineCount += 1
@@ -182,7 +193,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 
 		if isAppend && len(appendData) > 0 {
-			datas = append(datas, appendData)
 			toolkit.Serde(appendData, iv, "json")
 			ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
 			lineCount += 1
@@ -200,7 +210,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	}
 
 	if n == 1 {
-		reflect.ValueOf(m).Elem().Set(ivs.Index(0))
+		if ivs.Len() > 0 {
+			reflect.ValueOf(m).Elem().Set(ivs.Index(0))
+		}
 	} else {
 		reflect.ValueOf(m).Elem().Set(ivs)
 	}
