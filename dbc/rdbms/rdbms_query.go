@@ -128,13 +128,14 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 	*/
 
-	aggregate := false
+	// aggregate := false
 	dbname := q.Connection().Info().Database
 	session := q.Session()
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.(*Cursor).session = session
 	// driverName := q.GetDriverDB()
 	driverName := "oracle"
+	var QueryString string
 
 	/*
 		parts will return E - map{interface{}}interface{}
@@ -164,12 +165,35 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				Value.(int)
 		}
 
-		var fields toolkit.M
+		aggrParts, hasAggr := parts[dbox.QueryPartAggr]
+
+		var aggrExpression string
+		if hasAggr {
+			// aggregate = true
+			incAtt := 0
+			for _, aggr := range aggrParts.([]interface{}) {
+				qp := aggr.(*dbox.QueryPart)
+				// isi qp :  &{AGGR {$sum 1 Total Item}}
+				aggrInfo := qp.Value.(dbox.AggrInfo)
+				// isi Aggr Info :  {$sum 1 Total Item}
+
+				if incAtt == 0 {
+					aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+						cast.ToString(aggrInfo.Field) + ")" + " as '" + aggrInfo.Alias + "'"
+				} else {
+					aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
+						"(" + cast.ToString(aggrInfo.Field) + ")" + " as '" + aggrInfo.Alias + "'"
+				}
+				incAtt++
+			}
+			QueryString = "SELECT " + aggrExpression + " FROM " + tablename
+			// isi Aggr Expression :  sum(1) as 'Total Item', max(amount) as 'Max Amount', avg(amount) as 'Average Amount'
+		}
+
 		selectParts, hasSelect := parts[dbox.QueryPartSelect]
 		var attribute string
 		incAtt := 0
 		if hasSelect {
-			fields = toolkit.M{}
 			for _, sl := range selectParts.([]interface{}) {
 				qp := sl.(*dbox.QueryPart)
 				for _, fid := range qp.Value.([]string) {
@@ -179,8 +203,12 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 						attribute = attribute + "," + fid
 					}
 					incAtt++
-					fields.Set(fid, 1)
 				}
+			}
+			if attribute == "" {
+				QueryString = "SELECT * FROM " + tablename
+			} else {
+				QueryString = "SELECT " + attribute + " FROM " + tablename
 			}
 		} else {
 			_, hasUpdate := parts[dbox.QueryPartUpdate]
@@ -191,10 +219,10 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			if hasUpdate || hasInsert || hasDelete || hasSave {
 				return nil, errorlib.Error(packageName, modQuery, "Cursor",
 					"Valid operation for a cursor is select only")
+			} else {
+				QueryString = "SELECT * FROM " + tablename
 			}
 		}
-		//fmt.Printf("Result: %s \n", toolkit.JsonString(fields))
-		//fmt.Printf("Database:%s table:%s \n", dbname, tablename)
 		var sort []string
 		sortParts, hasSort := parts[dbox.QueryPartSelect]
 		if hasSort {
@@ -207,7 +235,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			}
 		}
 
-		//where := toolkit.M{}
 		var where interface{}
 		whereParts, hasWhere := parts[dbox.QueryPartWhere]
 		if hasWhere {
@@ -226,26 +253,34 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				return nil, errorlib.Error(packageName, modQuery, "Cursor",
 					e.Error())
 			} else {
-				//fmt.Printf("Where: %s", toolkit.JsonString(where))
 			}
-			//where = iwhere.(toolkit.M)
+			QueryString += " WHERE " + cast.ToString(where)
+		}
+
+		partGroup, hasGroup := parts[dbox.QueryPartGroup]
+		var groupExpression string
+		if hasGroup {
+			// aggregate = true
+			for _, aggr := range partGroup.([]interface{}) {
+				qp := aggr.(*dbox.QueryPart)
+				groupValue := qp.Value.([]string)
+				for i, val := range groupValue {
+					if i == 0 {
+						groupExpression += val
+					} else {
+						groupExpression += ", " + val
+					}
+				}
+			}
+			QueryString += " GROUP BY " + groupExpression
+			// isi group expression :  GROUP BY nama
 		}
 
 		if dbname != "" && tablename != "" && e != nil && skip == 0 && take == 0 && where == nil {
 
 		}
-		if !aggregate {
-			QueryString := ""
-			if attribute == "" {
-				QueryString = "SELECT * FROM " + tablename
-			} else {
-				QueryString = "SELECT " + attribute + " FROM " + tablename
-			}
-			if cast.ToString(where) != "" {
-				QueryString = QueryString + " WHERE " + cast.ToString(where)
-			}
-			cursor.(*Cursor).QueryString = QueryString
-		}
+
+		cursor.(*Cursor).QueryString = QueryString
 	} else if hasProcedure {
 		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
 		fmt.Println("Isi Proc command : ", procCommand)
