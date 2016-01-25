@@ -202,6 +202,9 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
+				if len(in) > 0 {
+					f = ReadVariable(f, in)
+				}
 				fb.AddFilter(f)
 			}
 		}
@@ -305,6 +308,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
+				if len(parm) > 0 {
+					f = ReadVariable(f, parm)
+				}
 				fb.AddFilter(f)
 			}
 		}
@@ -612,4 +618,30 @@ func (q *Query) execQueryPartUpdate(dt toolkit.M, Cond QueryCondition) error {
 	}
 
 	return nil
+}
+
+func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
+	if (f.Op == "$and" || f.Op == "$or") && strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
+		fs := f.Value.([]*dbox.Filter)
+		for i, ff := range fs {
+			bf := ReadVariable(ff, in)
+			fs[i] = bf
+		}
+		f.Value = fs
+	} else {
+		if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
+			fSlice := f.Value.([]interface{})
+			// nilai fSlice : [@name1 @name2]
+			for i := 0; i < len(fSlice); i++ {
+				// nilai fSlice [i] : @name1
+				if string(cast.ToString(fSlice[i])[0]) == "@" {
+					fSlice[i] = in.Get(strings.Replace(cast.ToString(fSlice[i]), "@", "", 1), "")
+				}
+			}
+			f.Value = fSlice
+		} else if string(cast.ToString(f.Value)[0]) == "@" {
+			f.Value = in.Get(strings.Replace(cast.ToString(f.Value), "@", "", 1), "")
+		}
+	}
+	return f
 }

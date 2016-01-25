@@ -92,14 +92,38 @@ func (c *Connection) NewQuery() IQuery {
 
 func NewQueryFromSQL(c IConnection, qstr string) (IQuery, error) {
 	q := c.NewQuery()
-	// qstr = strings.ToLower(qstr)
-	r := regexp.MustCompile(`(([Ss][Ee][Ll][Ee][Cc][Tt])) (?P<select>([^\-\.~!@#$%\^&()=+\-\[\]{}\\:;<>?/]*)) (([Ff][Rr][Oo][Mm])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*)) (([Ww][Hh][Ee][Rr][Ee])) (?P<where>(.*))`)
+	var r *regexp.Regexp
 
-	if !(r.MatchString(qstr)) {
-		r = regexp.MustCompile(`(([Ss][Ee][Ll][Ee][Cc][Tt])) (?P<select>([^\-\.~!@#$%\^&()=+\-\[\]{}\\:;<>?/]*)) (([Ff][Rr][Oo][Mm])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*))`)
-	}
-
-	if !(r.MatchString(qstr)) {
+	if cond, _ := regexp.MatchString(`^\([Ss][Ee][Ll][Ee][Cc][Tt]) (.*)$`, qstr); !cond {
+		r = regexp.MustCompile(`(([Ss][Ee][Ll][Ee][Cc][Tt])) (?P<select>([^\-\.~!@#$%\^&()=+\-\[\]{}\\:;<>?/]*)) (([Ff][Rr][Oo][Mm])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*)) (([Ww][Hh][Ee][Rr][Ee])) (?P<where>(.*))`)
+		if !(r.MatchString(qstr)) {
+			r = regexp.MustCompile(`(([Ss][Ee][Ll][Ee][Cc][Tt])) (?P<select>([^\-\.~!@#$%\^&()=+\-\[\]{}\\:;<>?/]*)) (([Ff][Rr][Oo][Mm])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*))`)
+		}
+		if !(r.MatchString(qstr)) {
+			return nil, errorlib.Error(packageName, "", "NewQueryFromSQL", "Invalid query format")
+		}
+	} else if cond, _ := regexp.MatchString(`^\([Ii][Nn][Ss][Ee][Rr][Tt]\s[Ii][Nn][Tt][Oo]) (.*)$`, qstr); !cond {
+		r = regexp.MustCompile(`(?P<insert>([Ii][Nn][Ss][Ee][Rr][Tt]\s[Ii][Nn][Tt][Oo])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*)) (.*)`)
+		if !(r.MatchString(qstr)) {
+			return nil, errorlib.Error(packageName, "", "NewQueryFromSQL", "Invalid query format")
+		}
+	} else if cond, _ := regexp.MatchString(`^\([Uu][Pp][Dd][Aa][Tt][Ee]) (.*)$`, qstr); !cond {
+		r = regexp.MustCompile(`(?P<update>([Uu][Pp][Dd][Aa][Tt][Ee])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*)) (.*) (([Ww][Hh][Ee][Rr][Ee])) (?P<where>(.*))`)
+		if !(r.MatchString(qstr)) {
+			r = regexp.MustCompile(`(?P<update>([Uu][Pp][Dd][Aa][Tt][Ee])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*)) (.*)`)
+		}
+		if !(r.MatchString(qstr)) {
+			return nil, errorlib.Error(packageName, "", "NewQueryFromSQL", "Invalid query format")
+		}
+	} else if cond, _ := regexp.MatchString(`^\([Dd][Ee][Ll][Ee][Tt][Ee]) (.*)$`, qstr); !cond {
+		r = regexp.MustCompile(`(?P<delete>([Dd][Ee][Ll][Ee][Tt][Ee])) (([Ff][Rr][Oo][Mm])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*)) (([Ww][Hh][Ee][Rr][Ee])) (?P<where>(.*))`)
+		if !(r.MatchString(qstr)) {
+			r = regexp.MustCompile(`(?P<delete>([Dd][Ee][Ll][Ee][Tt][Ee])) (([Ff][Rr][Oo][Mm])) (?P<from>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*))`)
+		}
+		if !(r.MatchString(qstr)) {
+			return nil, errorlib.Error(packageName, "", "NewQueryFromSQL", "Invalid query format")
+		}
+	} else {
 		return nil, errorlib.Error(packageName, "", "NewQueryFromSQL", "Invalid query format")
 	}
 
@@ -112,38 +136,34 @@ func NewQueryFromSQL(c IConnection, qstr string) (IQuery, error) {
 		}
 	}
 
-	// strselect := r.FindStringSubmatch(qstr)[3]
-	// strfrom := r.FindStringSubmatch(qstr)[7]
-	// strwhere := ""
-	// if isUseWhere {
-	// 	strwhere = r.FindStringSubmatch(qstr)[11]
-	// }
+	partselect := []string{}
 
-	partselect := strings.Split(sqlpart.Get("select", "").(string), ",")
-	for i, val := range partselect {
-		partselect[i] = strings.TrimSpace(val)
+	if sqlpart.Has("select") {
+		partselect = strings.Split(sqlpart.Get("select", "").(string), ",")
+		for i, val := range partselect {
+			partselect[i] = strings.TrimSpace(val)
+		}
+
+		// partorder := make([]string, 0, 0)
+		// partgroup := make([]string, 0, 0)
+	} else if sqlpart.Has("insert") {
+		q.Insert()
+	} else if sqlpart.Has("update") {
+		q.Update()
+	} else if sqlpart.Has("delete") {
+		q.Delete()
 	}
-
-	partfrom := strings.TrimSpace(sqlpart.Get("from", "").(string))
-
-	partwhere := new(Filter)
-	if sqlpart.Has("where") {
-		partwhere = generateFilterQuerySQL(sqlpart.Get("where", "").(string))
-	}
-
-	// partorder := make([]string, 0, 0)
-	// partgroup := make([]string, 0, 0)
 
 	if len(partselect) > 0 {
 		q.Select(partselect...)
 	}
 
-	if partfrom != "" {
-		q.From(partfrom)
+	if sqlpart.Has("from") {
+		q.From(strings.TrimSpace(sqlpart.Get("from", "").(string)))
 	}
 
 	if sqlpart.Has("where") {
-		q.Where(partwhere)
+		q.Where(generateFilterQuerySQL(sqlpart.Get("where", "").(string)))
 	}
 
 	return q, nil
@@ -151,12 +171,23 @@ func NewQueryFromSQL(c IConnection, qstr string) (IQuery, error) {
 
 func generateFilterQuerySQL(strwhere string) (fb *Filter) {
 	strwhere = strings.TrimSpace(strwhere)
-
-	r := regexp.MustCompile(`(?P<currcond>(.*)) (?P<oprandor>([Aa][Nn][Dd]|[Oo][Rr])) (?P<nextcond>(.*))`)
-	if !r.MatchString(strwhere) {
-		if cond, _ := regexp.MatchString(`^\(.*\)$`, strwhere); cond {
+	rbracket := regexp.MustCompile(`^\(.*\)$`)
+	if rbracket.MatchString(strwhere) {
+		if cond, _ := regexp.MatchString(`^\(.*\) ([Oo][Rr]|[Aa][Nn][Dd]) (.*)$`, strwhere); !cond {
 			strwhere = strings.TrimSuffix(strings.TrimPrefix(strwhere, "("), ")")
 		}
+	}
+	// toolkit.Printf("Connection 161 : %#v\n", strwhere)
+	r := regexp.MustCompile(`^(?P<lastprocess01>(.*))(?P<firstprocess>(\(.*([Aa][Nn][Dd]|[Oo][Rr]).*\)))(?P<lastprocess02>(.*))$`)
+	if !r.MatchString(strwhere) {
+		r = regexp.MustCompile(`(.*) (?P<oprandor>([Oo][Rr])) (.*)`)
+	}
+
+	if !r.MatchString(strwhere) {
+		r = regexp.MustCompile(`(.*) (?P<oprandor>([Aa][Nn][Dd])) (.*)`)
+	}
+
+	if !r.MatchString(strwhere) {
 		r = regexp.MustCompile(`(?P<field>([a-zA-Z][_a-zA-Z]+[_a-zA-Z0-1]*))(?P<opr>((\s)*(=|<>|[><](=)?)|(\s(I|i)(N|n)\s)|(\s(L|l)(I|i)(K|k)(E|e)\s)))(?P<value>(.*))`)
 	}
 
@@ -169,14 +200,45 @@ func generateFilterQuerySQL(strwhere string) (fb *Filter) {
 		}
 	}
 
-	if condpart.Has("oprandor") {
-		// arfilter := []*Filter{}
-		//Check Bracket if regexp.MatchString(`^(.*)\(.*([Aa][Nn][Dd]|[Oo][Rr]).*\)(.*)$`, strwhere) {
-		if strings.TrimSpace(condpart.Get("oprandor", "").(string)) == "and" {
-			fb = And(generateFilterQuerySQL(condpart.Get("currcond", "").(string)), generateFilterQuerySQL(condpart.Get("nextcond", "").(string)))
-		} else {
-			fb = Or(generateFilterQuerySQL(condpart.Get("currcond", "").(string)), generateFilterQuerySQL(condpart.Get("nextcond", "").(string)))
+	arstrwhere := make([]string, 0, 0)
+	oprstr := "or"
+	if condpart.Has("firstprocess") {
+		oprstr, arstrwhere = generateWhereCondition(strwhere)
+		// for _, val := range generateWhereCondition(strwhere) {
+		// 	arstrwhere = append(arstrwhere, val)
+		// }
+
+		// next01 := condpart.Get("lastprocess01", "").(string)
+		// next02 := condpart.Get("lastprocess01", "").(string)
+		// if condition {
+
+		// }
+		// //parsing check operator to and insert to arstwhere
+	} else if condpart.Has("oprandor") {
+		arstrwhere = strings.Split(strwhere, condpart["oprandor"].(string))
+		if strings.ToLower(condpart["oprandor"].(string)) == "and" {
+			oprstr = "and"
 		}
+	}
+
+	if len(arstrwhere) > 0 {
+		var arfilter []*Filter
+
+		for _, swhere := range arstrwhere {
+			arfilter = append(arfilter, generateFilterQuerySQL(swhere))
+		}
+
+		if oprstr == "and" {
+			fb = And(arfilter...)
+		} else {
+			fb = Or(arfilter...)
+		}
+		// //Check Bracket if regexp.MatchString(`^(.*)\(.*([Aa][Nn][Dd]|[Oo][Rr]).*\)(.*)$`, strwhere) {
+		// if strings.TrimSpace(condpart.Get("oprandor", "").(string)) == "and" {
+		// 	fb = And(generateFilterQuerySQL(condpart.Get("currcond", "").(string)), generateFilterQuerySQL(condpart.Get("nextcond", "").(string)))
+		// } else {
+		// 	fb = Or(generateFilterQuerySQL(condpart.Get("currcond", "").(string)), generateFilterQuerySQL(condpart.Get("nextcond", "").(string)))
+		// }
 	} else {
 		var (
 			asv []interface{}
@@ -186,6 +248,9 @@ func generateFilterQuerySQL(strwhere string) (fb *Filter) {
 		c1 := strings.TrimSpace(condpart.Get("field", "").(string))
 		tv := strings.TrimSpace(condpart.Get("value", "").(string))
 		opr := strings.ToLower(strings.TrimSpace(condpart.Get("opr", "").(string)))
+		// if condition {
+		tv = strings.TrimSuffix(tv, ")")
+		// }
 
 		if opr != "in" {
 			if strings.Contains(tv, `'`) || strings.Contains(tv, `"`) {
@@ -233,6 +298,65 @@ func generateFilterQuerySQL(strwhere string) (fb *Filter) {
 			fb = Contains(c1, iv.(string))
 		case "in":
 			fb = In(c1, asv...)
+		}
+	}
+
+	return
+}
+
+func generateWhereCondition(strwhere string) (oprstr string, sstr []string) {
+
+	oprstr = "or"
+	r := regexp.MustCompile(`^(?P<lastprocess01>(.*))(?P<firstprocess>(\(.*([Aa][Nn][Dd]|[Oo][Rr]).*\)))(?P<lastprocess02>(.*))$`)
+	// ror := regexp.MustCompile(`(.*) (?P<oprandor>([Oo][Rr])) (.*)`)
+	// rand := regexp.MustCompile(`(.*) (?P<oprandor>([Aa][Nn][Dd])) (.*)`)
+	// if !r.MatchString(strwhere) {
+	// 	r = ror
+	// }
+
+	// if !r.MatchString(strwhere) {
+	// 	r = rand
+	// }
+
+	// tempalias := make(toolkit.M, 0, 0)
+	tempalias := toolkit.M{}
+	for r.MatchString(strwhere) {
+		condpart := toolkit.M{}
+		temparray := r.FindStringSubmatch(strwhere)
+
+		for i, val := range r.SubexpNames() {
+			if val != "" && temparray[i] != "" {
+				condpart.Set(val, temparray[i])
+			}
+		}
+
+		straliaskey := "@" + toolkit.GenerateRandomString("1234567890", 10)
+		strwhere = strings.Replace(strwhere, condpart["firstprocess"].(string), straliaskey, -1)
+		tempalias.Set(straliaskey, condpart["firstprocess"])
+	}
+
+	r = regexp.MustCompile(`(.*) (?P<oprandor>([Oo][Rr])) (.*)`)
+	if !r.MatchString(strwhere) {
+		r = regexp.MustCompile(`(.*) (?P<oprandor>([Aa][Nn][Dd])) (.*)`)
+	}
+
+	condpart := toolkit.M{}
+	temparray := r.FindStringSubmatch(strwhere)
+	// toolkit.Printf("Connection 319 : %#v\n", temparray)
+	for i, val := range r.SubexpNames() {
+		if val != "" && temparray[i] != "" {
+			condpart.Set(val, temparray[i])
+		}
+	}
+
+	sstr = strings.Split(strwhere, condpart["oprandor"].(string))
+	if strings.ToLower(condpart["oprandor"].(string)) == "and" {
+		oprstr = "and"
+	}
+
+	for key, val := range tempalias {
+		for i, strval := range sstr {
+			sstr[i] = strings.Replace(strval, key, val.(string), -1)
 		}
 	}
 
