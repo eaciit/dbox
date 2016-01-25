@@ -7,8 +7,8 @@ import (
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io/ioutil"
-	"reflect"
-	"strconv"
+	//"reflect"
+	//"strconv"
 	"strings"
 )
 
@@ -236,13 +236,14 @@ func finUpdateObj(jsonData []toolkit.M, replaceData toolkit.M, isType string) []
 
 	if isType == "update" {
 		iReplaceData := toolkit.Id(replaceData)
-		reflectIs := reflect.ValueOf(iReplaceData).Kind()
-		dataUptId := ToString(reflectIs, iReplaceData)
+		//reflectIs := reflect.ValueOf(iReplaceData).Kind()
+		//dataUptId := ToString(reflectIs, iReplaceData)
+		dataUptId := toolkit.ToString(iReplaceData)
 
 		for _, v := range jsonData {
 			iSubV := toolkit.Id(v)
-			reflectIs := reflect.ValueOf(iSubV).Kind()
-			subvIdString := ToString(reflectIs, iSubV)
+			//reflectIs := reflect.ValueOf(iSubV).Kind()
+			subvIdString := toolkit.ToString(iSubV)
 			if strings.ToLower(subvIdString) == strings.ToLower(dataUptId) {
 				for key, _ := range v {
 					delete(v, key)
@@ -296,6 +297,7 @@ func (q *Query) WriteFile(newData []toolkit.M) error {
 	return nil
 }
 
+/*
 func ToString(reflectIs reflect.Kind, i interface{}) string {
 	var s string
 	if reflectIs != reflect.String {
@@ -306,6 +308,7 @@ func ToString(reflectIs reflect.Kind, i interface{}) string {
 	}
 	return s
 }
+*/
 
 func (q *Query) HasPartExec() error {
 	var e error
