@@ -105,42 +105,45 @@ func TestConnect(t *testing.T) {
 // 	}
 // }
 
-// func TestProcedure(t *testing.T) {
-// 	c, _ := prepareConnection()
-// 	defer c.Close()
+func TestProcedure(t *testing.T) {
+	c, _ := prepareConnection()
+	defer c.Close()
 
-// 	//csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmur").Set("parms", toolkit.M{}.Set("@name", "Vidal"))).Cursor(nil)
-// 	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").Set("parms", toolkit.M{}.Set("@umur1", "20").Set("@umur2", "23"))).Cursor(nil)
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized", e.Error())
-// 		return
-// 	}
-// 	defer csr.Close()
+	//csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmur").Set("parms", toolkit.M{}.Set("@name", "Vidal"))).Cursor(nil)
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").Set("parms", toolkit.M{}.Set("@umur1", "20").Set("@umur2", "23"))).Cursor(nil)
+	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").
+		Set("parms", toolkit.M{}.Set("@p_umur1", "20").Set("@p_umur2", "23").
+		Set("@@o_nama", "varchar2").Set("@@o_umur", "number"))).Cursor(nil)
+	if csr == nil {
+		t.Errorf("Cursor not initialized", e.Error())
+		return
+	}
+	defer csr.Close()
 
-// 	results := make([]map[string]interface{}, 0)
+	results := make([]map[string]interface{}, 0)
 
-// 	err := csr.Fetch(&results, 0, false)
-// 	fmt.Println("Hasil Procedure : ", results)
-// 	if err != nil {
-// 		t.Errorf("Unable to fetch: %s \n", err.Error())
-// 	} else {
-// 		fmt.Println("======================")
-// 		fmt.Println("Select with FILTER")
-// 		fmt.Println("======================")
-// 		for _, val := range results {
-// 			fmt.Printf("Fetch N OK. Result: %v \n",
-// 				toolkit.JsonString(val))
-// 		}
-// 	}
+	err := csr.Fetch(&results, 0, false)
+	fmt.Println("Hasil Procedure : ", results)
+	if err != nil {
+		t.Errorf("Unable to fetch: %s \n", err.Error())
+	} else {
+		fmt.Println("======================")
+		fmt.Println("Select with FILTER")
+		fmt.Println("======================")
+		for _, val := range results {
+			fmt.Printf("Fetch N OK. Result: %v \n",
+				toolkit.JsonString(val))
+		}
+	}
 
-// 	// ds, e := csr.Fetch(nil, 0, false)
-// 	// if e != nil {
-// 	// 	t.Errorf("Unable to fetch: %s \n", e.Error())
-// 	// } else {
-// 	// 	fmt.Printf("Fetch OK. Result: %v \n",
-// 	// 		toolkit.JsonString(ds.Data))
-// 	// }
-// }
+	// ds, e := csr.Fetch(nil, 0, false)
+	// if e != nil {
+	// 	t.Errorf("Unable to fetch: %s \n", e.Error())
+	// } else {
+	// 	fmt.Printf("Fetch OK. Result: %v \n",
+	// 		toolkit.JsonString(ds.Data))
+	// }
+}
 
 func TestSelectFilter(t *testing.T) {
 	c, e := prepareConnection()
@@ -150,20 +153,30 @@ func TestSelectFilter(t *testing.T) {
 	}
 	defer c.Close()
 
+	layoutFormat := "2006-01-02 15:04:05"
+	dateValue1 := "2016-01-12 14:35:54"
+	dateValue2 := "2016-01-12 14:36:15"
+	var tanggal1 time.Time
+	var tanggal2 time.Time
+	tanggal1, _ = time.Parse(layoutFormat, dateValue1)
+	tanggal2, _ = time.Parse(layoutFormat, dateValue2)
+	fmt.Println(tanggal1, tanggal2)
+
 	csr, e := c.NewQuery().
-		Select("id", "name", "umur").
+		Select("id", "name", "tanggal", "umur").
 		From("tes").
-		//Where(dbox.Eq("name", "Bourne")).
-		//Where(dbox.Ne("name", "Bourne")).
-		//Where(dbox.Gt("umur", 25)).
-		//Where(dbox.Gte("umur", 25)).
-		Where(dbox.Lt("umur", 25)).
-		//Where(dbox.Lte("umur", 25)).
-		//Where(dbox.In("name", "vidal", "bourne")).
-		//Where(dbox.In("umur", "25", "30")).
-		//Where(dbox.Nin("umur", "25", "30")).
-		//Where(dbox.In("tanggal", "2016-01-12 14:35:54", "2016-01-12 14:36:15")).
-		//Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
+		// Where(dbox.Eq("name", "Bourne")).
+		// Where(dbox.Ne("name", "Bourne")).
+		// Where(dbox.Gt("umur", 25)).
+		// Where(dbox.Gte("umur", 25)).
+		// Where(dbox.Lt("umur", 25)).
+		// Where(dbox.Lte("tanggal", tanggal1)).
+		// Where(dbox.Lte("umur", 25)).
+		// Where(dbox.In("name", "vidal", "bourne")).
+		// Where(dbox.In("umur", 25, 30)).
+		// Where(dbox.Nin("umur", 25, 30)).
+		// Where(dbox.In("tanggal", tanggal1, tanggal2)).
+		Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -176,7 +189,7 @@ func TestSelectFilter(t *testing.T) {
 	defer csr.Close()
 
 	// results := make([]map[string]interface{}, 0)
-	results := make([]Player, 0)
+	results := make([]User, 0)
 
 	err := csr.Fetch(&results, 0, false)
 	if err != nil {
@@ -315,15 +328,15 @@ func TestCRUD(t *testing.T) {
 
 	//===============================UPDATE==============================
 
-	data := User{}
-	data.Id = "7"
-	data.Name = "Oscar"
-	data.Tanggal = time.Now()
-	data.Umur = 24
-	e = c.NewQuery().From("tes").Where(dbox.Eq("id", "7")).Update().Exec(toolkit.M{"data": data})
-	if e != nil {
-		t.Errorf("Unable to update: %s \n", e.Error())
-	}
+	// data := User{}
+	// data.Id = "7"
+	// data.Name = "Oscar"
+	// data.Tanggal = time.Now()
+	// data.Umur = 24
+	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "7")).Update().Exec(toolkit.M{"data": data})
+	// if e != nil {
+	// 	t.Errorf("Unable to update: %s \n", e.Error())
+	// }
 
 	//===============================DELETE==============================
 	// e = c.NewQuery().From("tes").Where(dbox.And(dbox.Eq("id", "6"),dbox.Eq("name", "Barkley"))).Delete().Exec(nil)

@@ -2,9 +2,9 @@ package dbox
 
 import (
 	"github.com/eaciit/toolkit"
-	"reflect"
-	"strings"
-	"time"
+	//"reflect"
+	//"strings"
+	//"time"
 )
 
 const (
@@ -97,7 +97,7 @@ func MatchV(v interface{}, f *Filter) bool {
 		}
 	*/
 	if toolkit.HasMember([]interface{}{FilterOpEqual, FilterOpNoEqual, FilterOpGt, FilterOpGte, FilterOpLt, FilterOpLte}, f.Op) {
-		return Compare(v, f.Value, f.Op)
+		return toolkit.Compare(v, f.Value, f.Op)
 	} else if f.Op == FilterOpIn {
 		var values []interface{}
 		toolkit.FromBytes(toolkit.ToBytes(f.Value, ""), "", &values)
@@ -108,85 +108,4 @@ func MatchV(v interface{}, f *Filter) bool {
 		return !toolkit.HasMember(values, v)
 	}
 	return match
-}
-
-func Compare(v1 interface{}, v2 interface{}, op string) bool {
-	vv1 := reflect.Indirect(reflect.ValueOf(v1))
-	vv2 := reflect.Indirect(reflect.ValueOf(v2))
-	if vv1.Type().String() != vv2.Type().String() {
-		return false
-	}
-
-	k := strings.ToLower(vv1.Kind().String())
-	t := strings.ToLower(vv1.Type().String())
-	if strings.Contains(k, "int") || strings.Contains(k, "float") {
-		//--- is a number
-		// lets convert all to float64 for simplicity
-		var vv1o, vv2o float64
-		if strings.Contains(k, "int") {
-			vv1o = float64(vv1.Int())
-			vv2o = float64(vv2.Int())
-		} else {
-			vv1o = vv1.Float()
-			vv2o = vv2.Float()
-		}
-		if op == FilterOpEqual {
-			return vv1o == vv2o
-		} else if op == FilterOpNoEqual {
-			return vv1o != vv2o
-		} else if op == FilterOpLt {
-			return vv1o < vv2o
-		} else if op == FilterOpLte {
-			return vv1o <= vv2o
-		} else if op == FilterOpGt {
-			return vv1o > vv2o
-		} else if op == FilterOpGte {
-			return vv1o >= vv2o
-		}
-	} else if strings.Contains(t, "time.time") {
-		//--- is a time.Time
-		vv1o := vv1.Interface().(time.Time)
-		vv2o := vv2.Interface().(time.Time)
-		if op == FilterOpEqual {
-			return vv1o == vv2o
-		} else if op == FilterOpNoEqual {
-			return vv1o != vv2o
-		} else if op == FilterOpLt {
-			return vv1o.Before(vv2o)
-		} else if op == FilterOpLte {
-			return vv1o == vv2o || vv1o.Before(vv2o)
-		} else if op == FilterOpGt {
-			return vv1o.After(vv2o)
-		} else if op == FilterOpGte {
-			return vv1o == vv2o || vv1o.After(vv2o)
-		}
-
-	} else if strings.Contains(t, "bool") {
-		vv1o := vv1.Bool()
-		vv2o := vv2.Bool()
-		if op == FilterOpEqual {
-			return vv1o == vv2o
-		} else if op == FilterOpNoEqual {
-			return vv1o != vv2o
-		}
-	} else {
-		//--- will be string
-		vv1o := vv1.Interface().(string)
-		vv2o := vv2.Interface().(string)
-		if op == FilterOpEqual {
-			return vv1o == vv2o
-		} else if op == FilterOpNoEqual {
-			return vv1o != vv2o
-		} else if op == FilterOpLt {
-			return vv1o < vv2o
-		} else if op == FilterOpLte {
-			return vv1o <= vv2o
-		} else if op == FilterOpGt {
-			return vv1o > vv2o
-		} else if op == FilterOpGte {
-			return vv1o >= vv2o
-		}
-	}
-
-	return false
 }

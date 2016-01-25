@@ -85,7 +85,12 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 	}
 
-	e := toolkit.Serde(&source, m, "json")
+	var e error
+	if n == 1 {
+		e = toolkit.Serde(&source[0], m, "json")
+	} else {
+		e = toolkit.Serde(&source, m, "json")
+	}
 	if e != nil {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}

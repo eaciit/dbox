@@ -53,6 +53,29 @@ func (q *Query) Prepare() error {
 	return nil
 }
 
+func StringValue(v interface{}, db string) string {
+	var ret string
+	switch v.(type) {
+	case string:
+		ret = fmt.Sprintf("%s", "'"+v.(string)+"'")
+	case time.Time:
+		t := v.(time.Time).UTC()
+		if strings.Contains(db, "oracle") {
+			ret = "to_date('" + t.Format("2006-01-02 15:04:05") + "','yyyy-mm-dd hh24:mi:ss')"
+		} else {
+			ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
+		}
+	case int, int32, int64, uint, uint32, uint64:
+		ret = fmt.Sprintf("%d", v.(int))
+	case nil:
+		ret = ""
+	default:
+		ret = fmt.Sprintf("%v", v)
+		//-- do nothing
+	}
+	return ret
+}
+
 func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	var e error
 	/*
@@ -67,7 +90,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	session := q.Session()
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.(*Cursor).session = session
-	ProcStatement := ""
+	// driverName := q.GetDriverDB()
+	driverName := "oracle"
 
 	/*
 		parts will return E - map{interface{}}interface{}
@@ -147,7 +171,17 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			fb := q.Connection().Fb()
 			for _, p := range whereParts.([]interface{}) {
 				fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
-				for _, f := range fs {
+				for _, f := range fs { //get each element of 'Filter' Struct
+					f.DriverName = driverName
+					// if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
+					// 	fSlice := f.Value.([]interface{}) //get 'Value' field of 'Filter' Struct
+					// 	for i, fv := range fSlice {       // get each value from [] interface
+					// 		fSlice[i] = StringValue(fv, driverName)
+					// 	}
+					// 	f.Value = fSlice
+					// } else {
+					// 	f.Value = StringValue(f.Value, driverName)
+					// }
 					fb.AddFilter(f)
 				}
 			}
@@ -182,68 +216,61 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 		spName := procCommand.(toolkit.M)["name"].(string) + " "
 		params := procCommand.(toolkit.M)["parms"]
-
-		paramValue := ""
-		paramName := ""
 		incParam := 0
+		ProcStatement := ""
 
-		for key, val := range params.(toolkit.M) {
-			if incParam == 0 {
-				paramValue = "('" + val.(string) + "'"
-				paramName = key
-			} else {
-				paramValue += ",'" + val.(string) + "'"
+		if driverName == "mysql" {
+			paramValue := ""
+			paramName := ""
+
+			for key, val := range params.(toolkit.M) {
+				if incParam == 0 {
+					paramValue = "('" + val.(string) + "'"
+					paramName = key
+				} else {
+					paramValue += ",'" + val.(string) + "'"
+				}
+				incParam += 1
 			}
-			incParam += 1
+			paramValue += ", " + paramName + ")"
+
+			ProcStatement = "CALL " + spName + paramValue
+		} else if driverName == "mssql" {
+			paramstring := ""
+			incParam := 0
+			for key, val := range params.(toolkit.M) {
+				if incParam == 0 {
+					paramstring = key + " = '" + val.(string) + "'"
+				} else {
+					paramstring += ", " + key + " = '" + val.(string) + "'"
+				}
+				incParam += 1
+			}
+			paramstring += ";"
+
+			ProcStatement = "EXECUTE " + spName + paramstring
+		} else if driverName == "oracle" {
+			paramstring := ""
+			incParam := 0
+			for key, val := range params.(toolkit.M) {
+				if incParam == 0 {
+					paramstring = key + " = '" + val.(string) + "'"
+				} else {
+					paramstring += ", " + key + " = '" + val.(string) + "'"
+				}
+				incParam += 1
+			}
+			paramstring += ";"
+
+			ProcStatement = "EXECUTE " + spName + paramstring
+
 		}
-		paramValue += ", " + paramName + ")"
 
-		ProcStatement = "CALL " + spName + paramValue
-
-		//=========================SQL SERVER=================
-
-		// paramstring := ""
-		// incParam := 0
-		// for key, val := range params.(toolkit.M) {
-		// 	if incParam == 0 {
-		// 		paramstring = key + " = '" + val.(string) + "'"
-		// 	} else {
-		// 		paramstring += ", " + key + " = '" + val.(string) + "'"
-		// 	}
-		// 	incParam += 1
-		// }
-		// paramstring += ";"
-
-		// ProcStatement = "EXECUTE " + spName + paramstring
-
-		// cursor.(*Cursor).QueryString = ProcStatement
+		cursor.(*Cursor).QueryString = ProcStatement
 
 		fmt.Println("Proc Statement : ", ProcStatement)
 	}
 	return cursor, nil
-}
-
-func StringValue(v interface{}, db string) string {
-	var ret string
-	switch v.(type) {
-	case string:
-		ret = fmt.Sprintf("%s", "'"+v.(string)+"'")
-	case time.Time:
-		t := v.(time.Time).UTC()
-		if strings.Contains(db, "oracle") {
-			ret = "to_date('" + t.Format("2006-01-02 15:04:05") + "','yyyy-mm-dd hh24:mi:ss')"
-		} else {
-			ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
-		}
-	case int, int32, int64, uint, uint32, uint64:
-		ret = fmt.Sprintf("%d", v.(int))
-	case nil:
-		ret = ""
-	default:
-		ret = fmt.Sprintf("%v", v)
-		//-- do nothing
-	}
-	return ret
 }
 
 func (q *Query) Exec(parm toolkit.M) error {
