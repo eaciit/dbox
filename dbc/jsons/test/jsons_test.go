@@ -72,6 +72,7 @@ func TestFind(t *testing.T) {
 		toolkit.Printf("Record: %s \n", toolkit.JsonString(r))
 	}
 	toolkit.Printf("Find %d records of %d records\n", len(indexes), len(ms))
+	os.Exit(1)
 }
 
 func TestConnect(t *testing.T) {

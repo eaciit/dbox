@@ -34,28 +34,28 @@ func TestConnect(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 }
 
-func TestFilter(t *testing.T) {
-	fb := dbox.NewFilterBuilder(new(FilterBuilder))
-	fb.AddFilter(dbox.Or(
-		dbox.Contains("regfield", "1"),
-		dbox.Ne("nefield", 1),
-		dbox.Eq("group", "administrators")))
-	b, e := fb.Build()
-	if e != nil {
-		t.Errorf("Error %s", e.Error())
-	} else {
-		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
-	}
+// func TestFilter(t *testing.T) {
+// 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
+// 	fb.AddFilter(dbox.Or(
+// 		dbox.Contains("regfield", "1"),
+// 		dbox.Ne("nefield", 1),
+// 		dbox.Eq("group", "administrators")))
+// 	b, e := fb.Build()
+// 	if e != nil {
+// 		t.Errorf("Error %s", e.Error())
+// 	} else {
+// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
+// 	}
 
-	fb = dbox.NewFilterBuilder(new(FilterBuilder))
-	fb.AddFilter(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30")))
-	c, e := fb.Build()
-	if e != nil {
-		t.Errorf("Error %s", e.Error())
-	} else {
-		fmt.Printf("Result:\n%v\n", toolkit.JsonString(c))
-	}
-}
+// 	fb = dbox.NewFilterBuilder(new(FilterBuilder))
+// 	fb.AddFilter(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30")))
+// 	c, e := fb.Build()
+// 	if e != nil {
+// 		t.Errorf("Error %s", e.Error())
+// 	} else {
+// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(c))
+// 	}
+// }
 
 type employee struct {
 	Id        string
@@ -117,8 +117,8 @@ func TestSelect(t *testing.T) {
 	}
 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").
-		Cursor(nil)
+	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Eq("Id", "@Idparm")).
+		Cursor(toolkit.M{}.Set("Idparm", "ID-2"))
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -137,7 +137,6 @@ func TestSelect(t *testing.T) {
 		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
 	}
 
-	// results = make([]toolkit.M, 0)
 	e = csr.Fetch(&results, 3, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N2: %s \n", e.Error())
@@ -163,7 +162,48 @@ func TestSelect(t *testing.T) {
 	if e != nil {
 		t.Errorf("Unable to fetch N3: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch N3 OK. Result: %v \n", resultstruct)
+		fmt.Printf("Fetch N4 OK. Result: %v \n", resultstruct)
+	}
+}
+
+func TestSelectFreeQuery(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	tq, e := dbox.NewQueryFromSQL(c, `SELECT Id, FirstName, LastName FROM tab WHERE ((Email = "userAA@yahoo.com" or Email = "userBB@yahoo.com") or (Email = "userCC@yahoo.com" or Id = '12345'))`)
+	if e != nil {
+		t.Errorf("Query pre error: %s \n", e.Error())
+		return
+	}
+
+	csr, e := tq.Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 3, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch FN1 OK. Result: %v \n", results)
+	}
+
+	results = make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 2, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch FN2 OK. Result: %v \n", results)
 	}
 }
 
@@ -177,7 +217,7 @@ func TestSelect(t *testing.T) {
 
 // 	csr, e := c.NewQuery().
 // 		Select("EmployeeId", "FirstName", "LastName", "Age").
-// 		// Where(dbox.Eq("EmployeeId", "101-102-4")).Cursor(nil)
+// 		// Where(dbox.Eq("Age", "@age")).Cursor(toolkit.M{}.Set("age",15))
 // 		// Where(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4"))).Cursor(nil)
 // 		Where(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30"))).Cursor(nil)
 // 	if e != nil {
