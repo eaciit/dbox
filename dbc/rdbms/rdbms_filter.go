@@ -1,7 +1,8 @@
 package rdbms
 
 import (
-	// "github.com/eaciit/cast"
+	// "fmt"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
 )
 
@@ -25,9 +26,9 @@ func CombineIn(operator string, f *dbox.Filter) string {
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := ""
 	if f.Op == dbox.FilterOpEqual {
-		fm = fm + f.Field + "= " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " = " + StringValue(f.Value, "non") + ""
 	} else if f.Op == dbox.FilterOpNoEqual {
-		fm = fm + f.Field + "<>" + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " <>" + StringValue(f.Value, "non") + ""
 	} else if f.Op == dbox.FilterOpGt {
 		fm = fm + f.Field + " > " + StringValue(f.Value, "non") + ""
 	} else if f.Op == dbox.FilterOpGte {
@@ -45,17 +46,20 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	} else if f.Op == dbox.FilterOpOr || f.Op == dbox.FilterOpAnd {
 		fs := f.Value.([]*dbox.Filter)
 		for _, ff := range fs {
+			// nilai ff : &{name $eq Roy}
 			bf, _ := fb.BuildFilter(ff)
+			// nilai bf : name = 'Roy'
 			if fm == "" {
-				fm = StringValue(bf, "non")
+				fm = "(" + cast.ToString(bf)
 			} else {
 				if f.Op == dbox.FilterOpOr {
-					fm = fm + " OR " + StringValue(bf, "non")
+					fm += " OR " + cast.ToString(bf)
 				} else {
-					fm = fm + " AND " + StringValue(bf, "non")
+					fm += " AND " + cast.ToString(bf)
 				}
 			}
 		}
+		fm += ")"
 	} else {
 		//return nil, fmt.Errorf("Filter Op %s is not defined", f.Op)
 	}
