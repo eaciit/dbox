@@ -53,17 +53,18 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	cursor = newCursor(q)
 	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
+	// toolkit.Println("LINE 56 : ", where)
 	cursor.skip = setting.Get("skip", 0).(int)
 	cursor.limit = setting.Get("take", 0).(int)
 	cursor.fields = setting.Get("fields", toolkit.M{}).(toolkit.M)
 
-	if len(where) > 0 {
-		cursor.where = where
-		cursor.indexes, e = q.generateIndex(where)
-		if e != nil {
-			return nil, err.Error(packageName, modQuery, "Cursor", e.Error())
-		}
+	// if len(where) > 0 {
+	cursor.where = where
+	cursor.indexes, e = q.generateIndex(where)
+	if e != nil {
+		return nil, err.Error(packageName, modQuery, "Cursor", e.Error())
 	}
+	// }
 
 	return cursor, nil
 }
@@ -467,6 +468,11 @@ func (q *Query) generateIndex(filters []*dbox.Filter) (output []int, e error) {
 
 		for i, v := range tdread {
 			tm.Set(q.headerColumn[i].name, v)
+			if q.headerColumn[i].dataType == "int" {
+				tm[q.headerColumn[i].name] = cast.ToInt(v, cast.RoundingAuto)
+			} else if q.headerColumn[i].dataType == "float" {
+				tm[q.headerColumn[i].name] = cast.ToF64(v, (len(v.(string)) - (strings.IndexAny(v.(string), "."))), cast.RoundingAuto)
+			}
 		}
 
 		match := dbox.MatchM(tm, filters)
