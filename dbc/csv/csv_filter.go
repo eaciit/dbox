@@ -22,6 +22,14 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 		fm.Set(f.Field, M{}.
 			Set("$regex", fmt.Sprintf(".*%s.*", f.Value)).
 			Set("$options", "i"))
+	} else if f.Op == dbox.FilterOpStartWith {
+		fm.Set(f.Field, M{}.
+			Set("$regex", fmt.Sprintf("^%s.*$", f.Value)).
+			Set("$options", "i"))
+	} else if f.Op == dbox.FilterOpEndWith {
+		fm.Set(f.Field, M{}.
+			Set("$regex", fmt.Sprintf("^.*%s$", f.Value)).
+			Set("$options", "i"))
 	} else if f.Op == dbox.FilterOpIn {
 		fm.Set(f.Field, M{}.Set("$in", f.Value))
 	} else if f.Op == dbox.FilterOpNin {

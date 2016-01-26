@@ -91,11 +91,11 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		v = reflect.TypeOf(m).Elem().Elem()
 	}
 
-	iv := reflect.New(v).Interface()
 	ivs := reflect.MakeSlice(reflect.SliceOf(v), 0, 0)
 
 	for {
 		appendData := toolkit.M{}
+		iv := reflect.New(v).Interface()
 
 		datatemp, ef := c.q.reader.Read()
 		c.realIndex += 1

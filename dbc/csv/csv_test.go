@@ -117,8 +117,8 @@ func TestSelect(t *testing.T) {
 	}
 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").
-		Cursor(nil)
+	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Endwith("FirstName", "Sidik")).Cursor(nil)
+	//csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Startwith("FirstName", "Alip")).Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -173,7 +173,7 @@ func TestSelectFreeQuery(t *testing.T) {
 	}
 	defer c.Close()
 
-	tq, e := dbox.NewQueryFromSQL(c, `SELECT Id, FirstName, LastName FROM tab WHERE Email = "userAA@yahoo.com" or Email = "userBB@yahoo.com" or Email = "userCC@yahoo.com"`)
+	tq, e := dbox.NewQueryFromSQL(c, `SELECT Id, FirstName, LastName FROM tab WHERE ((Email = "userAA@yahoo.com" or Email = "userBB@yahoo.com") or (Email = "userCC@yahoo.com" or Id = '12345'))`)
 	if e != nil {
 		t.Errorf("Query pre error: %s \n", e.Error())
 		return

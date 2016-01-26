@@ -103,7 +103,7 @@ func TestConnect(t *testing.T) {
 func TestSelect(t *testing.T) {
 	skipIfConnectionIsNil(t)
 
-	cursor, e := ctx.NewQuery().From(tableName).Cursor(nil)
+	cursor, e := ctx.NewQuery().From(tableName).Where(dbox.Eq("Age", "34")).Cursor(nil)
 	if e != nil {
 		t.Fatalf("Cursor error: " + e.Error())
 	}
@@ -114,7 +114,7 @@ func TestSelect(t *testing.T) {
 	// }
 
 	var datas []toolkit.M
-	e = cursor.Fetch(&datas, 10, false)
+	e = cursor.Fetch(&datas, 2, false)
 	if e != nil {
 		t.Fatalf("Fetch error: %s", e.Error())
 	}

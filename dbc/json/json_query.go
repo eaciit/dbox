@@ -236,11 +236,14 @@ func finUpdateObj(jsonData []toolkit.M, replaceData toolkit.M, isType string) []
 
 	if isType == "update" {
 		iReplaceData := toolkit.Id(replaceData)
-		dataUptId := cast.ToString(iReplaceData) //ToString(reflectIs, iReplaceData)
+		//reflectIs := reflect.ValueOf(iReplaceData).Kind()
+		//dataUptId := ToString(reflectIs, iReplaceData)
+		dataUptId := toolkit.ToString(iReplaceData)
 
 		for _, v := range jsonData {
 			iSubV := toolkit.Id(v)
-			subvIdString := cast.ToString(iSubV) //ToString(reflectIs, iSubV)
+			//reflectIs := reflect.ValueOf(iSubV).Kind()
+			subvIdString := toolkit.ToString(iSubV)
 			if strings.ToLower(subvIdString) == strings.ToLower(dataUptId) {
 				for key, _ := range v {
 					delete(v, key)
