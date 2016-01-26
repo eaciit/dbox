@@ -18,6 +18,9 @@ const (
 	FilterOpNoEqual  = "$ne"
 	FilterOpContains = "$contains"
 
+	FilterOpStartWith = "$startwith"
+	FilterOpEndWith   = "$endwith"
+
 	FilterOpGt  = "$gt"
 	FilterOpLt  = "$lt"
 	FilterOpGte = "$gte"
@@ -184,5 +187,21 @@ func Or(fs ...*Filter) *Filter {
 	f := new(Filter)
 	f.Op = string(FilterOpOr)
 	f.Value = fs
+	return f
+}
+
+func Startwith(field string, values string) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpStartWith)
+	f.Value = values
+	return f
+}
+
+func Endwith(field string, values string) *Filter {
+	f := new(Filter)
+	f.Field = field
+	f.Op = string(FilterOpEndWith)
+	f.Value = values
 	return f
 }
