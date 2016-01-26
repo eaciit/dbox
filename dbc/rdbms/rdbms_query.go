@@ -128,13 +128,12 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 	*/
 
-	// aggregate := false
 	dbname := q.Connection().Info().Database
 	session := q.Session()
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.(*Cursor).session = session
 	// driverName := q.GetDriverDB()
-	driverName := "oracle"
+	driverName := "postgres"
 	var QueryString string
 
 	/*
@@ -153,23 +152,37 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		tablename := ""
 		tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
 
-		skip := 0
-		if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-			skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
-				Value.(int)
-		}
+		selectParts, hasSelect := parts[dbox.QueryPartSelect]
+		var attribute string
+		incAtt := 0
+		if hasSelect {
+			for _, sl := range selectParts.([]interface{}) {
+				qp := sl.(*dbox.QueryPart)
+				for _, fid := range qp.Value.([]string) {
+					if incAtt == 0 {
+						attribute = fid
+					} else {
+						attribute = attribute + ", " + fid
+					}
+					incAtt++
+				}
+			}
+		} else {
+			_, hasUpdate := parts[dbox.QueryPartUpdate]
+			_, hasInsert := parts[dbox.QueryPartInsert]
+			_, hasDelete := parts[dbox.QueryPartDelete]
+			_, hasSave := parts[dbox.QueryPartSave]
 
-		take := 0
-		if takeParts, has := parts[dbox.QueryPartTake]; has {
-			take = takeParts.([]interface{})[0].(*dbox.QueryPart).
-				Value.(int)
+			if hasUpdate || hasInsert || hasDelete || hasSave {
+				return nil, errorlib.Error(packageName, modQuery, "Cursor",
+					"Valid operation for a cursor is select only")
+			}
 		}
 
 		aggrParts, hasAggr := parts[dbox.QueryPartAggr]
 
 		var aggrExpression string
 		if hasAggr {
-			// aggregate = true
 			incAtt := 0
 			for _, aggr := range aggrParts.([]interface{}) {
 				qp := aggr.(*dbox.QueryPart)
@@ -186,53 +199,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				}
 				incAtt++
 			}
-			QueryString = "SELECT " + aggrExpression + " FROM " + tablename
 			// isi Aggr Expression :  sum(1) as 'Total Item', max(amount) as 'Max Amount', avg(amount) as 'Average Amount'
-		}
-
-		selectParts, hasSelect := parts[dbox.QueryPartSelect]
-		var attribute string
-		incAtt := 0
-		if hasSelect {
-			for _, sl := range selectParts.([]interface{}) {
-				qp := sl.(*dbox.QueryPart)
-				for _, fid := range qp.Value.([]string) {
-					if incAtt == 0 {
-						attribute = fid
-					} else {
-						attribute = attribute + "," + fid
-					}
-					incAtt++
-				}
-			}
-			if attribute == "" {
-				QueryString = "SELECT * FROM " + tablename
-			} else {
-				QueryString = "SELECT " + attribute + " FROM " + tablename
-			}
-		} else {
-			_, hasUpdate := parts[dbox.QueryPartUpdate]
-			_, hasInsert := parts[dbox.QueryPartInsert]
-			_, hasDelete := parts[dbox.QueryPartDelete]
-			_, hasSave := parts[dbox.QueryPartSave]
-
-			if hasUpdate || hasInsert || hasDelete || hasSave {
-				return nil, errorlib.Error(packageName, modQuery, "Cursor",
-					"Valid operation for a cursor is select only")
-			} else {
-				QueryString = "SELECT * FROM " + tablename
-			}
-		}
-		var sort []string
-		sortParts, hasSort := parts[dbox.QueryPartSelect]
-		if hasSort {
-			sort = []string{}
-			for _, sl := range sortParts.([]interface{}) {
-				qp := sl.(*dbox.QueryPart)
-				for _, fid := range qp.Value.([]string) {
-					sort = append(sort, fid)
-				}
-			}
 		}
 
 		var where interface{}
@@ -252,15 +219,50 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			if e != nil {
 				return nil, errorlib.Error(packageName, modQuery, "Cursor",
 					e.Error())
-			} else {
 			}
-			QueryString += " WHERE " + cast.ToString(where)
+		}
+
+		var orderExpression string
+		orderParts, hasOrder := parts[dbox.QueryPartOrder]
+		if hasOrder {
+			for _, oval := range orderParts.([]interface{}) {
+				qp := oval.(*dbox.QueryPart)
+				for i, fid := range qp.Value.([]string) {
+					if i == 0 {
+						if string(fid[0]) == "-" {
+							orderExpression = strings.Replace(fid, "-", "", 1) + " DESC"
+						} else {
+							orderExpression = fid + " ASC"
+						}
+					} else {
+						if string(fid[0]) == "-" {
+							orderExpression += ", " + strings.Replace(fid, "-", "", 1) + " DESC"
+						} else {
+							orderExpression += ", " + fid + " ASC"
+						}
+					}
+				}
+			}
+		}
+
+		skip := 0
+		skipParts, hasSkip := parts[dbox.QueryPartSkip]
+		if hasSkip {
+			skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
+				Value.(int)
+			fmt.Println("nilai skip : ", cast.ToString(skip))
+		}
+
+		take := 0
+		takeParts, hasTake := parts[dbox.QueryPartTake]
+		if hasTake {
+			take = takeParts.([]interface{})[0].(*dbox.QueryPart).
+				Value.(int)
 		}
 
 		partGroup, hasGroup := parts[dbox.QueryPartGroup]
 		var groupExpression string
 		if hasGroup {
-			// aggregate = true
 			for _, aggr := range partGroup.([]interface{}) {
 				qp := aggr.(*dbox.QueryPart)
 				groupValue := qp.Value.([]string)
@@ -272,15 +274,82 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 					}
 				}
 			}
-			QueryString += " GROUP BY " + groupExpression
 			// isi group expression :  GROUP BY nama
 		}
 
 		if dbname != "" && tablename != "" && e != nil && skip == 0 && take == 0 && where == nil {
 
 		}
+		if hasAggr {
+			if hasSelect && attribute != "" {
+				QueryString = "SELECT " + attribute + ", " + aggrExpression + " FROM " + tablename
+			} else {
+				QueryString = "SELECT " + aggrExpression + " FROM " + tablename
+			}
+
+		} else {
+			if attribute == "" {
+				QueryString = "SELECT * FROM " + tablename
+			} else {
+				QueryString = "SELECT " + attribute + " FROM " + tablename
+			}
+		}
+
+		if hasWhere {
+			QueryString += " WHERE " + cast.ToString(where)
+		}
+		if hasGroup {
+			QueryString += " GROUP BY " + groupExpression
+		}
+		if hasOrder {
+			QueryString += " ORDER BY " + orderExpression
+		}
+
+		if driverName == "mysql" {
+			if hasSkip && hasTake {
+				QueryString += " LIMIT " + cast.ToString(take) +
+					" OFFSET " + cast.ToString(skip)
+			} else if hasSkip && !hasTake {
+				QueryString += " LIMIT " + cast.ToString(9999999) +
+					" OFFSET " + cast.ToString(skip)
+			} else if hasTake && !hasSkip {
+				QueryString += " LIMIT " + cast.ToString(take)
+			}
+		} else if driverName == "mssql" {
+			if hasSkip && hasTake {
+				QueryString += " OFFSET " + cast.ToString(skip) + " ROWS FETCH NEXT " +
+					cast.ToString(take) + " ROWS ONLY "
+			} else if hasSkip && !hasTake {
+				QueryString += " OFFSET " + cast.ToString(skip) + " ROWS"
+			} else if hasTake && !hasSkip {
+				top := "SELECT TOP " + cast.ToString(take) + " "
+				QueryString = strings.Replace(QueryString, "SELECT", top, 1)
+			}
+
+		} else if driverName == "oracle" {
+			if hasSkip && hasTake {
+				QueryString += " ROWNUM <= " + cast.ToString(take) + " OFFSET " + cast.ToString(skip)
+			} else if hasSkip && !hasTake {
+
+			} else if hasTake && !hasSkip {
+				QueryString = "select * from (" + QueryString +
+					") WHERE ROWNUM <= " + cast.ToString(take)
+			}
+
+		} else if driverName == "postgres" {
+			if hasSkip && hasTake {
+				QueryString += " LIMIT " + cast.ToString(take) +
+					" OFFSET " + cast.ToString(skip)
+			} else if hasSkip && !hasTake {
+				QueryString += " LIMIT ALL" +
+					" OFFSET " + cast.ToString(skip)
+			} else if hasTake && !hasSkip {
+				QueryString += " LIMIT " + cast.ToString(take)
+			}
+		}
 
 		cursor.(*Cursor).QueryString = QueryString
+
 	} else if hasProcedure {
 		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
 		fmt.Println("Isi Proc command : ", procCommand)
@@ -414,9 +483,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 				values = "(" + stringValues
 				setUpdate = namaField + " = " + stringValues
 			} else {
-				attributes += " , " + namaField
-				values += " , " + stringValues
-				setUpdate += " , " + namaField + " = " + stringValues
+				attributes += ", " + namaField
+				values += ", " + stringValues
+				setUpdate += ", " + namaField + " = " + stringValues
 			}
 		}
 		attributes += ")"
