@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -69,206 +70,206 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	return cursor, nil
 }
 
-// func (q *Query) Exec(in toolkit.M) error {
-// 	setting, e := q.prepare(in)
-// 	commandType := setting["commandtype"].(string)
-// 	//toolkit.Printf("Command type: %s\n", commandType)
-// 	if e != nil {
-// 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
-// 	}
+func (q *Query) Exec(in toolkit.M) error {
+	// 	setting, e := q.prepare(in)
+	// 	commandType := setting["commandtype"].(string)
+	// 	//toolkit.Printf("Command type: %s\n", commandType)
+	// 	if e != nil {
+	// 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
+	// 	}
 
-// 	if setting.GetString("commandtype") == dbox.QueryPartSelect {
-// 		return err.Error(packageName, modQuery, "Exec: "+commandType, "Exec is not working with select command, please use .Cursor instead")
-// 	}
+	// 	if setting.GetString("commandtype") == dbox.QueryPartSelect {
+	// 		return err.Error(packageName, modQuery, "Exec: "+commandType, "Exec is not working with select command, please use .Cursor instead")
+	// 	}
 
-// 	q.Lock()
-// 	defer q.Unlock()
+	// 	q.Lock()
+	// 	defer q.Unlock()
 
-// 	var dataM toolkit.M
-// 	var dataMs []toolkit.M
+	// 	var dataM toolkit.M
+	// 	var dataMs []toolkit.M
 
-// 	hasData := in.Has("data")
-// 	dataIsSlice := false
-// 	data := in.Get("data")
-// 	if toolkit.IsSlice(data) {
-// 		dataIsSlice = true
-// 		e = toolkit.Unjson(toolkit.Jsonify(data), dataMs)
-// 		if e != nil {
-// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data encoding error: "+e.Error())
-// 		}
-// 	} else {
-// 		dataM, e = toolkit.ToM(data)
-// 		dataMs = append(dataMs, dataM)
-// 		if e != nil {
-// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data encoding error: "+e.Error())
-// 		}
-// 	}
+	// 	hasData := in.Has("data")
+	// 	dataIsSlice := false
+	// 	data := in.Get("data")
+	// 	if toolkit.IsSlice(data) {
+	// 		dataIsSlice = true
+	// 		e = toolkit.Unjson(toolkit.Jsonify(data), dataMs)
+	// 		if e != nil {
+	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data encoding error: "+e.Error())
+	// 		}
+	// 	} else {
+	// 		dataM, e = toolkit.ToM(data)
+	// 		dataMs = append(dataMs, dataM)
+	// 		if e != nil {
+	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data encoding error: "+e.Error())
+	// 		}
+	// 	}
 
-// 	hasWhere := setting.Has("where")
-// 	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
+	// 	hasWhere := setting.Has("where")
+	// 	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
 
-// 	if hasData && hasWhere == false && toolkit.HasMember([]interface{}{dbox.QueryPartInsert, dbox.QueryPartUpdate, dbox.QueryPartSave}, commandType) {
-// 		hasWhere = true
-// 		if toolkit.IsSlice(data) {
-// 			ids := []interface{}{}
-// 			idField := ""
-// 			if idField == "" {
-// 				return err.Error(packageName, modQuery, "Exec: "+commandType, "Data send is a slice, but its element has no ID")
-// 			}
-// 			dataCount := toolkit.SliceLen(data)
-// 			for i := 0; i < dataCount; i++ {
-// 				dataI := toolkit.SliceItem(data, i)
-// 				if i == 0 {
-// 					idField = toolkit.IdField(dataI)
-// 				}
-// 				ids = append(ids, toolkit.Id(dataI))
-// 			}
-// 			where = []*dbox.Filter{dbox.In(idField, ids)}
-// 		} else {
-// 			id := toolkit.Id(data)
-// 			if toolkit.IsNilOrEmpty(id) {
-// 				where = []*dbox.Filter{dbox.Eq(toolkit.IdField(id), id)}
-// 			} else {
-// 				where = nil
-// 				hasWhere = false
-// 			}
-// 		}
-// 	}
-// 	//toolkit.Printf("Where: %s\n", toolkit.JsonString(where))
-// 	e = q.openFile()
-// 	//toolkit.Printf(commandType+" Open File, found record: %d\nData:%s\n", len(q.data), toolkit.JsonString(q.data))
-// 	if e != nil {
-// 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
-// 	}
+	// 	if hasData && hasWhere == false && toolkit.HasMember([]interface{}{dbox.QueryPartInsert, dbox.QueryPartUpdate, dbox.QueryPartSave}, commandType) {
+	// 		hasWhere = true
+	// 		if toolkit.IsSlice(data) {
+	// 			ids := []interface{}{}
+	// 			idField := ""
+	// 			if idField == "" {
+	// 				return err.Error(packageName, modQuery, "Exec: "+commandType, "Data send is a slice, but its element has no ID")
+	// 			}
+	// 			dataCount := toolkit.SliceLen(data)
+	// 			for i := 0; i < dataCount; i++ {
+	// 				dataI := toolkit.SliceItem(data, i)
+	// 				if i == 0 {
+	// 					idField = toolkit.IdField(dataI)
+	// 				}
+	// 				ids = append(ids, toolkit.Id(dataI))
+	// 			}
+	// 			where = []*dbox.Filter{dbox.In(idField, ids)}
+	// 		} else {
+	// 			id := toolkit.Id(data)
+	// 			if toolkit.IsNilOrEmpty(id) {
+	// 				where = []*dbox.Filter{dbox.Eq(toolkit.IdField(id), id)}
+	// 			} else {
+	// 				where = nil
+	// 				hasWhere = false
+	// 			}
+	// 		}
+	// 	}
+	// 	//toolkit.Printf("Where: %s\n", toolkit.JsonString(where))
+	// 	e = q.openFile()
+	// 	//toolkit.Printf(commandType+" Open File, found record: %d\nData:%s\n", len(q.data), toolkit.JsonString(q.data))
+	// 	if e != nil {
+	// 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
+	// 	}
 
-// 	var indexes []interface{}
-// 	if hasWhere && commandType != dbox.QueryPartInsert {
-// 		whereIndex := dbox.Find(q.data, where)
-// 		indexes = toolkit.ToInterfaceArray(&whereIndex)
-// 		//toolkit.Printf("Where Index: %s Index:%s\n", toolkit.JsonString(whereIndex), toolkit.JsonString(indexes))
-// 	}
-// 	if commandType == dbox.QueryPartInsert {
-// 		if !hasData {
-// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
-// 		}
-// 		if !dataIsSlice {
-// 			dataMs = []toolkit.M{dataM}
-// 		}
+	// 	var indexes []interface{}
+	// 	if hasWhere && commandType != dbox.QueryPartInsert {
+	// 		whereIndex := dbox.Find(q.data, where)
+	// 		indexes = toolkit.ToInterfaceArray(&whereIndex)
+	// 		//toolkit.Printf("Where Index: %s Index:%s\n", toolkit.JsonString(whereIndex), toolkit.JsonString(indexes))
+	// 	}
+	// 	if commandType == dbox.QueryPartInsert {
+	// 		if !hasData {
+	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
+	// 		}
+	// 		if !dataIsSlice {
+	// 			dataMs = []toolkit.M{dataM}
+	// 		}
 
-// 		//-- validate
-// 		for _, datam := range dataMs {
-// 			idField, idValue := toolkit.IdInfo(datam)
-// 			toolkit.Serde(dbox.Find(q.data, []*dbox.Filter{dbox.Eq(idField, idValue)}), &indexes, "")
-// 			if len(indexes) > 0 {
-// 				return err.Error(packageName, modQuery, "Exec: "+commandType, toolkit.Sprintf("Data %v already exist", idValue))
-// 			}
-// 		}
+	// 		//-- validate
+	// 		for _, datam := range dataMs {
+	// 			idField, idValue := toolkit.IdInfo(datam)
+	// 			toolkit.Serde(dbox.Find(q.data, []*dbox.Filter{dbox.Eq(idField, idValue)}), &indexes, "")
+	// 			if len(indexes) > 0 {
+	// 				return err.Error(packageName, modQuery, "Exec: "+commandType, toolkit.Sprintf("Data %v already exist", idValue))
+	// 			}
+	// 		}
 
-// 		//-- insert the data
-// 		q.data = append(q.data, dataMs...)
-// 	} else if commandType == dbox.QueryPartUpdate {
+	// 		//-- insert the data
+	// 		q.data = append(q.data, dataMs...)
+	// 	} else if commandType == dbox.QueryPartUpdate {
 
-// 		//-- valida
-// 		if !hasData {
-// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
-// 		}
+	// 		//-- valida
+	// 		if !hasData {
+	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
+	// 		}
 
-// 		var dataUpdate toolkit.M
-// 		var updateDataIndex int
+	// 		var dataUpdate toolkit.M
+	// 		var updateDataIndex int
 
-// 		// if it is a slice then we need to update each data passed on its slice
-// 		isDataSlice := toolkit.IsSlice(data)
-// 		if isDataSlice == false {
-// 			isDataSlice = false
-// 			e = toolkit.Serde(data, &dataUpdate, "")
-// 			if e != nil {
-// 				return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
-// 			}
-// 		}
+	// 		// if it is a slice then we need to update each data passed on its slice
+	// 		isDataSlice := toolkit.IsSlice(data)
+	// 		if isDataSlice == false {
+	// 			isDataSlice = false
+	// 			e = toolkit.Serde(data, &dataUpdate, "")
+	// 			if e != nil {
+	// 				return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
+	// 			}
+	// 		}
 
-// 		var idField string
-// 		//toolkit.Printf("Indexes: %s\n", toolkit.JsonString(indexes))
-// 		for i, v := range q.data {
-// 			// update only data that match given index
-// 			if toolkit.HasMember(indexes, i) || !hasWhere {
-// 				if idField == "" {
-// 					idField = toolkit.IdField(v)
-// 					if idField == "" {
-// 						return err.Error(packageName, modQuery, "Exec: "+commandType, "No ID")
-// 					}
-// 				}
+	// 		var idField string
+	// 		//toolkit.Printf("Indexes: %s\n", toolkit.JsonString(indexes))
+	// 		for i, v := range q.data {
+	// 			// update only data that match given index
+	// 			if toolkit.HasMember(indexes, i) || !hasWhere {
+	// 				if idField == "" {
+	// 					idField = toolkit.IdField(v)
+	// 					if idField == "" {
+	// 						return err.Error(packageName, modQuery, "Exec: "+commandType, "No ID")
+	// 					}
+	// 				}
 
-// 				// If dataslice is sent, iterate f
-// 				if isDataSlice {
-// 					e = toolkit.Serde(toolkit.SliceItem(data, updateDataIndex), &dataUpdate, "")
-// 					if e != nil {
-// 						return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
-// 					}
-// 					updateDataIndex++
-// 				}
-// 				dataOrigin := q.data[i]
-// 				toolkit.CopyM(&dataUpdate, &dataOrigin, false, []string{"_id"})
-// 				toolkit.Serde(dataOrigin, &v, "")
-// 				q.data[i] = v
-// 			}
-// 		}
-// 	} else if commandType == dbox.QueryPartDelete {
-// 		if hasWhere && len(where) > 0 {
-// 			var indexes []interface{}
-// 			toolkit.Serde(dbox.Find(q.data, where), &indexes, "")
-// 			if len(indexes) > 0 {
-// 				newdata := []toolkit.M{}
-// 				for index, v := range q.data {
-// 					if toolkit.HasMember(indexes, index) == false {
-// 						newdata = append(newdata, v)
-// 					}
-// 				}
-// 				q.data = newdata
-// 			}
-// 		} else {
-// 			q.data = []toolkit.M{}
-// 		}
-// 		//toolkit.Printf("Data now: %s\n", toolkit.JsonString(q.data))
-// 	} else if commandType == dbox.QueryPartSave {
-// 		if !hasData {
-// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
-// 		}
+	// 				// If dataslice is sent, iterate f
+	// 				if isDataSlice {
+	// 					e = toolkit.Serde(toolkit.SliceItem(data, updateDataIndex), &dataUpdate, "")
+	// 					if e != nil {
+	// 						return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
+	// 					}
+	// 					updateDataIndex++
+	// 				}
+	// 				dataOrigin := q.data[i]
+	// 				toolkit.CopyM(&dataUpdate, &dataOrigin, false, []string{"_id"})
+	// 				toolkit.Serde(dataOrigin, &v, "")
+	// 				q.data[i] = v
+	// 			}
+	// 		}
+	// 	} else if commandType == dbox.QueryPartDelete {
+	// 		if hasWhere && len(where) > 0 {
+	// 			var indexes []interface{}
+	// 			toolkit.Serde(dbox.Find(q.data, where), &indexes, "")
+	// 			if len(indexes) > 0 {
+	// 				newdata := []toolkit.M{}
+	// 				for index, v := range q.data {
+	// 					if toolkit.HasMember(indexes, index) == false {
+	// 						newdata = append(newdata, v)
+	// 					}
+	// 				}
+	// 				q.data = newdata
+	// 			}
+	// 		} else {
+	// 			q.data = []toolkit.M{}
+	// 		}
+	// 		//toolkit.Printf("Data now: %s\n", toolkit.JsonString(q.data))
+	// 	} else if commandType == dbox.QueryPartSave {
+	// 		if !hasData {
+	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
+	// 		}
 
-// 		var dataMs []toolkit.M
-// 		var dataM toolkit.M
-// 		if !toolkit.IsSlice(data) {
-// 			e = toolkit.Serde(&data, &dataM, "json")
-// 			if e != nil {
-// 				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
-// 			}
-// 			dataMs = append(dataMs, dataM)
-// 		} else {
-// 			e = toolkit.Serde(&data, &dataMs, "json")
-// 			if e != nil {
-// 				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
-// 			}
-// 		}
-// 		//toolkit.Printf("Saving: %s\n", toolkit.JsonString(dataMs))
+	// 		var dataMs []toolkit.M
+	// 		var dataM toolkit.M
+	// 		if !toolkit.IsSlice(data) {
+	// 			e = toolkit.Serde(&data, &dataM, "json")
+	// 			if e != nil {
+	// 				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
+	// 			}
+	// 			dataMs = append(dataMs, dataM)
+	// 		} else {
+	// 			e = toolkit.Serde(&data, &dataMs, "json")
+	// 			if e != nil {
+	// 				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
+	// 			}
+	// 		}
+	// 		//toolkit.Printf("Saving: %s\n", toolkit.JsonString(dataMs))
 
-// 		for _, v := range dataMs {
-// 			idField, idValue := toolkit.IdInfo(v)
-// 			indexes := dbox.Find(q.data, []*dbox.Filter{dbox.Eq(idField, idValue)})
-// 			if len(indexes) == 0 {
-// 				q.data = append(q.data, v)
-// 			} else {
-// 				dataOrigin := q.data[indexes[0]]
-// 				//toolkit.Printf("Copy data %s to %s\n", toolkit.JsonString(v), toolkit.JsonString(dataOrigin))
-// 				toolkit.CopyM(&v, &dataOrigin, false, []string{idField})
-// 				q.data[indexes[0]] = dataOrigin
-// 			}
-// 		}
-// 	}
-// 	e = q.writeFile()
-// 	if e != nil {
-// 		return err.Error(packageName, modQuery, "Exec: "+commandType+" Write fail", e.Error())
-// 	}
-// 	return nil
-// }
+	// 		for _, v := range dataMs {
+	// 			idField, idValue := toolkit.IdInfo(v)
+	// 			indexes := dbox.Find(q.data, []*dbox.Filter{dbox.Eq(idField, idValue)})
+	// 			if len(indexes) == 0 {
+	// 				q.data = append(q.data, v)
+	// 			} else {
+	// 				dataOrigin := q.data[indexes[0]]
+	// 				//toolkit.Printf("Copy data %s to %s\n", toolkit.JsonString(v), toolkit.JsonString(dataOrigin))
+	// 				toolkit.CopyM(&v, &dataOrigin, false, []string{idField})
+	// 				q.data[indexes[0]] = dataOrigin
+	// 			}
+	// 		}
+	// 	}
+	// e = q.writeFile()
+	// if e != nil {
+	// 	return err.Error(packageName, modQuery, "Exec: "+commandType+" Write fail", e.Error())
+	// }
+	return nil
+}
 
 func (q *Query) Close() {
 }
@@ -471,7 +472,7 @@ func (q *Query) generateIndex(filters []*dbox.Filter) (output []int, e error) {
 			if q.headerColumn[i].dataType == "int" {
 				tm[q.headerColumn[i].name] = cast.ToInt(v, cast.RoundingAuto)
 			} else if q.headerColumn[i].dataType == "float" {
-				tm[q.headerColumn[i].name] = cast.ToF64(v, (len(v.(string)) - (strings.IndexAny(v.(string), "."))), cast.RoundingAuto)
+				tm[q.headerColumn[i].name] = cast.ToF64(v, (len(v) - (strings.IndexAny(v, "."))), cast.RoundingAuto)
 			}
 		}
 
@@ -629,10 +630,39 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
+				if len(in) > 0 {
+					f = ReadVariable(f, in)
+				}
 				filters = append(filters, f)
 			}
 		}
 	}
 	output.Set("where", filters)
 	return
+}
+
+func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
+	if (f.Op == "$and" || f.Op == "$or") && strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
+		fs := f.Value.([]*dbox.Filter)
+		for i, ff := range fs {
+			bf := ReadVariable(ff, in)
+			fs[i] = bf
+		}
+		f.Value = fs
+	} else {
+		if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
+			fSlice := f.Value.([]interface{})
+			// nilai fSlice : [@name1 @name2]
+			for i := 0; i < len(fSlice); i++ {
+				// nilai fSlice [i] : @name1
+				if string(cast.ToString(fSlice[i])[0]) == "@" {
+					fSlice[i] = in.Get(strings.Replace(cast.ToString(fSlice[i]), "@", "", 1), "")
+				}
+			}
+			f.Value = fSlice
+		} else if string(cast.ToString(f.Value)[0]) == "@" {
+			f.Value = in.Get(strings.Replace(cast.ToString(f.Value), "@", "", 1), "")
+		}
+	}
+	return f
 }
