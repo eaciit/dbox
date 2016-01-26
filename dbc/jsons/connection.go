@@ -5,6 +5,8 @@ import (
 	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"os"
+	"regexp"
+	"strings"
 )
 
 func init() {
@@ -61,6 +63,35 @@ func (c *Connection) NewQuery() dbox.IQuery {
 		return q
 	}
 	return nil
+}
+
+func (c *Connection) ObjectNames(obj dbox.ObjTypeEnum) []string {
+	if obj == "" {
+		obj = dbox.ObjTypeAll
+	}
+
+	astr := []string{}
+
+	if obj == dbox.ObjTypeAll || obj == dbox.ObjTypeTable {
+		d, err := os.Open(c.Info().Host)
+		if err != nil {
+			return []string{}
+		}
+		defer d.Close()
+
+		files, err := d.Readdir(-1)
+		if err != nil {
+			return []string{}
+		}
+
+		for _, file := range files {
+			if cond, _ := regexp.MatchString("^(.*)(\\.[Jj][Ss][Oo][Nn])$", file.Name()); cond {
+				astr = append(astr, file.Name()[:strings.IndexAny(file.Name(), ".")])
+			}
+		}
+
+	}
+	return astr
 }
 
 func (c *Connection) Close() {

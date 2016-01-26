@@ -7,8 +7,6 @@ import (
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io/ioutil"
-	//"reflect"
-	//"strconv"
 	"strings"
 )
 
@@ -297,19 +295,6 @@ func (q *Query) WriteFile(newData []toolkit.M) error {
 	return nil
 }
 
-/*
-func ToString(reflectIs reflect.Kind, i interface{}) string {
-	var s string
-	if reflectIs != reflect.String {
-		toI := toolkit.ToInt(i)
-		s = strconv.Itoa(toI)
-	} else {
-		s = i.(string)
-	}
-	return s
-}
-*/
-
 func (q *Query) HasPartExec() error {
 	var e error
 	var lastJson []toolkit.M
@@ -331,12 +316,32 @@ func (q *Query) HasPartExec() error {
 					}
 					if toolkit.SliceLen(idata) == 0 {
 						lastJson = append(lastJson, q.sliceData[idSlice])
-						// toolkit.Printf("idata>%v\n", q.sliceData[idSlice])
 					}
 				}
 			}
 		}
 		q.sliceData = lastJson
+	} else {
+		idx := []int{}
+		for _, v := range q.whereData {
+			getWhere := []*dbox.Filter{v}
+			idx = dbox.Find(q.sliceData, getWhere)
+
+		}
+		// toolkit.Printf("newdata>%v\n", idx)
+		if toolkit.SliceLen(idx) > 1 {
+			newdata := toolkit.M{}
+			for idslice, dataslice := range q.sliceData {
+				if toolkit.HasMember(idx, idslice) {
+					idf, _ := toolkit.IdInfo(dataslice)
+					newdata = q.sliceData[idslice]
+					toolkit.CopyM(&dataslice, &newdata, false, []string{idf})
+				}
+			}
+			q.sliceData = []toolkit.M{}
+			q.sliceData = append(q.sliceData, newdata)
+		}
+
 	}
 
 	e = q.WriteFile(q.sliceData)
@@ -353,6 +358,12 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 		qp := x.(*dbox.QueryPart)
 		return qp.PartType
 	}, nil).Data
+
+	skip := 0
+	if skipPart, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
+		skip = skipPart.([]interface{})[0].(*dbox.QueryPart).Value.(int)
+	}
+	filters.Set("skip", skip)
 
 	var fields []string
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
@@ -389,14 +400,19 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	var where []*dbox.Filter
 	if hasWhere {
+		fb := new(FilterBuilder)
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
+				f := fb.CheckFilter(f, parm)
+
 				where = append(where, f)
 			}
 		}
 		filters.Set("where", where)
 	}
+	// toolkit.Printf("where>%v\n", toolkit.JsonString(filters.Get("where")))
+
 	return filters, nil
 }
 

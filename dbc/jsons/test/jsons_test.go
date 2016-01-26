@@ -196,6 +196,12 @@ func TestProcedure(t *testing.T) {
 	}
 }
 
+func TestGetObj(t *testing.T) {
+	toolkit.Printf("List Table : %v\n", ctx.ObjectNames(dbox.ObjTypeTable))
+
+	toolkit.Printf("All Object : %v\n", ctx.ObjectNames(""))
+}
+
 func TestClose(t *testing.T) {
 	skipIfConnectionIsNil(t)
 	ctx.Close()

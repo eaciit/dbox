@@ -6,6 +6,7 @@ import (
 
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	"regexp"
 	"time"
 )
 
@@ -78,6 +79,30 @@ func (c *Connection) NewQuery() dbox.IQuery {
 	q.SetConnection(c)
 	q.SetThis(q)
 	return q
+}
+
+func (c *Connection) ObjectNames(obj dbox.ObjTypeEnum) []string {
+	mgoDb := c.session.DB(c.Info().Database)
+	if obj == "" {
+		obj = dbox.ObjTypeAll
+	}
+
+	astr := []string{}
+
+	if obj == dbox.ObjTypeAll || obj == dbox.ObjTypeTable {
+		cols, err := mgoDb.CollectionNames()
+		if err != nil {
+			return []string{}
+		}
+
+		for _, col := range cols {
+			if cond, _ := regexp.MatchString("^(.*)(\\.(indexes))$", col); !cond {
+				astr = append(astr, col)
+			}
+		}
+
+	}
+	return astr
 }
 
 func (c *Connection) Close() {

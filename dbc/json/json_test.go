@@ -198,6 +198,69 @@ func TestSelectFilter(t *testing.T) {
 	}
 }
 
+func TestSelectParm(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().
+		// Where(dbox.Ne("id", "@userid1")).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Where(dbox.Gt("id", "@userid1")).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Where(dbox.Gte("id", "@userid1")).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Where(dbox.Lt("id", "@userid1")).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Where(dbox.Lte("id", "@userid1")).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Where(dbox.In("id", "@userid1", "@userid2")).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
+		// Where(dbox.Nin("id", "@userid1", "@userid2")).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
+		// Where(dbox.Eq("id", "@userid1")).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Where(dbox.And(dbox.Eq("id", "@userid1"), dbox.Eq("title", "@userid2"))).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-400's name"))
+		// Where(dbox.Lt("title", "@title")).
+		// Cursor(toolkit.M{}.Set("title", "User-8's name"))
+		// Where(dbox.Or(dbox.Eq("id", "@userid1"), dbox.Eq("id", "@userid2"))).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
+		Where(dbox.Contains("title", "@userid1")).
+		Cursor(toolkit.M{}.Set("userid1", "own"))
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	//rets := []toolkit.M{}
+
+	// results := make([]toolkit.M, 0)
+	type App struct {
+		Id    string `json:"id"`
+		Title string `json:"title"`
+		Email string `json:"email"`
+	}
+
+	var apps []App
+	e = csr.Fetch(&apps, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch filter params. Result: %v \n",
+			toolkit.JsonString(apps))
+
+	}
+}
+
 /*
 func TestSelectAggregate(t *testing.T) {
 	c, e := prepareConnection()
@@ -360,23 +423,23 @@ func TestUpdateFilter(t *testing.T) {
 		t.Errorf("Unable to update filter: %s \n", e.Error())
 	}
 
-	/*///update $lte = Less than or equal (<=)
-	e = c.NewQuery().Update().Where(dbox.Lte("id", "User-2")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("title", false)))
-	if e != nil {
-		t.Errorf("Unable to update filter: %s \n", e.Error())
-	}
+	// ///update $lte = Less than or equal (<=)
+	// e = c.NewQuery().Update().Where(dbox.Lte("id", "User-2")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("title", false)))
+	// if e != nil {
+	// 	t.Errorf("Unable to update filter: %s \n", e.Error())
+	// }
 
-	///update $ne = Not equal (!=)
-	e = c.NewQuery().Update().Where(dbox.Ne("id", "User-3")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("title", " - ")))
-	if e != nil {
-		t.Errorf("Unable to update filter: %s \n", e.Error())
-	}
+	// ///update $ne = Not equal (!=)
+	// e = c.NewQuery().Update().Where(dbox.Ne("id", "User-3")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("title", " - ")))
+	// if e != nil {
+	// 	t.Errorf("Unable to update filter: %s \n", e.Error())
+	// }
 
-	///update $gt = Greater than (>)
-	e = c.NewQuery().Update().Where(dbox.Gt("id", "User-4")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("title", "Unknown")))
-	if e != nil {
-		t.Errorf("Unable to update filter: %s \n", e.Error())
-	}*/
+	// ///update $gt = Greater than (>)
+	// e = c.NewQuery().Update().Where(dbox.Gt("id", "User-4")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("title", "Unknown")))
+	// if e != nil {
+	// 	t.Errorf("Unable to update filter: %s \n", e.Error())
+	// }
 }
 
 func TestUpdateNoFilter(t *testing.T) {
