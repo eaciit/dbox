@@ -13,7 +13,7 @@ func connect() error {
 	var e error
 	if ctx == nil {
 		ctx, e = dbox.NewConnection("mongo",
-			&dbox.ConnectionInfo{"localhost:27123", "ectest", "", "", nil})
+			&dbox.ConnectionInfo{"localhost:27017", "eccolony", "", "", nil})
 		if e != nil {
 			return e
 		}
@@ -122,6 +122,13 @@ func TestProcedure(t *testing.T) {
 	} else {
 		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(results[0:10]))
 	}
+}
+
+func TestGetObj(t *testing.T) {
+	skipIfConnectionIsNil(t)
+	//ObjTypeTable, ObjTypeView, ObjTypeProcedure, ObjTypeAll
+	toolkit.Printf("List Table : %v\n", ctx.ObjectNames(dbox.ObjTypeTable))
+	toolkit.Printf("List All Object : %v\n", ctx.ObjectNames(""))
 }
 
 func TestClose(t *testing.T) {
