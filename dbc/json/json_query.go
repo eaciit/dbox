@@ -2,13 +2,11 @@ package json
 
 import (
 	"encoding/json"
-	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io/ioutil"
-	"reflect"
 	"strings"
 )
 
@@ -402,10 +400,11 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	var where []*dbox.Filter
 	if hasWhere {
+		fb := new(FilterBuilder)
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
-				f := q.CheckFilter(f, parm)
+				f := fb.CheckFilter(f, parm)
 
 				where = append(where, f)
 			}
@@ -415,54 +414,6 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 	// toolkit.Printf("where>%v\n", toolkit.JsonString(filters.Get("where")))
 
 	return filters, nil
-}
-
-func (q *Query) CheckFilter(f *dbox.Filter, p toolkit.M) *dbox.Filter {
-	if f.Op == "$eq" || f.Op == "$ne" || f.Op == "$gt" || f.Op == "$gte" || f.Op == "$lt" ||
-		f.Op == "$lte" {
-		if !toolkit.IsSlice(f.Value) {
-			fTostring := cast.ToString(f.Value)
-			foundSubstring := strings.Index(fTostring, "@")
-			// toolkit.Printf("index>%v fTostring>%v\n", foundSubstring, fTostring)
-			if foundSubstring != 0 {
-				return f
-			}
-
-			if strings.Contains(fTostring, "@") {
-				splitParm := strings.Split(fTostring, "@")
-				f.Value = p.Get(splitParm[1])
-				return f
-			}
-		}
-	} else if f.Op == "$in" || f.Op == "$nin" {
-		var splitValue []string
-		if toolkit.IsSlice(f.Value) {
-			for i, v := range f.Value.([]interface{}) {
-				vToString := cast.ToString(v)
-				if strings.Contains(vToString, "@") {
-					splitValue = strings.Split(vToString, "@")
-				}
-				switch cast.Kind(v) {
-				case reflect.String:
-					stringValue := cast.ToString(p.Get(splitValue[1]))
-					f.Value.([]interface{})[i] = stringValue
-				case reflect.Int:
-					stringValue := toolkit.ToInt(p.Get(splitValue[1]))
-					f.Value.([]interface{})[i] = stringValue
-				case reflect.Bool:
-					f.Value.([]interface{})[i] = p.Get(splitValue[1]).(bool)
-				}
-			}
-			return f
-		}
-	} else if f.Op == "$or" || f.Op == "$and" {
-		fs := f.Value.([]*dbox.Filter)
-		for i, ff := range fs {
-			bf := q.CheckFilter(ff, p)
-			fs[i] = bf
-		}
-	}
-	return f
 }
 
 func (q *Query) Close() {

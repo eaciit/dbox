@@ -227,10 +227,10 @@ func TestSelectParm(t *testing.T) {
 		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-400's name"))
 		// Where(dbox.Lt("title", "@title")).
 		// Cursor(toolkit.M{}.Set("title", "User-8's name"))
-		Where(dbox.Or(dbox.Eq("id", "@userid1"), dbox.Eq("id", "@userid2"))).
-		Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
-	// Where(dbox.Contains("id", "@userid1")).
-	// Cursor(toolkit.M{}.Set("userid1", "own"))
+		// Where(dbox.Or(dbox.Eq("id", "@userid1"), dbox.Eq("id", "@userid2"))).
+		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
+		Where(dbox.Contains("title", "@userid1")).
+		Cursor(toolkit.M{}.Set("userid1", "own"))
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
