@@ -12,54 +12,72 @@ type FilterBuilder struct {
 
 func CombineIn(operator string, f *dbox.Filter) string {
 	values := ""
-	for i, val := range f.Value.([]interface{}) {
-		if i == 0 {
-			values = f.Field + " " + operator + " (" + StringValue(val, "non")
-		} else {
-			values += "," + StringValue(val, "non")
+	if operator == "LIKE " {
+		for i, val := range f.Value.([]string) {
+			if i == 0 {
+				values = f.Field + " " + operator + " '%" + val + "%' "
+			} else {
+				values += " '%" + val + "%' "
+			}
 		}
+	} else {
+		for i, val := range f.Value.([]interface{}) {
+			if i == 0 {
+				values = f.Field + " " + operator + " (" + StringValue(val, "non")
+			} else {
+				values += "," + StringValue(val, "non")
+			}
+		}
+		values += ")"
 	}
-	values += ")"
 	return values
 }
 
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := ""
+	// vals := ""
+	//drivername :=  dbox.Connection
+	// drivername :=  new(Connection)
+	//drivername :=  fb.GetDriver()
+	// drivername := fb.Connection().(*Connection).Drivername
+	// fmt.Println("drivernamenya adalah : ", drivername)
 	if f.Op == dbox.FilterOpEqual {
-		fm = fm + f.Field + " = " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + "= '" + cast.ToString(f.Value) + "'"
 	} else if f.Op == dbox.FilterOpNoEqual {
-		fm = fm + f.Field + " <>" + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + "<>'" + cast.ToString(f.Value) + "'"
 	} else if f.Op == dbox.FilterOpGt {
-		fm = fm + f.Field + " > " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " > '" + cast.ToString(f.Value) + "'"
 	} else if f.Op == dbox.FilterOpGte {
-		fm = fm + f.Field + " >= " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " >= '" + cast.ToString(f.Value) + "'"
 	} else if f.Op == dbox.FilterOpLt {
-		fm = fm + f.Field + " < " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " < '" + cast.ToString(f.Value) + "'"
 	} else if f.Op == dbox.FilterOpLte {
-		fm = fm + f.Field + " <= " + StringValue(f.Value, "non") + ""
+		fm = fm + f.Field + " <= '" + cast.ToString(f.Value) + "'"
+	} else if f.Op == dbox.FilterOpContains {
+		fm = CombineIn("LIKE ", f)
 	} else if f.Op == dbox.FilterOpIn {
 		fm = CombineIn("IN", f)
 	} else if f.Op == dbox.FilterOpNin {
 		fm = CombineIn("NOT IN", f)
-	} else if f.Op == dbox.FilterOpContains {
-		fm = CombineIn("NOT IN", f)
 	} else if f.Op == dbox.FilterOpOr || f.Op == dbox.FilterOpAnd {
+		// bfs := []interface{}{}
 		fs := f.Value.([]*dbox.Filter)
 		for _, ff := range fs {
-			// nilai ff : &{name $eq Roy}
 			bf, _ := fb.BuildFilter(ff)
-			// nilai bf : name = 'Roy'
+			// if eb == nil {
+			// 	bfs = append(bfs, bf)
+			// }
 			if fm == "" {
-				fm = "(" + cast.ToString(bf)
+				fm = cast.ToString(bf)
 			} else {
 				if f.Op == dbox.FilterOpOr {
-					fm += " OR " + cast.ToString(bf)
+					fm = fm + " OR " + cast.ToString(bf)
 				} else {
-					fm += " AND " + cast.ToString(bf)
+					fm = fm + " AND " + cast.ToString(bf)
 				}
 			}
 		}
-		fm += ")"
+		//fm.Set(f.Op, bfs)
 	} else {
 		//return nil, fmt.Errorf("Filter Op %s is not defined", f.Op)
 	}

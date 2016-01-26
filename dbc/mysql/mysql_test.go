@@ -24,7 +24,7 @@ type Player struct {
 }
 
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"localhost:3306", "test", "root", "", nil}
+	ci := &dbox.ConnectionInfo{"localhost:3306", "tes", "root", "", nil}
 	c, e := dbox.NewConnection("mysql", ci)
 	if e != nil {
 		return nil, e
@@ -313,77 +313,115 @@ func (t JSONTime) MarshalJSON() ([]byte, error) {
 	return []byte(stamp), nil
 }
 
-func TestCRUD(t *testing.T) {
-	//t.Skip()
+// func TestCRUD(t *testing.T) {
+// 	//t.Skip()
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("Unable to connect %s \n", e.Error())
+// 		return
+// 	}
+// 	defer c.Close()
+
+//===============================INSERT==============================
+
+// q := c.NewQuery().SetConfig("multiexec", true).From("tes").Save()
+
+// dataInsert := User{}
+// dataInsert.Id = fmt.Sprintf("6")
+// dataInsert.Name = fmt.Sprintf("Barkley")
+// //dataInsert.Tanggal = JSONTime(time.Now())
+// dataInsert.Tanggal = time.Now()
+// dataInsert.Umur = 21
+
+// e = q.Exec(toolkit.M{
+// 	"data": dataInsert,
+// })
+// if e != nil {
+// 	t.Errorf("Unable to save: %s \n", e.Error())
+// }
+
+//===============================INSERT MANY==============================
+
+// nama := [] string{"Barkley", "Vidal", "Arnautovic", "Agger", "Wijnaldum", "Ighalo", "Mahrez"}
+// dataInsert := User{}
+
+// for i, val := range nama{
+
+// 	dataInsert.Id = strconv.Itoa (i+1)
+// 	dataInsert.Name = fmt.Sprintf(val)
+// 	dataInsert.Tanggal = time.Now()
+// 	dataInsert.Umur = i+20
+// 	e = q.Exec(toolkit.M{
+// 	"data": dataInsert,
+// 	})
+// 	if e != nil {
+// 		t.Errorf("Unable to save: %s \n", e.Error())
+// 	}
+// }
+
+//===============================UPDATE==============================
+
+// data := User{}
+// data.Id = "7"
+// data.Name = "Oscar"
+// data.Tanggal = time.Now()
+// data.Umur = 24
+// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "7")).Update().Exec(toolkit.M{"data": data})
+// if e != nil {
+// 	t.Errorf("Unable to update: %s \n", e.Error())
+// }
+
+//===============================DELETE==============================
+// e = c.NewQuery().From("tes").Where(dbox.And(dbox.Eq("id", "6"),dbox.Eq("name", "Barkley"))).Delete().Exec(nil)
+// if e != nil {
+// 	t.Errorf("Unablet to delete table %s\n", e.Error())
+// 	return
+// }
+
+//===============================CLEAR ALL TABLE DATA==============================
+
+// e = c.NewQuery().From("tes").Delete().Exec(nil)
+// if e != nil {
+// 	t.Errorf("Unablet to clear table %s\n", e.Error())
+// 	return
+// }
+
+//}
+
+func TestContainer(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
-		t.Errorf("Unable to connect %s \n", e.Error())
-		return
+		t.Errorf("unnable  to connect %s \n", e.Error())
 	}
 	defer c.Close()
 
-	//===============================INSERT==============================
+	csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Contains("name", "ar", "ov")).Cursor(nil)
+	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Or(dbox.Contains("name", "oy"), dbox.Contains("name", "os"))).Cursor(nil)
 
-	// q := c.NewQuery().SetConfig("multiexec", true).From("tes").Save()
+	if e != nil {
+		t.Errorf("cursor pre error : %s \n", e.Error())
+		return
+	}
 
-	// dataInsert := User{}
-	// dataInsert.Id = fmt.Sprintf("6")
-	// dataInsert.Name = fmt.Sprintf("Barkley")
-	// //dataInsert.Tanggal = JSONTime(time.Now())
-	// dataInsert.Tanggal = time.Now()
-	// dataInsert.Umur = 21
+	if csr == nil {
+		t.Errorf("cursor not initialized")
+	}
 
-	// e = q.Exec(toolkit.M{
-	// 	"data": dataInsert,
-	// })
-	// if e != nil {
-	// 	t.Errorf("Unable to save: %s \n", e.Error())
-	// }
+	results := make([]map[string]interface{}, 0)
 
-	//===============================INSERT MANY==============================
+	err := csr.Fetch(&results, 0, false)
+	if err != nil {
+		t.Errorf("unnable to fetch: %s \n", err.Error())
+	} else {
+		fmt.Println("===========================")
+		fmt.Println("contain data")
+		fmt.Println("===========================")
 
-	// nama := [] string{"Barkley", "Vidal", "Arnautovic", "Agger", "Wijnaldum", "Ighalo", "Mahrez"}
-	// dataInsert := User{}
+		fmt.Println("fetch N Ok. Result :\n")
 
-	// for i, val := range nama{
-
-	// 	dataInsert.Id = strconv.Itoa (i+1)
-	// 	dataInsert.Name = fmt.Sprintf(val)
-	// 	dataInsert.Tanggal = time.Now()
-	// 	dataInsert.Umur = i+20
-	// 	e = q.Exec(toolkit.M{
-	// 	"data": dataInsert,
-	// 	})
-	// 	if e != nil {
-	// 		t.Errorf("Unable to save: %s \n", e.Error())
-	// 	}
-	// }
-
-	//===============================UPDATE==============================
-
-	// data := User{}
-	// data.Id = "7"
-	// data.Name = "Oscar"
-	// data.Tanggal = time.Now()
-	// data.Umur = 24
-	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "7")).Update().Exec(toolkit.M{"data": data})
-	// if e != nil {
-	// 	t.Errorf("Unable to update: %s \n", e.Error())
-	// }
-
-	//===============================DELETE==============================
-	// e = c.NewQuery().From("tes").Where(dbox.And(dbox.Eq("id", "6"),dbox.Eq("name", "Barkley"))).Delete().Exec(nil)
-	// if e != nil {
-	// 	t.Errorf("Unablet to delete table %s\n", e.Error())
-	// 	return
-	// }
-
-	//===============================CLEAR ALL TABLE DATA==============================
-
-	// e = c.NewQuery().From("tes").Delete().Exec(nil)
-	// if e != nil {
-	// 	t.Errorf("Unablet to clear table %s\n", e.Error())
-	// 	return
-	// }
+		for i := 0; i < len(results); i++ {
+			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
+		}
+	}
 
 }

@@ -343,6 +343,28 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 			ProcStatement = "EXECUTE " + spName + paramstring
 
+		} else if driverName == "postgres" {
+			paramValue := ""
+			incParam := 0
+			for key, val := range params.(toolkit.M) {
+				fmt.Println("===============", val)
+				if val != "" {
+					if incParam == 0 {
+						fmt.Println("++++++++++ param value 0")
+						paramValue = "('" + val.(string) + "'"
+						//paramName = key
+						fmt.Println(key)
+					} else {
+						paramValue += ",'" + val.(string) + "'"
+					}
+					incParam += 1
+				} else {
+					paramValue = "( "
+				}
+			}
+			paramValue += ");"
+
+			ProcStatement = "SELECT * FROM " + spName + paramValue
 		}
 
 		cursor.(*Cursor).QueryString = ProcStatement
