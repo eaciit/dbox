@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -264,9 +265,9 @@ func (q *Query) Exec(in toolkit.M) error {
 	// 		}
 	// 	}
 	// e = q.writeFile()
-	if e != nil {
-		return err.Error(packageName, modQuery, "Exec: "+commandType+" Write fail", e.Error())
-	}
+	// if e != nil {
+	// 	return err.Error(packageName, modQuery, "Exec: "+commandType+" Write fail", e.Error())
+	// }
 	return nil
 }
 
@@ -471,7 +472,7 @@ func (q *Query) generateIndex(filters []*dbox.Filter) (output []int, e error) {
 			if q.headerColumn[i].dataType == "int" {
 				tm[q.headerColumn[i].name] = cast.ToInt(v, cast.RoundingAuto)
 			} else if q.headerColumn[i].dataType == "float" {
-				tm[q.headerColumn[i].name] = cast.ToF64(v, (len(v.(string)) - (strings.IndexAny(v.(string), "."))), cast.RoundingAuto)
+				tm[q.headerColumn[i].name] = cast.ToF64(v, (len(v) - (strings.IndexAny(v, "."))), cast.RoundingAuto)
 			}
 		}
 
