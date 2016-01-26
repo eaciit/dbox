@@ -9,7 +9,7 @@ import (
 
 func prepareConnection() (dbox.IConnection, error) {
 	var config = toolkit.M{}.Set("timeout", 3)
-	ci := &dbox.ConnectionInfo{"localhost:27123", "ectest", "", "", config}
+	ci := &dbox.ConnectionInfo{"localhost:27017", "eccolony", "", "", config}
 	c, e := dbox.NewConnection("mongo", ci)
 	if e != nil {
 		return nil, e
@@ -35,8 +35,8 @@ func TestConnect(t *testing.T) {
 func TestFilter(t *testing.T) {
 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
 	fb.AddFilter(dbox.Or(
-		dbox.Eq("_id", 1),
-		dbox.Eq("group", "administrators")))
+		dbox.Contains("_id", "1"),
+		dbox.Contains("group", "adm", "test")))
 	b, e := fb.Build()
 	if e != nil {
 		t.Errorf("Error %s", e.Error())
@@ -45,7 +45,7 @@ func TestFilter(t *testing.T) {
 	}
 }
 
-func TestSelect(t *testing.T) {
+/*func TestSelect(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -84,43 +84,60 @@ func TestSelect(t *testing.T) {
 		fmt.Printf("Fetch N OK. Result: %v \n",
 			ds.Data)
 	}
+}*/
+
+func TestSelectFilter(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().Select().
+		Where(dbox.Contains("fullname", "43")).
+		From("TestUsers").Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := make([]map[string]interface{}, 0)
+	e = csr.Fetch(&results, 10, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
+	}
+
+	csr, e = c.NewQuery().
+		Where(dbox.Contains("fullname", "43", "44")).
+		From("TestUsers").Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results = make([]map[string]interface{}, 0)
+	e = csr.Fetch(&results, 10, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N2 OK. Result: %v \n", results)
+	}
 }
 
-// func TestSelectFilter(t *testing.T) {
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("Unable to connect %s \n", e.Error())
-// 		return
-// 	}
-// 	defer c.Close()
-
-// 	csr, e := c.NewQuery().
-// 		//Select("_id", "email").
-// 		Where(dbox.Eq("email", "arief@eaciit.com")).
-// 		From("appusers").Cursor(nil)
-// 	if e != nil {
-// 		t.Errorf("Cursor pre error: %s \n", e.Error())
-// 		return
-// 	}
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized")
-// 		return
-// 	}
-// 	defer csr.Close()
-
-// 	//rets := []toolkit.M{}
-
-// 	ds, e := csr.Fetch(nil, 0, false)
-// 	if e != nil {
-// 		t.Errorf("Unable to fetch: %s \n", e.Error())
-// 	} else {
-// 		fmt.Printf("Fetch OK. Result: %v \n",
-// 			toolkit.JsonString(ds.Data[0]))
-
-// 	}
-// }
-
-func TestSelectAggregate(t *testing.T) {
+/*func TestSelectAggregate(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -153,9 +170,9 @@ func TestSelectAggregate(t *testing.T) {
 			toolkit.JsonString(ds.Data))
 
 	}
-}
+}*/
 
-func TestSelectAggregateUsingCommand(t *testing.T) {
+/*func TestSelectAggregateUsingCommand(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -207,7 +224,7 @@ func TestProcedure(t *testing.T) {
 			toolkit.JsonString(ds.Data))
 	}
 
-}
+}*/
 
 // func TestCRUD(t *testing.T) {
 // 	//t.Skip()
