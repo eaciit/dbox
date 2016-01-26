@@ -1,7 +1,7 @@
 package rdbms
 
 import (
-	// "fmt"
+	//"fmt"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
 )
@@ -20,6 +20,7 @@ func CombineIn(operator string, f *dbox.Filter) string {
 				values += " '%" + val + "%' "
 			}
 		}
+
 	} else {
 		for i, val := range f.Value.([]interface{}) {
 			if i == 0 {
@@ -55,6 +56,12 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 		fm = fm + f.Field + " <= '" + cast.ToString(f.Value) + "'"
 	} else if f.Op == dbox.FilterOpContains {
 		fm = CombineIn("LIKE ", f)
+	} else if f.Op == dbox.FilterOpEndWith {
+		fm = fm + f.Field + " LIKE '%" + cast.ToString(f.Value) + "'"
+		//fm = CombineIn("START ", f)
+	} else if f.Op == dbox.FilterOpStartWith {
+		fm = fm + f.Field + " LIKE '" + cast.ToString(f.Value) + "%'"
+		//fm = CombineIn("START ", f)
 	} else if f.Op == dbox.FilterOpIn {
 		fm = CombineIn("IN", f)
 	} else if f.Op == dbox.FilterOpNin {
