@@ -61,6 +61,12 @@ func TestConnect(t *testing.T) {
 	}
 }
 
+func TestGetObj(t *testing.T) {
+	toolkit.Printf("List Table : %v\n", ctx.ObjectNames(dbox.ObjTypeTable))
+
+	toolkit.Printf("All Object : %v\n", ctx.ObjectNames(""))
+}
+
 // func TestCRUD(t *testing.T) {
 // 	skipIfConnectionIsNil(t)
 // 	e := ctx.NewQuery().Delete().From(tableName).SetConfig("multiexec", true).Exec(nil)

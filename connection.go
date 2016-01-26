@@ -8,6 +8,15 @@ import (
 	"strings"
 )
 
+type ObjTypeEnum string
+
+const (
+	ObjTypeTable     ObjTypeEnum = "table"
+	ObjTypeView      ObjTypeEnum = "view"
+	ObjTypeProcedure ObjTypeEnum = "procedure"
+	ObjTypeAll       ObjTypeEnum = "allobject"
+)
+
 type IConnection interface {
 	Connect() error
 	Close()
@@ -19,6 +28,8 @@ type IConnection interface {
 
 	Fb() IFilterBuilder
 	SetFb(IFilterBuilder)
+
+	ObjectNames(ObjTypeEnum) []string
 }
 
 type FnNewConnection func(*ConnectionInfo) (IConnection, error)
@@ -88,6 +99,13 @@ func (c *Connection) Close() {
 func (c *Connection) NewQuery() IQuery {
 	q := new(Query)
 	return q
+}
+
+func (c *Connection) ObjectNames(obj ObjTypeEnum) []string {
+	if obj == "" {
+		obj = ObjTypeAll
+	}
+	return []string{}
 }
 
 func NewQueryFromSQL(c IConnection, qstr string) (IQuery, error) {
