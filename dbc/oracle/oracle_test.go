@@ -1,20 +1,20 @@
 package oracle
 
-import ( 
-	"github.com/eaciit/dbox"
-	"github.com/eaciit/toolkit"   
-	"testing"
+import (
 	"fmt"
-	"time" 
+	"github.com/eaciit/dbox"
+	"github.com/eaciit/toolkit"
+	"testing"
+	"time"
 )
 
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"localhost", "", "system", "pass_system", nil}
-	c, e := dbox.NewConnection("oracle", ci) 
+	ci := &dbox.ConnectionInfo{"localhost", "", "oracle", "oracle", nil}
+	c, e := dbox.NewConnection("oracle", ci)
 	if e != nil {
 		return nil, e
 	}
-     
+
 	e = c.Connect()
 	if e != nil {
 		return nil, e
@@ -23,61 +23,47 @@ func prepareConnection() (dbox.IConnection, error) {
 }
 
 func TestConnect(t *testing.T) {
-	c, e := prepareConnection()  
+	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect: %s \n", e.Error())
 		fmt.Println(e)
-	}else{
+	} else {
 		// fmt.Println(c)
 	}
 	defer c.Close()
 }
- 
 
-// func TestSelect(t *testing.T) {
-// 	c, e := prepareConnection()
+func TestSelect(t *testing.T) {
+	c, e := prepareConnection()
 
-// 	if e != nil {
-// 		t.Errorf("Unable to connect %s \n", e.Error())
-// 	}
-// 	defer c.Close()
-    
-// 	// csr, e := c.NewQuery().Select().From("tes").Where(dbox.Eq("id", "3")).Cursor(nil) 
-// 	csr, e := c.NewQuery().Select("id","title","email").From("testtables").Cursor(nil) 
-	
-// 	if e != nil {
-// 		t.Errorf("Cursor pre error: %s \n", e.Error())
-// 		return
-// 	}
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized")
-// 		return
-// 	}
-// 	defer csr.Close()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
 
-// 	// //rets := []toolkit.M{}
-	 
-// 	ds, e := csr.Fetch(nil, 1, false)
-// 	if e != nil {
-// 		t.Errorf("Unable to fetch all: %s \n", e.Error())
-// 	} else {
-// 		fmt.Printf("Fetch N OK. Result: %v \n",
-// 			ds.Data)
-// 	}
+	// csr, e := c.NewQuery().Select().From("tes").Where(dbox.Eq("id", "3")).Cursor(nil)
+	csr, e := c.NewQuery().Select("id", "nama", "umur").From("tes").Cursor(nil)
 
-// 	e = csr.ResetFetch()
-// 	if e != nil {
-// 		t.Errorf("Unable to reset fetch: %s \n", e.Error())
-// 	}
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
 
-// 	ds, e = csr.Fetch(nil, 0, false)
-// 	if e != nil {
-// 		t.Errorf("Unable to fetch N: %s \n", e.Error())
-// 	} else {
-// 		fmt.Printf("Fetch N OK. Result: %v \n",
-// 			ds.Data)
-// 	}
-// }
+	// //rets := []toolkit.M{}
+
+	ds, e = csr.Fetch(nil, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N OK. Result: %v \n",
+			ds.Data)
+	}
+}
 
 // func TestSelectFilter(t *testing.T) {
 // 	c, e := prepareConnection()
@@ -151,7 +137,6 @@ func TestSelectAggregate(t *testing.T) {
 	}
 }
 */
- 
 
 // func TestCRUD(t *testing.T) {
 // 	//t.Skip()
@@ -174,17 +159,16 @@ func TestSelectAggregate(t *testing.T) {
 // 	// defer c.Close()
 // 	q := c.NewQuery().SetConfig("multiexec", true).From("tes").Save()
 // 	type user struct {
-// 		Id     int   
-// 		Name   string 
-// 		Date   time.Time 
+// 		Id     int
+// 		Name   string
+// 		Date   time.Time
 // 	}
-	 
+
 // 	// 	//go func(q dbox.IQuery, i int) {
 // 		data := user{}
 // 		data.Id = 9999999
 // 		data.Name = "dsad2"
 // 		data.Date = time.Now()
-  
 
 // 		e = q.Exec(toolkit.M{
 // 			"data": data,
@@ -192,14 +176,13 @@ func TestSelectAggregate(t *testing.T) {
 // 		if e != nil {
 // 			t.Errorf("Unable to save: %s \n", e.Error())
 // 		}
-	 
-// 	// // q.Close() 
-// 	// data.Id = "3" 
+
+// 	// // q.Close()
+// 	// data.Id = "3"
 // 	// data.Name = "uuuuuuuuuu"
 // 	// e = c.NewQuery().From("testtables").Where(dbox.Eq("id", "3")).Update().Exec(toolkit.M{"data": data})
 // 	// if e != nil {
 // 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 // 	// }
-	 
-// }
 
+// }

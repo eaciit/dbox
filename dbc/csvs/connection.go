@@ -1,4 +1,4 @@
-package jsons
+package csvs
 
 import (
 	"github.com/eaciit/dbox"
@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	dbox.RegisterConnector("jsons", NewConnection)
+	dbox.RegisterConnector("csvs", NewConnection)
 }
 
 func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
@@ -45,7 +45,7 @@ func (c *Connection) Connect() error {
 }
 
 func (c *Connection) NewQuery() dbox.IQuery {
-	pooling := c.Info().Settings.Get("pooling", false).(bool)
+	pooling := c.Info().Settings.Get("pooling", true).(bool)
 
 	if pooling && c.defautQuery != nil {
 		return c.defautQuery
@@ -53,11 +53,9 @@ func (c *Connection) NewQuery() dbox.IQuery {
 		q := new(Query)
 		q.SetConnection(c)
 		q.SetThis(q)
-		/*
-			if pooling {
-				c.defautQuery = q
-			}
-		*/
+		if pooling {
+			c.defautQuery = q
+		}
 		return q
 	}
 	return nil
