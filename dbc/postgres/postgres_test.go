@@ -300,16 +300,56 @@ func TestConnect(t *testing.T) {
 // 	}
 // }
 
-func TestContainer(t *testing.T) {
+// func TestContainer(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("unnable  to connect %s \n", e.Error())
+// 	}
+// 	defer c.Close()
+
+// 	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Contains("name", "ar")).Cursor(nil)
+// 	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Contains("name", "ar", "ov")).Cursor(nil)
+// 	csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Or(dbox.Contains("name", "oy"), dbox.Contains("name", "Os"))).Cursor(nil)
+
+// 	if e != nil {
+// 		t.Errorf("cursor pre error : %s \n", e.Error())
+// 		return
+// 	}
+
+// 	if csr == nil {
+// 		t.Errorf("cursor not initialized")
+// 	}
+
+// 	results := make([]map[string]interface{}, 0)
+
+// 	err := csr.Fetch(&results, 0, false)
+// 	if err != nil {
+// 		t.Errorf("unnable to fetch: %s \n", err.Error())
+// 	} else {
+// 		fmt.Println("===========================")
+// 		fmt.Println("contain data")
+// 		fmt.Println("===========================")
+
+// 		fmt.Println("fetch N Ok. Result :\n")
+
+// 		for i := 0; i < len(results); i++ {
+// 			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
+// 		}
+// 	}
+
+// }
+
+//============================================ Startwith or Endwith =============================
+
+func TestStartorEndWith(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("unnable  to connect %s \n", e.Error())
 	}
 	defer c.Close()
 
-	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Contains("name", "ar")).Cursor(nil)
-	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Contains("name", "ar", "ov")).Cursor(nil)
-	csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Or(dbox.Contains("name", "oy"), dbox.Contains("name", "Os"))).Cursor(nil)
+	csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Startwith("name", "Bo")).Cursor(nil)
+	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Endwith("name", "ar")).Cursor(nil)
 
 	if e != nil {
 		t.Errorf("cursor pre error : %s \n", e.Error())
