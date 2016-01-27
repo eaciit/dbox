@@ -273,3 +273,16 @@ func TestProcedure(t *testing.T) {
 // 		t.Errorf("Unable to update: %s \n", e.Error())
 // 	}
 // }
+
+func TestGetObj(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+	//ObjTypeTable, ObjTypeView, ObjTypeProcedure, ObjTypeAll
+	toolkit.Printf("List Table : %v\n", c.ObjectNames(dbox.ObjTypeTable))
+	toolkit.Printf("List Procedure : %v\n", c.ObjectNames(dbox.ObjTypeProcedure))
+	toolkit.Printf("List All Object : %v\n", c.ObjectNames(""))
+}
