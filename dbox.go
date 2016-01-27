@@ -135,6 +135,15 @@ func MatchV(v interface{}, f *Filter) bool {
 				return true
 			}
 		}
+	} else if f.Op == FilterOpStartWith || f.Op == FilterOpEndWith {
+		value := ""
+		if f.Op == FilterOpStartWith {
+			value = toolkit.Sprintf("^%s.*$", f.Value)
+		} else {
+			value = toolkit.Sprintf("^.*%s$", f.Value)
+		}
+		cond, _ := regexp.Match(value, []byte(v.(string)))
+		return cond
 	}
 	return match
 }
