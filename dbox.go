@@ -125,14 +125,16 @@ func MatchV(v interface{}, f *Filter) bool {
 		return !toolkit.HasMember(values, v)
 	} else if f.Op == FilterOpContains {
 		var values []interface{}
+		var b bool
 		toolkit.FromBytes(toolkit.ToBytes(f.Value, ""), "", &values)
+
 		for _, val := range values {
 			value := toolkit.Sprintf(".*%s.*", val.(string))
-			b, _ := regexp.Match(value, []byte(v.(string)))
-			// toolkit.Printf("Error not match regex: %s\n", e.Error())
-			return b
+			b, _ = regexp.Match(value, []byte(v.(string)))
+			if b {
+				return true
+			}
 		}
-
 	}
 	return match
 }
