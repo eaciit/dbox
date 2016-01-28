@@ -378,3 +378,64 @@ func TestStartorEndWith(t *testing.T) {
 	}
 
 }
+
+func TestViewAllTables(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("unnable  to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	csr := c.ObjectNames(dbox.ObjTypeTable)
+
+	for i := 0; i < len(csr); i++ {
+		fmt.Printf("show name table %v \n", toolkit.JsonString(csr[i]))
+	}
+
+}
+
+func TestViewProcedureName(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("unnable  to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	proc := c.ObjectNames(dbox.ObjTypeProcedure)
+
+	for i := 0; i < len(proc); i++ {
+		fmt.Printf("show name procdure %v \n", toolkit.JsonString(proc[i]))
+	}
+
+}
+
+func TestViewName(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("unnable  to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	view := c.ObjectNames(dbox.ObjTypeView)
+
+	for i := 0; i < len(view); i++ {
+		fmt.Printf("show name view %v \n", toolkit.JsonString(view[i]))
+	}
+
+}
+
+func TestAllObj(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("unnable  to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	all := c.ObjectNames(dbox.ObjTypeAll)
+
+	fmt.Println(all)
+	for i := 0; i < len(all); i++ {
+		fmt.Printf("show objects %v \n", toolkit.JsonString(all[i]))
+	}
+
+}
