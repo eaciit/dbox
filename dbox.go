@@ -5,6 +5,7 @@ import (
 	//"reflect"
 	//"strings"
 	//"time"
+	"regexp"
 )
 
 const (
@@ -122,6 +123,27 @@ func MatchV(v interface{}, f *Filter) bool {
 		var values []interface{}
 		toolkit.FromBytes(toolkit.ToBytes(f.Value, ""), "", &values)
 		return !toolkit.HasMember(values, v)
+	} else if f.Op == FilterOpContains {
+		var values []interface{}
+		var b bool
+		toolkit.FromBytes(toolkit.ToBytes(f.Value, ""), "", &values)
+
+		for _, val := range values {
+			value := toolkit.Sprintf(".*%s.*", val.(string))
+			b, _ = regexp.Match(value, []byte(v.(string)))
+			if b {
+				return true
+			}
+		}
+	} else if f.Op == FilterOpStartWith || f.Op == FilterOpEndWith {
+		value := ""
+		if f.Op == FilterOpStartWith {
+			value = toolkit.Sprintf("^%s.*$", f.Value)
+		} else {
+			value = toolkit.Sprintf("^.*%s$", f.Value)
+		}
+		cond, _ := regexp.Match(value, []byte(v.(string)))
+		return cond
 	}
 	return match
 }

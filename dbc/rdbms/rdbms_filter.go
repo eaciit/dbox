@@ -36,24 +36,18 @@ func CombineIn(operator string, f *dbox.Filter) string {
 
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := ""
-	// vals := ""
-	//drivername :=  dbox.Connection
-	// drivername :=  new(Connection)
-	//drivername :=  fb.GetDriver()
-	// drivername := fb.Connection().(*Connection).Drivername
-	// fmt.Println("drivernamenya adalah : ", drivername)
 	if f.Op == dbox.FilterOpEqual {
-		fm = fm + f.Field + "= '" + cast.ToString(f.Value) + "'"
+		fm = fm + f.Field + " = " + StringValue(f.Value, "non")
 	} else if f.Op == dbox.FilterOpNoEqual {
-		fm = fm + f.Field + "<>'" + cast.ToString(f.Value) + "'"
+		fm = fm + f.Field + " <>" + StringValue(f.Value, "non")
 	} else if f.Op == dbox.FilterOpGt {
-		fm = fm + f.Field + " > '" + cast.ToString(f.Value) + "'"
+		fm = fm + f.Field + " > " + StringValue(f.Value, "non")
 	} else if f.Op == dbox.FilterOpGte {
-		fm = fm + f.Field + " >= '" + cast.ToString(f.Value) + "'"
+		fm = fm + f.Field + " >= " + StringValue(f.Value, "non")
 	} else if f.Op == dbox.FilterOpLt {
-		fm = fm + f.Field + " < '" + cast.ToString(f.Value) + "'"
+		fm = fm + f.Field + " < " + StringValue(f.Value, "non")
 	} else if f.Op == dbox.FilterOpLte {
-		fm = fm + f.Field + " <= '" + cast.ToString(f.Value) + "'"
+		fm = fm + f.Field + " <= " + StringValue(f.Value, "non")
 	} else if f.Op == dbox.FilterOpContains {
 		fm = CombineIn("LIKE ", f)
 	} else if f.Op == dbox.FilterOpEndWith {
