@@ -635,12 +635,12 @@ func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
 			for i := 0; i < len(fSlice); i++ {
 				// nilai fSlice [i] : @name1
 				if string(cast.ToString(fSlice[i])[0]) == "@" {
-					fSlice[i] = in.Get(strings.Replace(cast.ToString(fSlice[i]), "@", "", 1), "")
+					fSlice[i] = in.Get(cast.ToString(fSlice[i]), "")
 				}
 			}
 			f.Value = fSlice
 		} else if string(cast.ToString(f.Value)[0]) == "@" {
-			f.Value = in.Get(strings.Replace(cast.ToString(f.Value), "@", "", 1), "")
+			f.Value = in.Get(cast.ToString(f.Value), "")
 		}
 	}
 	return f

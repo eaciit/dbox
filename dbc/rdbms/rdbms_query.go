@@ -250,7 +250,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		if hasSkip {
 			skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
 				Value.(int)
-			fmt.Println("nilai skip : ", cast.ToString(skip))
 		}
 
 		take := 0
@@ -356,25 +355,36 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 		spName := procCommand.(toolkit.M)["name"].(string) + " "
 		params := procCommand.(toolkit.M)["parms"]
-		incParam := 0
+		orderparam := procCommand.(toolkit.M)["orderparam"]
 		ProcStatement := ""
 
 		if driverName == "mysql" {
-			paramValue := ""
-			paramName := ""
+			// paramValue := ""
+			// paramName := ""
+			paramstring := ""
 
-			for key, val := range params.(toolkit.M) {
-				if incParam == 0 {
-					paramValue = "('" + val.(string) + "'"
-					paramName = key
+			paramToolkit := params.(toolkit.M)
+			orderString := orderparam.([]string)
+			for i := 0; i < len(paramToolkit); i++ {
+				if i == 0 {
+					if strings.Contains(orderString[i], "@@") {
+						paramstring = "(" + strings.Replace(orderString[i], "@@", "@", 1)
+					} else {
+						paramstring = "(" + StringValue(paramToolkit[orderString[i]], driverName)
+					}
 				} else {
-					paramValue += ",'" + val.(string) + "'"
+					if strings.Contains(orderString[i], "@@") {
+						paramstring += ", " + strings.Replace(orderString[i], "@@", "@", 1)
+					} else {
+						paramstring += ", " + StringValue(paramToolkit[orderString[i]], driverName)
+					}
 				}
-				incParam += 1
-			}
-			paramValue += ", " + paramName + ")"
 
-			ProcStatement = "CALL " + spName + paramValue
+				fmt.Println("Print value order", paramstring)
+			}
+			paramstring += ")"
+
+			ProcStatement = "CALL " + spName + paramstring
 		} else if driverName == "mssql" {
 			paramstring := ""
 			incParam := 0
@@ -415,14 +425,11 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		} else if driverName == "postgres" {
 			paramValue := ""
 			incParam := 0
-			for key, val := range params.(toolkit.M) {
+			for _, val := range params.(toolkit.M) {
 				fmt.Println("===============", val)
 				if val != "" {
 					if incParam == 0 {
-						fmt.Println("++++++++++ param value 0")
 						paramValue = "('" + val.(string) + "'"
-						//paramName = key
-						fmt.Println(key)
 					} else {
 						paramValue += ",'" + val.(string) + "'"
 					}

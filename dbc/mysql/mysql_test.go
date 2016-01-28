@@ -24,7 +24,7 @@ type Player struct {
 }
 
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"localhost:3306", "tes", "root", "", nil}
+	ci := &dbox.ConnectionInfo{"localhost:3306", "test", "root", "", nil}
 	c, e := dbox.NewConnection("mysql", ci)
 	if e != nil {
 		return nil, e
@@ -105,114 +105,114 @@ func TestConnect(t *testing.T) {
 // 	}
 // }
 
-// func TestProcedure(t *testing.T) {
-// 	c, _ := prepareConnection()
-// 	defer c.Close()
+func TestProcedure(t *testing.T) {
+	c, _ := prepareConnection()
+	defer c.Close()
 
-//csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmur").Set("parms", toolkit.M{}.Set("@name", "Vidal"))).Cursor(nil)
-//====================CALL MY SQL STORED PROCEDURE====================
-//Without output
-// csr, e := c.NewQuery().
-// 	Command("procedure", toolkit.M{}.
-// 	Set("name", "insertdata").
-// 	Set("orderparam", []string{"@idIn", "@nameIn", "@umurIn"}).
-// 	Set("parms", toolkit.M{}.
-// 	Set("@idIn", "30").
-// 	Set("@nameIn", "Costacurta").
-// 	Set("@umurIn", 40))).
-// 	Cursor(nil)
+	//csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmur").Set("parms", toolkit.M{}.Set("@name", "Vidal"))).Cursor(nil)
+	//====================CALL MY SQL STORED PROCEDURE====================
+	//Without output
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "insertdata").
+	// 	Set("orderparam", []string{"@idIn", "@nameIn", "@umurIn"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idIn", "30").
+	// 	Set("@nameIn", "Costacurta").
+	// 	Set("@umurIn", 40))).
+	// 	Cursor(nil)
 
-// csr, e := c.NewQuery().
-// 	Command("procedure", toolkit.M{}.
-// 	Set("name", "updatedata").
-// 	Set("orderparam", []string{"@idIn", "@idCondIn", "@nameIn", "@umurIn"}).
-// 	Set("parms", toolkit.M{}.
-// 	Set("@idIn", "ply030").
-// 	Set("@idCondIn", "30").
-// 	Set("@nameIn", "Payet").
-// 	Set("@umurIn", 25))).
-// 	Cursor(nil)
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "updatedata").
+	// 	Set("orderparam", []string{"@idIn", "@idCondIn", "@nameIn", "@umurIn"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idIn", "ply030").
+	// 	Set("@idCondIn", "30").
+	// 	Set("@nameIn", "Payet").
+	// 	Set("@umurIn", 25))).
+	// 	Cursor(nil)
 
-// csr, e := c.NewQuery().
-// 	Command("procedure", toolkit.M{}.
-// 	Set("name", "deletedata").
-// 	Set("orderparam", []string{"@idCondIn"}).
-// 	Set("parms", toolkit.M{}.
-// 	Set("@idCondIn", "ply030"))).
-// 	Cursor(nil)
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "deletedata").
+	// 	Set("orderparam", []string{"@idCondIn"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idCondIn", "ply030"))).
+	// 	Cursor(nil)
 
-// With output
-// csr, e := c.NewQuery().
-// 	Command("procedure", toolkit.M{}.
-// 	Set("name", "twooutput").
-// 	Set("orderparam", []string{"@@umurOut", "@nameIn", "@umurIn", "@@nameOut"}).
-// 	Set("parms", toolkit.M{}.
-// 	Set("@@umurOut", "int").
-// 	Set("@nameIn", "Kane").
-// 	Set("@umurIn", 29).
-// 	Set("@@nameOut", "varchar(255)"))).
-// 	Cursor(nil)
+	// With output
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "twooutput").
+	// 	Set("orderparam", []string{"@@umurOut", "@nameIn", "@umurIn", "@@nameOut"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@@umurOut", "int").
+	// 	Set("@nameIn", "Kane").
+	// 	Set("@umurIn", 29).
+	// 	Set("@@nameOut", "varchar(255)"))).
+	// 	Cursor(nil)
 
-// csr, e := c.NewQuery().
-// 	Command("procedure", toolkit.M{}.
-// 	Set("name", "getUmurIn").
-// 	Set("orderparam", []string{"@umur1", "@umur2", "@@o_umur"}).
-// 	Set("parms", toolkit.M{}.
-// 	Set("@umur1", 20).
-// 	Set("@umur2", 23).
-// 	Set("@@o_umur", "int"))).
-// 	Cursor(nil)
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "getUmurIn").
+	// 	Set("orderparam", []string{"@umur1", "@umur2", "@@o_umur"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@umur1", 20).
+	// 	Set("@umur2", 23).
+	// 	Set("@@o_umur", "int"))).
+	// 	Cursor(nil)
 
-// in out example
-// csr, e := c.NewQuery().
-// 	Command("procedure", toolkit.M{}.
-// 	Set("name", "inoutproc").
-// 	Set("orderparam", []string{"@@umur", "@nameIn", "@@nameOut"}).
-// 	Set("parms", toolkit.M{}.
-// 	Set("@@umurOut", "int").
-// 	Set("@nameIn", "Kane").
-// 	Set("@@nameOut", "varchar(255)"))).
-// 	Cursor(nil)
+	// in out example
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "inoutproc").
+	// 	Set("orderparam", []string{"@@umur", "@nameIn", "@@nameOut"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@@umurOut", "int").
+	// 	Set("@nameIn", "Kane").
+	// 	Set("@@nameOut", "varchar(255)"))).
+	// 	Cursor(nil)
 
-// csr, e := c.NewQuery().
-// 	Command("procedure", toolkit.M{}.
-// 	Set("name", "getUmurAjah").
-// 	Set("orderparam", []string{"@nama"}).
-// 	Set("parms", toolkit.M{}.
-// 	Set("@nama", "Kane"))).
-// 	Cursor(nil)
-//====================CALL ORACLE STORED PROCEDURE====================
-// csr, e := c.NewQuery().
-// 	Command("procedure", toolkit.M{}.
-// 	Set("name", "getUmurIn").
-// 	Set("parms", toolkit.M{}.
-// 	Set("@p_umur1", "20").
-// 	Set("@p_umur2", "23").
-// 	Set("@@o_nama", "varchar2").
-// 	Set("@@o_umur", "number"))).
-// 	Cursor(nil)
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized", e.Error())
-// 		return
-// 	}
-// 	defer csr.Close()
+	csr, e := c.NewQuery().
+		Command("procedure", toolkit.M{}.
+		Set("name", "getUmurAjah").
+		Set("orderparam", []string{"@nama"}).
+		Set("parms", toolkit.M{}.
+		Set("@nama", "Kane"))).
+		Cursor(nil)
+	//====================CALL ORACLE STORED PROCEDURE====================
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "getUmurIn").
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@p_umur1", "20").
+	// 	Set("@p_umur2", "23").
+	// 	Set("@@o_nama", "varchar2").
+	// 	Set("@@o_umur", "number"))).
+	// 	Cursor(nil)
+	if csr == nil {
+		t.Errorf("Cursor not initialized", e.Error())
+		return
+	}
+	defer csr.Close()
 
-// 	results := make([]map[string]interface{}, 0)
+	results := make([]map[string]interface{}, 0)
 
-// 	err := csr.Fetch(&results, 0, false)
-// 	fmt.Println("Hasil Procedure : ", results)
-// 	if err != nil {
-// 		t.Errorf("Unable to fetch: %s \n", err.Error())
-// 	} else {
-// 		fmt.Println("======================")
-// 		fmt.Println("STORED PROCEDURE")
-// 		fmt.Println("======================")
-// 		for _, val := range results {
-// 			fmt.Printf("Fetch N OK. Result: %v \n",
-// 				toolkit.JsonString(val))
-// 		}
-// 	}
-// }
+	err := csr.Fetch(&results, 0, false)
+	fmt.Println("Hasil Procedure : ", results)
+	if err != nil {
+		t.Errorf("Unable to fetch: %s \n", err.Error())
+	} else {
+		fmt.Println("======================")
+		fmt.Println("STORED PROCEDURE")
+		fmt.Println("======================")
+		for _, val := range results {
+			fmt.Printf("Fetch N OK. Result: %v \n",
+				toolkit.JsonString(val))
+		}
+	}
+}
 
 // func TestSelectFilter(t *testing.T) {
 // 	c, e := prepareConnection()
@@ -474,102 +474,3 @@ func (t JSONTime) MarshalJSON() ([]byte, error) {
 // }
 
 //}
-
-// func TestStartorEndWith(t *testing.T) {
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("unnable  to connect %s \n", e.Error())
-// 	}
-// 	defer c.Close()
-
-// 	csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Startwith("name", "Co")).Cursor(nil)
-// 	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Endwith("name", "ey")).Cursor(nil)
-
-// 	if e != nil {
-// 		t.Errorf("cursor pre error : %s \n", e.Error())
-// 		return
-// 	}
-
-// 	if csr == nil {
-// 		t.Errorf("cursor not initialized")
-// 	}
-
-// 	results := make([]map[string]interface{}, 0)
-
-// 	err := csr.Fetch(&results, 0, false)
-// 	if err != nil {
-// 		t.Errorf("unnable to fetch: %s \n", err.Error())
-// 	} else {
-// 		fmt.Println("===========================")
-// 		fmt.Println("contain data")
-// 		fmt.Println("===========================")
-
-// 		fmt.Println("fetch N Ok. Result :\n")
-
-// 		for i := 0; i < len(results); i++ {
-// 			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
-// 		}
-// 	}
-
-// }
-
-func TestViewAllTables(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	csr := c.ObjectNames(dbox.ObjTypeTable)
-
-	for i := 0; i < len(csr); i++ {
-		fmt.Printf("show name table %v \n", toolkit.JsonString(csr[i]))
-	}
-
-}
-
-func TestViewProcedureName(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	proc := c.ObjectNames(dbox.ObjTypeProcedure)
-
-	for i := 0; i < len(proc); i++ {
-		fmt.Printf("show name procdure %v \n", toolkit.JsonString(proc[i]))
-	}
-
-}
-
-func TestViewName(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	view := c.ObjectNames(dbox.ObjTypeView)
-
-	for i := 0; i < len(view); i++ {
-		fmt.Printf("show name view %v \n", toolkit.JsonString(view[i]))
-	}
-
-}
-
-func TestAllObj(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	all := c.ObjectNames(dbox.ObjTypeAll)
-
-	fmt.Println(all)
-	for i := 0; i < len(all); i++ {
-		fmt.Printf("show objects %v \n", toolkit.JsonString(all[i]))
-	}
-
-}

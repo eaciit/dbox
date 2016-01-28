@@ -118,7 +118,8 @@ func TestSelect(t *testing.T) {
 	defer c.Close()
 
 	// csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Startwith("FirstName", "Alip")).Cursor(nil)
-	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Endwith("FirstName", "Sidik")).Cursor(nil)
+	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Endwith("FirstName", "@consfirst")).
+		Cursor(toolkit.M{}.Set("@confirst", "v"))
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
