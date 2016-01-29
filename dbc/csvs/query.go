@@ -630,9 +630,9 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
-				if len(in) > 0 {
-					f = ReadVariable(f, in)
-				}
+				// if len(in) > 0 {
+				f = ReadVariable(f, in)
+				// }
 				filters = append(filters, f)
 			}
 		}
@@ -642,6 +642,7 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 }
 
 func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
+	f.Field = strings.ToLower(f.Field)
 	if (f.Op == "$and" || f.Op == "$or") && strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
 		fs := f.Value.([]*dbox.Filter)
 		for i, ff := range fs {
@@ -656,12 +657,12 @@ func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
 			for i := 0; i < len(fSlice); i++ {
 				// nilai fSlice [i] : @name1
 				if string(cast.ToString(fSlice[i])[0]) == "@" {
-					fSlice[i] = in.Get(strings.Replace(cast.ToString(fSlice[i]), "@", "", 1), "")
+					fSlice[i] = in.Get(cast.ToString(fSlice[i]), "")
 				}
 			}
 			f.Value = fSlice
 		} else if string(cast.ToString(f.Value)[0]) == "@" {
-			f.Value = in.Get(strings.Replace(cast.ToString(f.Value), "@", "", 1), "")
+			f.Value = in.Get(cast.ToString(f.Value), "")
 		}
 	}
 	return f

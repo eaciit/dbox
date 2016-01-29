@@ -229,8 +229,8 @@ func TestSelectParm(t *testing.T) {
 		// Cursor(toolkit.M{}.Set("title", "User-8's name"))
 		// Where(dbox.Or(dbox.Eq("id", "@userid1"), dbox.Eq("id", "@userid2"))).
 		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
-		Where(dbox.Contains("title", "@userid1")).
-		Cursor(toolkit.M{}.Set("userid1", "own"))
+		Where(dbox.Contains("title", "@userid1", "@userid2")).
+		Cursor(toolkit.M{}.Set("userid1", "own").Set("userid2", "Lima"))
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -260,6 +260,121 @@ func TestSelectParm(t *testing.T) {
 
 	}
 }
+
+func TestSelectSkip(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().
+		Skip(3).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := []toolkit.M{}
+	e = csr.Fetch(&results, 4, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch skip N4. Result: %v \n",
+			toolkit.JsonString(results))
+
+	}
+
+	e = csr.Fetch(&results, 4, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch skip N4. Result: %v \n",
+			toolkit.JsonString(results))
+
+	}
+}
+
+func TestSelectTake(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().
+		Take(5).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := []toolkit.M{}
+	e = csr.Fetch(&results, 3, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch take N3. Result: %v \n",
+			toolkit.JsonString(results))
+
+	}
+
+	e = csr.Fetch(&results, 3, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch take 3. Result: %v \n",
+			toolkit.JsonString(results))
+
+	}
+}
+
+/*func TestSelectSort(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().
+		Order("-Age").
+		// Take(10).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := []toolkit.M{}
+	e = csr.Fetch(&results, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch order. Result: %v \n",
+			toolkit.JsonString(results))
+
+	}
+}*/
 
 /*
 func TestSelectAggregate(t *testing.T) {
@@ -342,7 +457,7 @@ type user struct {
   data.MasterDataSource = "master"
   data.Title = "Test update"*/
 
-func TestSave(t *testing.T) {
+/*func TestSave(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -371,7 +486,7 @@ func TestSave(t *testing.T) {
 
 	}
 	q.Close()
-}
+}*/
 
 func TestInsert(t *testing.T) {
 	c, e := prepareConnection()
