@@ -359,6 +359,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		ProcStatement := ""
 
 		if driverName == "mysql" {
+			// paramValue := ""
+			// paramName := ""
 			paramstring := ""
 
 			paramToolkit := params.(toolkit.M)
@@ -438,7 +440,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			}
 			paramValue += ");"
 
-			ProcStatement = "SELECT " + spName + paramValue
+			ProcStatement = "SELECT * FROM " + spName + paramValue
 		}
 
 		cursor.(*Cursor).QueryString = ProcStatement
@@ -456,7 +458,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 	// fmt.Println("Parameter Exec : ", parm)
 
 	dbname := q.Connection().Info().Database
-	// driverName := q.GetDriverDB()
 	tablename := ""
 
 	if parm == nil {
@@ -550,196 +551,59 @@ func (q *Query) Exec(parm toolkit.M) error {
 		commandType = dbox.QueryPartSave
 	}
 
-	var id string
-	var idVal interface{}
 	if data == nil {
 		//---
 		multi = true
 	} else {
 		if where == nil {
-			id, idVal = toolkit.IdInfo(data)
-			if id != "" {
-				where = id + " = " + StringValue(idVal, "non")
+			id := toolkit.Id(data)
+			if id != nil {
+				where = (toolkit.M{}).Set("_id", id)
 			}
 		} else {
 			multi = true
 		}
 	}
 	session := q.Session()
-	multiExec := q.Config("multiexec", false).(bool)
 
 	if dbname != "" && tablename != "" && multi == true {
 
 	}
 	if commandType == dbox.QueryPartInsert {
-		if attributes != "" && values != "" {
-			statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
-			fmt.Println("Insert Statement : ", statement)
-			_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
-		} else {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please provide the data")
-		}
 
 	} else if commandType == dbox.QueryPartUpdate {
-		if where == nil && setUpdate != "" && multi && multiExec {
-			statement := "UPDATE " + tablename + " SET " + setUpdate
-			fmt.Println("Update Statement : ", statement)
-			_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
-
-		} else if setUpdate != "" && multiExec && where != nil {
-			statement := "UPDATE " + tablename + " SET " + setUpdate +
-				" WHERE " + cast.ToString(where)
-			fmt.Println("Update Statement : ", statement)
-			_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
-		} else if setUpdate != "" && !multiExec && where != nil {
-			querystmt := "select count(*) from " + tablename +
-				" where " + cast.ToString(where)
-			rows, _ := session.Query(querystmt)
-			var rowCount int
-			for rows.Next() {
-				rows.Scan(&rowCount)
-			}
-			if rowCount == 1 {
-				statement := "UPDATE " + tablename + " SET " + setUpdate +
-					" WHERE " + cast.ToString(where)
-				fmt.Println("Update Statement : ", statement)
-				_, e = session.Exec(statement)
-				if e != nil {
-					fmt.Println(e.Error())
-				}
-			} else {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
-					"please use multiexec to update more than one row")
-			}
-
-		} else if setUpdate == "" {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please provide the data")
-		} else {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please use multiexec to update more than one row")
+		statement := "UPDATE " + tablename + " SET " + setUpdate + " WHERE " + cast.ToString(where)
+		fmt.Println("Update Statement : ", statement)
+		_, e = session.Exec(statement)
+		if e != nil {
+			fmt.Println(e.Error())
 		}
 
 	} else if commandType == dbox.QueryPartDelete {
-		if where == nil && multi && multiExec {
+		if where == nil {
 			statement := "DELETE FROM " + tablename
-			fmt.Println("Delete Statement : ", statement)
+			fmt.Println(statement)
 			_, e = session.Exec(statement)
 			if e != nil {
 				fmt.Println(e.Error())
 			}
-		} else if where != nil && multiExec {
-			statement := "DELETE FROM " + tablename + " where " + cast.ToString(where)
-			fmt.Println("Delete Statement : ", statement)
-			_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
-		} else if where != nil && !multiExec {
-			querystmt := "select count(*) from " + tablename +
-				" where " + cast.ToString(where)
-			rows, _ := session.Query(querystmt)
-			var rowCount int
-			for rows.Next() {
-				rows.Scan(&rowCount)
-			}
-			if rowCount == 1 {
-				statement := "DELETE FROM " + tablename + " where " + cast.ToString(where)
-				fmt.Println("Delete Statement : ", statement)
-				_, e = session.Exec(statement)
-				if e != nil {
-					fmt.Println(e.Error())
-				}
-			} else {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
-					"please use multiexec to delete more than one row")
-			}
-
 		} else {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please use multiexec to delete all data")
+			statement := "DELETE FROM " + tablename + " where " + cast.ToString(where)
+			fmt.Println(statement)
+			_, e = session.Exec(statement)
+			if e != nil {
+				fmt.Println(e.Error())
+			}
 		}
 
 	} else if commandType == dbox.QueryPartSave {
-		if attributes != "" && values != "" && where == nil {
-			statement := "INSERT INTO " + tablename + " " +
-				attributes + " VALUES " + values
-			fmt.Println("Save Statement : ", statement)
-			_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
 
-		} else if attributes != "" && values != "" && where != nil && multiExec {
-			querystmt := "select " + id + " from " + tablename +
-				" where " + cast.ToString(where)
-			rows, _ := session.Query(querystmt)
-			var rowCount string
-
-			for rows.Next() {
-				rows.Scan(&rowCount)
-			}
-
-			var statement string
-
-			if rowCount == "" {
-				statement = "INSERT INTO " + tablename + " " +
-					attributes + " VALUES " + values
-			} else if rowCount != "" {
-				statement = "UPDATE " + tablename + " SET " + setUpdate +
-					" WHERE " + cast.ToString(where)
-			}
-			fmt.Println("Save Statement : ", statement)
-			_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
-		} else if attributes != "" && values != "" && where != nil && !multiExec {
-			querystmt := "select count(*) from " + tablename +
-				" where " + cast.ToString(where)
-			rows, _ := session.Query(querystmt)
-			var rowCount int
-			for rows.Next() {
-				rows.Scan(&rowCount)
-			}
-
-			var statement string
-
-			if rowCount == 0 {
-				statement = "INSERT INTO " + tablename + " " +
-					attributes + " VALUES " + values
-			} else if rowCount == 1 {
-				statement = "UPDATE " + tablename + " SET " + setUpdate +
-					" WHERE " + cast.ToString(where)
-			} else {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
-					"please use multiexec to save more than one row")
-			}
-
-			fmt.Println("Save Statement : ", statement)
-			_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
-
-		} else if values == "" {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please provide the data")
-		} else {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please use multiexec to save more than one row")
+		statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+		fmt.Println("Insert Statement : ", statement)
+		_, e = session.Exec(statement)
+		if e != nil {
+			fmt.Println(e.Error())
 		}
-
 	}
 	if e != nil {
 		return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
