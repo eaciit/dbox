@@ -25,6 +25,11 @@ type UpdateID struct {
 	Player_id string
 }
 
+type Coba struct {
+	Id   string
+	Nama string
+}
+
 func prepareConnection() (dbox.IConnection, error) {
 	//ci := &dbox.ConnectionInfo{"localhost", "Tes", "sa", "Password.Sql", nil}
 	// ci := &dbox.ConnectionInfo{"localhost", "test", "sa", "budi123", nil}
@@ -372,6 +377,14 @@ func TestCRUD(t *testing.T) {
 	// if e != nil {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
+
+	data := Coba{}
+	data.Id = "1"
+	data.Nama = "Depf"
+	e = c.NewQuery().SetConfig("multiexec", false).From("coba").Update().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	}
 
 	// ===============================UPDATE ALL ID==============================
 	// data := UpdateID{}
