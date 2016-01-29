@@ -25,10 +25,15 @@ type UpdateID struct {
 	Player_id string
 }
 
+type Coba struct {
+	Id   string
+	Nama string
+}
+
 func prepareConnection() (dbox.IConnection, error) {
 	//ci := &dbox.ConnectionInfo{"localhost", "Tes", "sa", "Password.Sql", nil}
-	ci := &dbox.ConnectionInfo{"localhost", "test", "sa", "budi123", nil}
-	//ci := &dbox.ConnectionInfo{"localhost", "test", "Lenovo-PC\\Lenovo Z40", "123456", nil}
+	// ci := &dbox.ConnectionInfo{"localhost", "test", "sa", "budi123", nil}
+	ci := &dbox.ConnectionInfo{"localhost", "test", "Lenovo-PC\\Lenovo Z40", "123456", nil}
 	c, e := dbox.NewConnection("mssql", ci)
 	if e != nil {
 		return nil, e
@@ -373,6 +378,14 @@ func TestCRUD(t *testing.T) {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
 
+	data := Coba{}
+	data.Id = "1"
+	data.Nama = "Depf"
+	e = c.NewQuery().SetConfig("multiexec", false).From("coba").Update().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	}
+
 	// ===============================UPDATE ALL ID==============================
 	// data := UpdateID{}
 	// fmt.Println(data)
@@ -405,104 +418,5 @@ func TestCRUD(t *testing.T) {
 	// 	t.Errorf("Unablet to clear table %s\n", e.Error())
 	// 	return
 	// }
-
-}
-
-// func TestStartorEndWith(t *testing.T) {
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("unnable  to connect %s \n", e.Error())
-// 	}
-// 	defer c.Close()
-
-// 	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Startwith("name", "Co")).Cursor(nil)
-// 	csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Endwith("name", "ey")).Cursor(nil)
-
-// 	if e != nil {
-// 		t.Errorf("cursor pre error : %s \n", e.Error())
-// 		return
-// 	}
-
-// 	if csr == nil {
-// 		t.Errorf("cursor not initialized")
-// 	}
-
-// 	results := make([]map[string]interface{}, 0)
-
-// 	err := csr.Fetch(&results, 0, false)
-// 	if err != nil {
-// 		t.Errorf("unnable to fetch: %s \n", err.Error())
-// 	} else {
-// 		fmt.Println("===========================")
-// 		fmt.Println("contain data")
-// 		fmt.Println("===========================")
-
-// 		fmt.Println("fetch N Ok. Result :\n")
-
-// 		for i := 0; i < len(results); i++ {
-// 			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
-// 		}
-// 	}
-
-// }
-
-func TestViewAllTables(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	csr := c.ObjectNames(dbox.ObjTypeTable)
-
-	for i := 0; i < len(csr); i++ {
-		fmt.Printf("show name table %v \n", toolkit.JsonString(csr[i]))
-	}
-
-}
-
-func TestViewProcedureName(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	proc := c.ObjectNames(dbox.ObjTypeProcedure)
-
-	for i := 0; i < len(proc); i++ {
-		fmt.Printf("show name procdure %v \n", toolkit.JsonString(proc[i]))
-	}
-
-}
-
-func TestViewName(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	view := c.ObjectNames(dbox.ObjTypeView)
-
-	for i := 0; i < len(view); i++ {
-		fmt.Printf("show name view %v \n", toolkit.JsonString(view[i]))
-	}
-
-}
-
-func TestAllObj(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	all := c.ObjectNames(dbox.ObjTypeAll)
-
-	fmt.Println(all)
-	for i := 0; i < len(all); i++ {
-		fmt.Printf("show objects %v \n", toolkit.JsonString(all[i]))
-	}
 
 }
