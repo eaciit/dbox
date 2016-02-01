@@ -341,101 +341,146 @@ func TestConnect(t *testing.T) {
 
 //============================================ Startwith or Endwith =============================
 
-func TestStartorEndWith(t *testing.T) {
+// func TestStartorEndWith(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("unnable  to connect %s \n", e.Error())
+// 	}
+// 	defer c.Close()
+
+// 	csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Startwith("name", "Bo")).Cursor(nil)
+// 	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Endwith("name", "ar")).Cursor(nil)
+
+// 	if e != nil {
+// 		t.Errorf("cursor pre error : %s \n", e.Error())
+// 		return
+// 	}
+
+// 	if csr == nil {
+// 		t.Errorf("cursor not initialized")
+// 	}
+
+// 	results := make([]map[string]interface{}, 0)
+
+// 	err := csr.Fetch(&results, 0, false)
+// 	if err != nil {
+// 		t.Errorf("unnable to fetch: %s \n", err.Error())
+// 	} else {
+// 		fmt.Println("===========================")
+// 		fmt.Println("contain data")
+// 		fmt.Println("===========================")
+
+// 		fmt.Println("fetch N Ok. Result :\n")
+
+// 		for i := 0; i < len(results); i++ {
+// 			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
+// 		}
+// 	}
+
+// }
+
+// func TestViewAllTables(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("unnable  to connect %s \n", e.Error())
+// 	}
+// 	defer c.Close()
+
+// 	csr := c.ObjectNames(dbox.ObjTypeTable)
+
+// 	for i := 0; i < len(csr); i++ {
+// 		fmt.Printf("show name table %v \n", toolkit.JsonString(csr[i]))
+// 	}
+
+// }
+
+// func TestViewProcedureName(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("unnable  to connect %s \n", e.Error())
+// 	}
+// 	defer c.Close()
+
+// 	proc := c.ObjectNames(dbox.ObjTypeProcedure)
+
+// 	for i := 0; i < len(proc); i++ {
+// 		fmt.Printf("show name procdure %v \n", toolkit.JsonString(proc[i]))
+// 	}
+
+// }
+
+// func TestViewName(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("unnable  to connect %s \n", e.Error())
+// 	}
+// 	defer c.Close()
+
+// 	view := c.ObjectNames(dbox.ObjTypeView)
+
+// 	for i := 0; i < len(view); i++ {
+// 		fmt.Printf("show name view %v \n", toolkit.JsonString(view[i]))
+// 	}
+
+// }
+
+// func TestAllObj(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("unnable  to connect %s \n", e.Error())
+// 	}
+// 	defer c.Close()
+
+// 	all := c.ObjectNames(dbox.ObjTypeAll)
+
+// 	fmt.Println(all)
+// 	for i := 0; i < len(all); i++ {
+// 		fmt.Printf("show objects %v \n", toolkit.JsonString(all[i]))
+// 	}
+
+// }
+
+func TestSelectAggregate(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
+		t.Errorf("Unable to connect %s \n", e.Error())
 	}
 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Startwith("name", "Bo")).Cursor(nil)
-	//csr, e := c.NewQuery().Select("id", "name", "umur").From("tes").Where(dbox.Endwith("name", "ar")).Cursor(nil)
-
+	csr, e := c.NewQuery().
+		Select("nama").
+		Aggr(dbox.AggrSum, 1, "Total Item").
+		Aggr(dbox.AggrMax, "amount", "Max Amount").
+		Aggr(dbox.AggrSum, "amount", "Total Amount").
+		Aggr(dbox.AggrAvr, "amount", "Average Amount").
+		From("orders").
+		Group("nama").
+		Order("nama").
+		Skip(2).
+		Take(1).
+		Cursor(nil)
 	if e != nil {
-		t.Errorf("cursor pre error : %s \n", e.Error())
+		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
 	}
-
 	if csr == nil {
-		t.Errorf("cursor not initialized")
+		t.Errorf("Cursor not initialized")
+		return
 	}
+	defer csr.Close()
 
 	results := make([]map[string]interface{}, 0)
 
 	err := csr.Fetch(&results, 0, false)
 	if err != nil {
-		t.Errorf("unnable to fetch: %s \n", err.Error())
+		t.Errorf("Unable to fetch: %s \n", err.Error())
 	} else {
-		fmt.Println("===========================")
-		fmt.Println("contain data")
-		fmt.Println("===========================")
-
-		fmt.Println("fetch N Ok. Result :\n")
-
-		for i := 0; i < len(results); i++ {
-			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
+		fmt.Println("======================")
+		fmt.Println("QUERY AGGREGATION")
+		fmt.Println("======================")
+		for _, val := range results {
+			fmt.Printf("Fetch N OK. Result: %v \n",
+				toolkit.JsonString(val))
 		}
 	}
-
-}
-
-func TestViewAllTables(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	csr := c.ObjectNames(dbox.ObjTypeTable)
-
-	for i := 0; i < len(csr); i++ {
-		fmt.Printf("show name table %v \n", toolkit.JsonString(csr[i]))
-	}
-
-}
-
-func TestViewProcedureName(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	proc := c.ObjectNames(dbox.ObjTypeProcedure)
-
-	for i := 0; i < len(proc); i++ {
-		fmt.Printf("show name procdure %v \n", toolkit.JsonString(proc[i]))
-	}
-
-}
-
-func TestViewName(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	view := c.ObjectNames(dbox.ObjTypeView)
-
-	for i := 0; i < len(view); i++ {
-		fmt.Printf("show name view %v \n", toolkit.JsonString(view[i]))
-	}
-
-}
-
-func TestAllObj(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("unnable  to connect %s \n", e.Error())
-	}
-	defer c.Close()
-
-	all := c.ObjectNames(dbox.ObjTypeAll)
-
-	fmt.Println(all)
-	for i := 0; i < len(all); i++ {
-		fmt.Printf("show objects %v \n", toolkit.JsonString(all[i]))
-	}
-
 }
