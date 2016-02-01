@@ -100,7 +100,7 @@ func (c *Connection) ObjectNames(obj dbox.ObjTypeEnum) []string {
 	if c.Drivername == "mysql" {
 		viewmy := c.OnQuery("SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'VIEW'", "tables_in_"+c.Info().Database)
 		tablemy := c.OnQuery("SHOW FULL TABLES IN "+c.Info().Database+" WHERE TABLE_TYPE LIKE '%BASE TABLE%' ", "tables_in_"+c.Info().Database)
-		procmy := c.OnQuery("select name from mysql.proc", "name")
+		procmy := c.OnQuery("SHOW PROCEDURE STATUS WHERE Db = '"+c.Info().Database+"';", "name")
 		if obj == "table" {
 			astr = tablemy
 		} else if obj == "procedure" {
