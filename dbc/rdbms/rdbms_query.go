@@ -354,33 +354,46 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		fmt.Println("Isi Proc command : ", procCommand)
 
 		spName := procCommand.(toolkit.M)["name"].(string) + " "
-		params := procCommand.(toolkit.M)["parms"]
-		orderparam := procCommand.(toolkit.M)["orderparam"]
+		params, hasParam := procCommand.(toolkit.M)["parms"]
+		orderparam, hasOrder := procCommand.(toolkit.M)["orderparam"]
 		ProcStatement := ""
 
 		if driverName == "mysql" {
 			paramstring := ""
+			if hasParam && hasOrder {
+				paramToolkit := params.(toolkit.M)
+				orderString := orderparam.([]string)
+				for i := 0; i < len(paramToolkit); i++ {
+					if i == 0 {
+						if strings.Contains(orderString[i], "@@") {
+							paramstring = "(" + strings.Replace(orderString[i], "@@", "@", 1)
+						} else if StringValue(paramToolkit[orderString[i]], driverName) != "''" {
+							paramstring = "(" + StringValue(paramToolkit[orderString[i]], driverName)
 
-			paramToolkit := params.(toolkit.M)
-			orderString := orderparam.([]string)
-			for i := 0; i < len(paramToolkit); i++ {
-				if i == 0 {
-					if strings.Contains(orderString[i], "@@") {
-						paramstring = "(" + strings.Replace(orderString[i], "@@", "@", 1)
+						} else {
+							paramstring = "("
+						}
+
 					} else {
-						paramstring = "(" + StringValue(paramToolkit[orderString[i]], driverName)
+						if strings.Contains(orderString[i], "@@") {
+							paramstring += ", " + strings.Replace(orderString[i], "@@", "@", 1)
+						} else {
+							paramstring += ", " + StringValue(paramToolkit[orderString[i]], driverName)
+
+						}
 					}
-				} else {
-					if strings.Contains(orderString[i], "@@") {
-						paramstring += ", " + strings.Replace(orderString[i], "@@", "@", 1)
-					} else {
-						paramstring += ", " + StringValue(paramToolkit[orderString[i]], driverName)
-					}
+
+					fmt.Println("Print value order", paramstring)
 				}
 
-				fmt.Println("Print value order", paramstring)
+			} else if hasParam && !hasOrder {
+
+				return nil, errorlib.Error(packageName, modQuery, "procedure", "please provide order parameter")
+
+			} else {
+				paramstring = "("
 			}
-			paramstring += ")"
+			paramstring += ");"
 
 			ProcStatement = "CALL " + spName + paramstring
 		} else if driverName == "mssql" {
@@ -421,24 +434,43 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			ProcStatement = "EXECUTE " + spName + paramstring
 
 		} else if driverName == "postgres" {
-			paramValue := ""
-			incParam := 0
-			for _, val := range params.(toolkit.M) {
-				fmt.Println("===============", val)
-				if val != "" {
-					if incParam == 0 {
-						paramValue = "('" + val.(string) + "'"
-					} else {
-						paramValue += ",'" + val.(string) + "'"
-					}
-					incParam += 1
-				} else {
-					paramValue = "( "
-				}
-			}
-			paramValue += ");"
+			paramstring := ""
+			if hasParam && hasOrder {
+				paramToolkit := params.(toolkit.M)
+				orderString := orderparam.([]string)
+				for i := 0; i < len(paramToolkit); i++ {
+					if i == 0 {
+						if strings.Contains(orderString[i], "@@") {
+							paramstring = "(" + strings.Replace(orderString[i], "@@", "@", 1)
+						} else if StringValue(paramToolkit[orderString[i]], driverName) != "''" {
+							paramstring = "(" + StringValue(paramToolkit[orderString[i]], driverName)
 
-			ProcStatement = "SELECT " + spName + paramValue
+						} else {
+							paramstring = "("
+						}
+
+					} else {
+						if strings.Contains(orderString[i], "@@") {
+							paramstring += ", " + strings.Replace(orderString[i], "@@", "@", 1)
+						} else {
+							paramstring += ", " + StringValue(paramToolkit[orderString[i]], driverName)
+
+						}
+					}
+
+					fmt.Println("Print value order", paramstring)
+				}
+
+			} else if hasParam && !hasOrder {
+
+				return nil, errorlib.Error(packageName, modQuery, "procedure", "please provide order parameter")
+
+			} else {
+				paramstring = "("
+			}
+			paramstring += ")"
+
+			ProcStatement = "SELECT " + spName + paramstring
 		}
 
 		cursor.(*Cursor).QueryString = ProcStatement
