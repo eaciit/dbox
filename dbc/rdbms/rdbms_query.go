@@ -191,11 +191,22 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				// isi Aggr Info :  {$sum 1 Total Item}
 
 				if incAtt == 0 {
-					aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
-						cast.ToString(aggrInfo.Field) + ")" + " as '" + aggrInfo.Alias + "'"
+
+					if driverName == "postgres" {
+						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					} else {
+						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as '" + aggrInfo.Alias + "'"
+					}
 				} else {
-					aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
-						"(" + cast.ToString(aggrInfo.Field) + ")" + " as '" + aggrInfo.Alias + "'"
+					if driverName == "postgres" {
+						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
+							"(" + cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					} else {
+						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
+							"(" + cast.ToString(aggrInfo.Field) + ")" + " as '" + aggrInfo.Alias + "'"
+					}
 				}
 				incAtt++
 			}
@@ -346,14 +357,14 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
 		}
-
+		fmt.Println("========== querystring", QueryString)
 		cursor.(*Cursor).QueryString = QueryString
 
 	} else if hasProcedure {
 		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
 		fmt.Println("Isi Proc command : ", procCommand)
 
-		spName := procCommand.(toolkit.M)["name"].(string) + " "
+		spName := procCommand.(toolkit.M)["name"].(string) + ""
 		params, hasParam := procCommand.(toolkit.M)["parms"]
 		orderparam, hasOrder := procCommand.(toolkit.M)["orderparam"]
 		ProcStatement := ""
