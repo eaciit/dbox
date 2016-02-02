@@ -3,12 +3,19 @@ package dbox
 import (
 	"fmt"
 	"github.com/eaciit/errorlib"
-	//"github.com/eaciit/toolkit"
+	"github.com/eaciit/toolkit"
+	"strings"
+	//"time"
 )
 
 type FilterOp string
 
 const (
+	DataString string = "string"
+	DataInt    string = "int"
+	DataFloat  string = "float"
+	DataDate   string = "date"
+
 	modFilter = "FilterBuilder"
 
 	FilterOpAnd = "$and"
@@ -204,4 +211,87 @@ func Endwith(field string, values string) *Filter {
 	f.Op = string(FilterOpEndWith)
 	f.Value = values
 	return f
+}
+
+/*
+ParseFilter, parse filter data and convert it into *Filter
+fieldid = name of the field
+filter = filter text
+dataType = type of data It accepts (string, int, float, date)
+*/
+func ParseFilter(fieldid string, filterText string, dataType string, dateFormat string) *Filter {
+	var fs []*Filter
+
+	fByCommas := strings.Split(filterText, ",")
+	for _, fByComma := range fByCommas {
+		if strings.HasPrefix(fByComma, "!") {
+			fs = append(fs, Ne(fieldid, toInterface(fByComma[1:], dataType, dateFormat)))
+		} else if strings.HasPrefix(fByComma, "*") || strings.HasSuffix(fByComma, "*") {
+			if !strings.HasPrefix(fByComma, "*") {
+				fs = append(fs, Startwith(fieldid, fByComma[:len(fByComma)]))
+			} else if !strings.HasSuffix(fByComma, "*") {
+				fs = append(fs, Endwith(fieldid, fByComma[1:]))
+			} else {
+				fs = append(fs, Contains(fieldid, fByComma[1:len(fByComma)-1]))
+			}
+		} else if strings.Contains(fByComma, "..") {
+			bounds := strings.Split(fByComma, "..")
+			if len(bounds) == 2 {
+				if bounds[0] == "" {
+					upperBound := toInterface(bounds[1], dataType, dateFormat)
+					fs = append(fs, Lte(fieldid, upperBound))
+				} else if bounds[1] == "" {
+					lowerBound := toInterface(bounds[0], dataType, dateFormat)
+					fs = append(fs, Gte(fieldid, lowerBound))
+				} else {
+					lowerBound := toInterface(bounds[0], dataType, dateFormat)
+					upperBound := toInterface(bounds[1], dataType, dateFormat)
+					fs = append(fs, And(Gte(fieldid, lowerBound), Lte(fieldid, upperBound)))
+				}
+			} else if len(bounds) == 1 {
+				lowerBound := toInterface(bounds[0], dataType, dateFormat)
+				fs = append(fs, Gte(fieldid, lowerBound))
+			}
+		} else {
+			fs = append(fs, Eq(fieldid, toInterface(fByComma, dataType, dateFormat)))
+		}
+	}
+
+	if len(fs) == 0 {
+		return nil
+	} else if len(fs) == 1 {
+		return fs[0]
+	} else {
+		return And(fs...)
+	}
+}
+
+func toInterface(data string, dataType string, dateFormat string) interface{} {
+	if dataType == "" {
+		if strings.HasPrefix(data, "#") && strings.HasSuffix(data, "#") {
+			dataType = DataDate
+		} else {
+			vfloat := toolkit.ToFloat64(dataType, 2, toolkit.RoundingAuto)
+			vint := toolkit.ToInt(dataType, toolkit.RoundingAuto)
+			if int(vfloat) == vint && vint != 0 {
+				dataType = DataInt
+			} else if vfloat != 0 {
+				dataType = DataFloat
+			} else {
+				dataType = DataString
+			}
+		}
+	}
+
+	if dataType == DataDate {
+		return toolkit.String2Date(data, dateFormat)
+	} else if dataType == DataInt {
+		return toolkit.ToInt(data, toolkit.RoundingAuto)
+	} else if dataType == DataFloat {
+		return toolkit.ToFloat64(data, 2, toolkit.RoundingAuto)
+	} else {
+		return data
+	}
+
+	return nil
 }
