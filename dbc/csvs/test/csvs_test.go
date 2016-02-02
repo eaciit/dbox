@@ -62,82 +62,93 @@ func TestConnect(t *testing.T) {
 }
 
 func TestGetObj(t *testing.T) {
+	t.Skip("Skip : Comment this line to do test")
 	toolkit.Printf("List Table : %v\n", ctx.ObjectNames(dbox.ObjTypeTable))
-
 	toolkit.Printf("All Object : %v\n", ctx.ObjectNames(""))
 }
 
-// func TestCRUD(t *testing.T) {
-// 	skipIfConnectionIsNil(t)
-// 	e := ctx.NewQuery().Delete().From(tableName).SetConfig("multiexec", true).Exec(nil)
-// 	if e != nil {
-// 		t.Fatalf("Delete fail: %s", e.Error())
-// 	}
-
-// 	es := []string{}
-// 	qinsert := ctx.NewQuery().From(tableName).SetConfig("multiexec", true).Insert()
-// 	for i := 1; i <= 50; i++ {
-// 		u := &testUser{
-// 			toolkit.Sprintf("user%d", i),
-// 			toolkit.Sprintf("User %d", i),
-// 			toolkit.RandInt(30) + 20, true}
-// 		e = qinsert.Exec(toolkit.M{}.Set("data", u))
-// 		if e != nil {
-// 			es = append(es, toolkit.Sprintf("Insert fail %d: %s \n", i, e.Error()))
-// 		}
-// 	}
-
-// 	if len(es) > 0 {
-// 		t.Fatal(es)
-// 	}
-
-// 	e = ctx.NewQuery().Update().From(tableName).Where(dbox.Lte("_id", "user2")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("Enable", false)))
-// 	if e != nil {
-// 		t.Fatalf("Update fail: %s", e.Error())
-// 	}
-// }
-
-// func TestUpdate(t *testing.T) {
-// 	skipIfConnectionIsNil(t)
-
-// 	e := ctx.NewQuery().From(tableName).Save().Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("_id", "user54").Set("Enable", false)))
-// 	if e != nil {
-// 		t.Fatalf("Specific update fail: %s", e.Error())
-// 	}
-// }
-
-func TestSelect(t *testing.T) {
+func TestInsert(t *testing.T) {
+	t.Skip("Skip : Comment this line to do test")
 	skipIfConnectionIsNil(t)
 
-	cursor, e := ctx.NewQuery().From(tableName).Where(dbox.Eq("Age", "34")).Cursor(nil)
+	es := []string{}
+	qinsert := ctx.NewQuery().From("Data_CUD").SetConfig("multiexec", true).Insert()
+
+	for i := 1; i <= 5; i++ {
+		u := toolkit.M{}.Set("Id", toolkit.Sprintf("ID-1%d", i)).
+			Set("Email", toolkit.Sprintf("user-1%d", i)).
+			Set("FirstName", toolkit.Sprintf("User no.%d", i)).
+			Set("LastName", toolkit.Sprintf("Test no.%d", i))
+
+		e := qinsert.Exec(toolkit.M{}.Set("data", u))
+		if e != nil {
+			es = append(es, toolkit.Sprintf("Insert fail %d: %s \n", i, e.Error()))
+		}
+	}
+
+	if len(es) > 0 {
+		t.Fatal(es)
+	}
+}
+
+func TestUpdate(t *testing.T) {
+	t.Skip("Skip : Comment this line to do test")
+	skipIfConnectionIsNil(t)
+
+	e := ctx.NewQuery().Update().From("Data_CUD").Where(dbox.Eq("Id", "ID-11")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("Phone", "0874-XXX-CCC")))
+	if e != nil {
+		t.Fatalf("Update fail: %s", e.Error())
+	}
+}
+
+func TestSave(t *testing.T) {
+	t.Skip("Skip : Comment this line to do test")
+	skipIfConnectionIsNil(t)
+
+	e := ctx.NewQuery().From("Data_CUD").Save().Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("Id", "ID-1").Set("Phone", "XXX-0856-244").Set("JoinDate", "2014-11-01")))
+	if e != nil {
+		t.Fatalf("Specific update fail: %s", e.Error())
+	}
+
+	e = ctx.NewQuery().From("Data_CUD").Save().Exec(toolkit.M{}.Set("data", toolkit.M{}.
+		Set("Id", "ID-11").
+		Set("Email", "user123@yahoo.com").
+		Set("FirstName", "Test 123").
+		Set("lastname", "rr").
+		Set("Phone", "XXX-0852").
+		Set("JoinDate", "2014-11-03")))
+	if e != nil {
+		t.Fatalf("Specific update fail: %s", e.Error())
+	}
+}
+
+func TestDelete(t *testing.T) {
+	t.Skip("Skip : Comment this line to do test")
+	skipIfConnectionIsNil(t)
+	e := ctx.NewQuery().Delete().From("Data_CUD").SetConfig("multiexec", true).Where(dbox.Or(dbox.Eq("Id", "ID-11"), dbox.Eq("Id", "ID-13"))).Exec(nil)
+	if e != nil {
+		t.Fatalf("Delete fail: %s", e.Error())
+	}
+}
+
+func TestSelect(t *testing.T) {
+	t.Skip("Skip : Comment this line to do test")
+	skipIfConnectionIsNil(t)
+
+	cursor, e := ctx.NewQuery().From(tableName).Where(dbox.Eq("Age", 34)).Cursor(nil)
 	if e != nil {
 		t.Fatalf("Cursor error: " + e.Error())
 	}
 	defer cursor.Close()
-
-	// if cursor.Count() == 0 {
-	// 	t.Fatalf("No record found")
-	// }
 
 	var datas []toolkit.M
 	e = cursor.Fetch(&datas, 2, false)
 	if e != nil {
 		t.Fatalf("Fetch error: %s", e.Error())
 	}
-	// if len(datas) != cursor.Count() {
-	// 	t.Fatalf("Expect %d records got %d\n%s\n", cursor.Count(), len(datas), toolkit.JsonString(datas))
-	// }
+
 	toolkit.Printf("Total Record : %d\n", cursor.Count())
 	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
-
-	// toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas),
-	// 	func() string {
-	// 		var ret []string
-	// 		for _, v := range datas {
-	// 			ret = append(ret, v.GetString("_id"))
-	// 		}
-	// 		return strings.Join(ret, ",")
-	// 	}())
 }
 
 // func TestQueryAggregate(t *testing.T) {
