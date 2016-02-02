@@ -34,28 +34,29 @@ func TestConnect(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// func TestFilter(t *testing.T) {
-// 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
-// 	fb.AddFilter(dbox.Or(
-// 		dbox.Contains("regfield", "1"),
-// 		dbox.Ne("nefield", 1),
-// 		dbox.Eq("group", "administrators")))
-// 	b, e := fb.Build()
-// 	if e != nil {
-// 		t.Errorf("Error %s", e.Error())
-// 	} else {
-// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
-// 	}
+func TestFilter(t *testing.T) {
+	t.Skip("Just Skip Test")
+	fb := dbox.NewFilterBuilder(new(FilterBuilder))
+	fb.AddFilter(dbox.Or(
+		dbox.Contains("regfield", "1"),
+		dbox.Ne("nefield", 1),
+		dbox.Eq("group", "administrators")))
+	b, e := fb.Build()
+	if e != nil {
+		t.Errorf("Error %s", e.Error())
+	} else {
+		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
+	}
 
-// 	fb = dbox.NewFilterBuilder(new(FilterBuilder))
-// 	fb.AddFilter(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30")))
-// 	c, e := fb.Build()
-// 	if e != nil {
-// 		t.Errorf("Error %s", e.Error())
-// 	} else {
-// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(c))
-// 	}
-// }
+	fb = dbox.NewFilterBuilder(new(FilterBuilder))
+	fb.AddFilter(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30")))
+	c, e := fb.Build()
+	if e != nil {
+		t.Errorf("Error %s", e.Error())
+	} else {
+		fmt.Printf("Result:\n%v\n", toolkit.JsonString(c))
+	}
+}
 
 type employee struct {
 	Id        string
