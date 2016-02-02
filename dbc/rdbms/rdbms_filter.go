@@ -15,11 +15,12 @@ func CombineIn(operator string, f *dbox.Filter) string {
 	if operator == "LIKE " {
 		for i, val := range f.Value.([]string) {
 			if i == 0 {
-				values = f.Field + " " + operator + " '%" + val + "%' "
+				values = f.Field + " " + operator + " '%" + val
 			} else {
-				values += " '%" + val + "%' "
+				values += "%" + val
 			}
 		}
+		values += "%'"
 
 	} else {
 		for i, val := range f.Value.([]interface{}) {
