@@ -346,11 +346,11 @@ func (q *Query) Exec(parm toolkit.M) error {
 		e = q.execQueryPartUpdate(data, execCond)
 	}
 
+	q.Connection().(*Connection).ExecOpr = true
 	if e != nil {
-		return e
+		q.Connection().(*Connection).ExecOpr = false
 	}
 
-	q.Connection().(*Connection).ExecOpr = true
 	if commandType != dbox.QueryPartSave || q.updatessave {
 		e = q.Connection().(*Connection).EndSessionWrite()
 		q.Connection().(*Connection).TypeOpenFile = TypeOpenFile_Append
@@ -635,12 +635,12 @@ func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
 			for i := 0; i < len(fSlice); i++ {
 				// nilai fSlice [i] : @name1
 				if string(cast.ToString(fSlice[i])[0]) == "@" {
-					fSlice[i] = in.Get(strings.Replace(cast.ToString(fSlice[i]), "@", "", 1), "")
+					fSlice[i] = in.Get(cast.ToString(fSlice[i]), "")
 				}
 			}
 			f.Value = fSlice
 		} else if string(cast.ToString(f.Value)[0]) == "@" {
-			f.Value = in.Get(strings.Replace(cast.ToString(f.Value), "@", "", 1), "")
+			f.Value = in.Get(cast.ToString(f.Value), "")
 		}
 	}
 	return f

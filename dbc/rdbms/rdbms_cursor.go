@@ -48,9 +48,15 @@ func (c *Cursor) ResetFetch() error {
 }
 
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
-	fmt.Println(c.QueryString)
-
+	// var statement, err = c.session.Prepare("CALL twooutput (@umurOut, 'Kane', 29, @nameOut);")
+	// statement, err = c.session.Prepare("select @umurOut, @nameOut;")
+	// if err != nil {
+	// 	fmt.Println("error statement : ", err.Error())
+	// }
+	// rows, e := statement.Query()
 	rows, e := c.session.Query(c.QueryString)
+
+	fmt.Println("nilai rows : ", rows)
 
 	var valueType reflect.Type
 

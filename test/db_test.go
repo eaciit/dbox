@@ -4,8 +4,13 @@ import (
 	"github.com/eaciit/dbox"
 	_ "github.com/eaciit/dbox/dbc/mongo"
 	"github.com/eaciit/toolkit"
+	"os"
 	"testing"
 )
+
+func killApp() {
+	os.Exit(1000)
+}
 
 var ctx dbox.IConnection
 
@@ -13,7 +18,7 @@ func connect() error {
 	var e error
 	if ctx == nil {
 		ctx, e = dbox.NewConnection("mongo",
-			&dbox.ConnectionInfo{"localhost:27017", "eccolony", "", "", nil})
+			&dbox.ConnectionInfo{"localhost:27123", "eccolony", "", "", nil})
 		if e != nil {
 			return e
 		}
@@ -50,6 +55,12 @@ type testUser struct {
 	FullName string
 	Age      int
 	Enable   bool
+}
+
+func TestParse(t *testing.T) {
+	//defer killApp()
+	f := dbox.ParseFilter("city", "!Surabaya,Medan..", "", "")
+	toolkit.Printf("F Value: %s \n", toolkit.JsonString(f))
 }
 
 func TestCRUD(t *testing.T) {
