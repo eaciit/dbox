@@ -26,8 +26,15 @@ type UpdateID struct {
 }
 
 type Coba struct {
-	Id   string
-	Nama string
+	Id      string
+	Nama    string
+	Tanggal time.Time
+}
+
+type NoID struct {
+	Aidi    string
+	Nama    string
+	Tanggal time.Time
 }
 
 func prepareConnection() (dbox.IConnection, error) {
@@ -58,50 +65,8 @@ func TestConnect(t *testing.T) {
 	defer c.Close()
 }
 
-// func TestSelect(t *testing.T) {
-// 	c, e := prepareConnection()
-
-// 	if e != nil {
-// 		t.Errorf("Unable to connect %s \n", e.Error())
-// 	}
-// 	defer c.Close()
-
-// 	//csr, e := c.NewQuery().Select().From("tes").Where(dbox.Eq("player_id", "3")).Cursor(nil)
-// 	csr, e := c.NewQuery().Select("player_id", "nama").From("tes").Cursor(nil)
-
-// 	if e != nil {
-// 		t.Errorf("Cursor pre error: %s \n", e.Error())
-// 		return
-// 	}
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized")
-// 		return
-// 	}
-// 	defer csr.Close()
-
-// 	results := make([]map[string]interface{}, 0)
-
-// 	err := csr.Fetch(&results, 0, false)
-// 	if err != nil {
-// 		t.Errorf("Unable to fetch all: %s \n", err.Error())
-// 	} else {
-// 		fmt.Println("=========================")
-// 		fmt.Println("Select with NO filter")
-// 		fmt.Println("=========================")
-
-// 		for _, val := range results {
-// 			fmt.Printf("Fetch N OK. Result: %v \n",
-// 				toolkit.JsonString(val))
-// 		}
-// 	}
-
-// 	e = csr.ResetFetch()
-// 	if e != nil {
-// 		t.Errorf("Unable to reset fetch: %s \n", e.Error())
-// 	}
-// }
-
 func TestProcedure(t *testing.T) {
+	t.Skip("")
 	c, _ := prepareConnection()
 	defer c.Close()
 
@@ -134,6 +99,7 @@ func TestProcedure(t *testing.T) {
 }
 
 func TestSelectFilter(t *testing.T) {
+	// t.Skip("")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -142,8 +108,8 @@ func TestSelectFilter(t *testing.T) {
 	defer c.Close()
 
 	layoutFormat := "2006-01-02 15:04:05"
-	dateValue1 := "2016-01-12 14:35:54"
-	dateValue2 := "2016-01-12 14:36:15"
+	dateValue1 := "2016-01-26 3:26:40"
+	dateValue2 := "2016-01-26 3:26:39"
 	var tanggal1 time.Time
 	var tanggal2 time.Time
 	tanggal1, _ = time.Parse(layoutFormat, dateValue1)
@@ -156,7 +122,6 @@ func TestSelectFilter(t *testing.T) {
 		// Where(dbox.Eq("nama", "Bourne")).
 		// Where(dbox.Ne("nama", "Bourne")).
 		// Where(dbox.Gt("umur", 25)).
-		Where(dbox.Endwith("nama", "ey")).
 		// Where(dbox.Gte("umur", 25)).
 		// Where(dbox.Lt("umur", 25)).
 		// Where(dbox.Lte("tanggal", tanggal1)).
@@ -166,12 +131,21 @@ func TestSelectFilter(t *testing.T) {
 		// Where(dbox.Nin("umur", 25, 30)).
 		// Where(dbox.In("tanggal", tanggal1, tanggal2)).
 		// Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("nama", "Roy"))).
+		// Where(dbox.Or(dbox.Lte("umur", 25), dbox.Eq("nama", "Roy"))).
 		// Where(dbox.Contains("nama", "ar", "ov")).
+		// Where(dbox.Startwith("nama", "Ba")).
+		// Where(dbox.Endwith("nama", "ta")).
 		Order("nama").
 		// Skip(2).
 		Take(1).
 		Cursor(nil)
+	// Where(dbox.Contains("nama", "@name1")).
+	// Cursor(toolkit.M{}.Set("name1", "Os"))
 	// Where(dbox.In("nama", "@nama1", "@nama2")).
+	// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
+	// Where(dbox.Startwith("nama", "@nama1")).
+	// Cursor(toolkit.M{}.Set("nama1", "cl"))
+	// Where(dbox.Endwith("name", "ey")).
 	// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
 	// Where(dbox.Lte("tanggal", "@date")).
 	// Cursor(toolkit.M{}.Set("date", tanggal1))
@@ -219,108 +193,55 @@ func TestSelectFilter(t *testing.T) {
 	}
 }
 
-// func TestSelectAggregate(t *testing.T) {
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("Unable to connect %s \n", e.Error())
-// 	}
-// 	defer c.Close()
+func TestSelectAggregate(t *testing.T) {
+	t.Skip("")
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
 
-// 	csr, e := c.NewQuery().
-// 		Select("nama").
-// 		Aggr(dbox.AggrSum, 1, "Total Item").
-// 		Aggr(dbox.AggrMax, "amount", "Max Amount").
-// 		Aggr(dbox.AggrSum, "amount", "Total Amount").
-// 		Aggr(dbox.AggrAvr, "amount", "Average Amount").
-// 		From("orders").
-// 		Group("nama").
-// 		Order("nama").
-// 		Skip(2).
-// 		Take(1).
-// 		Cursor(nil)
-// 	if e != nil {
-// 		t.Errorf("Cursor pre error: %s \n", e.Error())
-// 		return
-// 	}
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized")
-// 		return
-// 	}
-// 	defer csr.Close()
+	csr, e := c.NewQuery().
+		Select("nama").
+		Aggr(dbox.AggrSum, 1, "Total Item").
+		Aggr(dbox.AggrMax, "amount", "Max Amount").
+		Aggr(dbox.AggrSum, "amount", "Total Amount").
+		Aggr(dbox.AggrAvr, "amount", "Average Amount").
+		From("orders").
+		Group("nama").
+		Order("nama").
+		Skip(2).
+		Take(1).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
 
-// 	results := make([]map[string]interface{}, 0)
+	results := make([]map[string]interface{}, 0)
 
-// 	err := csr.Fetch(&results, 0, false)
-// 	if err != nil {
-// 		t.Errorf("Unable to fetch: %s \n", err.Error())
-// 	} else {
-// 		fmt.Println("======================")
-// 		fmt.Println("QUERY AGGREGATION")
-// 		fmt.Println("======================")
-// 		fmt.Printf("Fetch N OK. Result:\n")
-// 		for _, val := range results {
-// 			fmt.Printf("%v \n",
-// 				toolkit.JsonString(val))
-// 		}
-// 	}
-// }
-
-// func TestSelectAggregateUsingCommand(t *testing.T) {
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("Unable to connect %s \n", e.Error())
-// 		return
-// 	}
-// 	defer c.Close()
-
-// 	pipe := []toolkit.M{toolkit.M{}.Set("$group",
-// 		toolkit.M{}.Set("_id", "cust_id").
-// 			Set("Total Item", toolkit.M{}.Set("$sum", 1)).
-// 			Set("Total Amount", toolkit.M{}.Set(dbox.AggrSum, "amount")).
-// 			Set("Average Amount", toolkit.M{}.Set(dbox.AggrAvr, "amount")))}
-// 	csr, e := c.NewQuery().
-// 		Command("pipe", pipe).
-// 		From("orders").
-// 		Cursor(nil)
-// 	if e != nil {
-// 		t.Errorf("Cursor pre error: %s \n", e.Error())
-// 		return
-// 	}
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized")
-// 		return
-// 	}
-// 	defer csr.Close()
-
-// 	results := make([]map[string]interface{}, 0)
-
-// 	err := csr.Fetch(&results, 0, false)
-// 	if err != nil {
-// 		t.Errorf("Unable to fetch: %s \n", err.Error())
-// 	} else {
-// 		fmt.Println("======================")
-// 		fmt.Println("AGGREGATE USING COMMAND")
-// 		fmt.Println("======================")
-// 		for _, val := range results {
-// 			fmt.Printf("Fetch N OK. Result: %v \n",
-// 				toolkit.JsonString(val))
-// 		}
-// 	}
-// }
-
-type Marshaler interface {
-	MarshalJSON() ([]byte, error)
-}
-
-type JSONTime time.Time
-
-func (t JSONTime) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprintf("\"%s\"", time.Time(t).UTC())
-	return []byte(stamp), nil
+	err := csr.Fetch(&results, 0, false)
+	if err != nil {
+		t.Errorf("Unable to fetch: %s \n", err.Error())
+	} else {
+		fmt.Println("======================")
+		fmt.Println("QUERY AGGREGATION")
+		fmt.Println("======================")
+		fmt.Printf("Fetch N OK. Result:\n")
+		for _, val := range results {
+			fmt.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
 }
 
 func TestCRUD(t *testing.T) {
-	//t.Skip()
+	t.Skip("")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -328,10 +249,8 @@ func TestCRUD(t *testing.T) {
 	}
 	defer c.Close()
 
-	// ===============================INSERT==============================
-
-	// q := c.NewQuery().SetConfig("multiexec", true).From("tes").Save()
-
+	/* ===============================INSERT============================== */
+	// q := c.NewQuery().From("tes").Insert()
 	// dataInsert := User{}
 	// dataInsert.Player_id = fmt.Sprintf("30")
 	// dataInsert.Nama = fmt.Sprintf("Batistuta")
@@ -339,14 +258,12 @@ func TestCRUD(t *testing.T) {
 	// dataInsert.Tanggal = time.Now()
 	// dataInsert.Umur = 40
 
-	// e = q.Exec(toolkit.M{
-	// 	"data": dataInsert,
-	// })
+	// e = q.Exec(toolkit.M{"data": dataInsert})
 	// if e != nil {
 	// 	t.Errorf("Unable to save: %s \n", e.Error())
 	// }
 
-	// ===============================INSERT MANY==============================
+	/* ===============================INSERT MANY============================== */
 
 	// nama := []string{"Toure", "Ivanovic", "Costa", "Chamberlain", "Hart", "Bruyne", "Aguero"}
 	// dataInsert := User{}
@@ -366,27 +283,57 @@ func TestCRUD(t *testing.T) {
 	// 	}
 	// }
 
-	// ===============================UPDATE==============================
+	/* ===============================SAVE DATA============================== */
+	// q := c.NewQuery().SetConfig("multiexec", true).From("coba").Save()
+	// dataInsert := Coba{}
+	// dataInsert.Id = fmt.Sprintf("1")
+	// dataInsert.Nama = fmt.Sprintf("multi true, with data contains ID, update")
+	// dataInsert.Tanggal = time.Now()
+
+	// q := c.NewQuery().SetConfig("multiexec", true).From("noid").Save()
+	// dataInsert := NoID{}
+	// dataInsert.Aidi = fmt.Sprintf("10")
+	// dataInsert.Nama = fmt.Sprintf("multi false, with data contains no ID")
+	// dataInsert.Tanggal = time.Now()
+
+	// e = q.Exec(toolkit.M{"data": dataInsert})
+	// // e = q.Exec(nil)
+	// if e != nil {
+	// 	t.Errorf("Unable to save data : %s \n", e.Error())
+	// }
+
+	/* ===============================UPDATE============================== */
 
 	// data := User{}
 	// data.Player_id = "ply030"
 	// data.Nama = "Terry"
 	// data.Tanggal = time.Now()
 	// data.Umur = 35
-	// e = c.NewQuery().From("tes").Where(dbox.Eq("player_id", "30")).Update().Exec(toolkit.M{"data": data})
+
+	// e = c.NewQuery().From("coba").Where(dbox.Eq("player_id", "30")).Update().Exec(toolkit.M{"data": data})
 	// if e != nil {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
 
-	data := Coba{}
-	data.Id = "1"
-	data.Nama = "Depf"
-	e = c.NewQuery().SetConfig("multiexec", false).From("coba").Update().Exec(toolkit.M{"data": data})
-	if e != nil {
-		t.Errorf("Unable to update: %s \n", e.Error())
-	}
+	// data := NoID{}
+	// data.Aidi = fmt.Sprintf("10")
+	// data.Nama = fmt.Sprintf("multi true, with conditons, with data contains no ID")
+	// data.Tanggal = time.Now()
 
-	// ===============================UPDATE ALL ID==============================
+	// data := Coba{}
+	// data.Id = fmt.Sprintf("1")
+	// data.Nama = fmt.Sprintf("multi true, with data contains ID, with condition, update")
+	// data.Tanggal = time.Now()
+
+	// e = c.NewQuery().SetConfig("multiexec", true).From("noid").Update().
+	// 	Where(dbox.Eq("aidi", "10")).
+	// 	Exec(toolkit.M{"data": data})
+	// // Exec(nil)
+	// if e != nil {
+	// 	t.Errorf("Unable to update: %s \n", e.Error())
+	// }
+
+	/* ===============================UPDATE ALL ID============================== */
 	// data := UpdateID{}
 	// fmt.Println(data)
 	// for i := 1; i < 23; i++ {
@@ -404,14 +351,17 @@ func TestCRUD(t *testing.T) {
 
 	// }
 
-	// ===============================DELETE==============================
+	/* ===============================DELETE==============================*/
 	// e = c.NewQuery().From("tes").Where(dbox.And(dbox.Eq("player_id", "ply030"), dbox.Eq("nama", "Terry"))).Delete().Exec(nil)
+	// e = c.NewQuery().From("noid").SetConfig("multiexec", false).Delete().
+	// 	// Where(dbox.Eq("aidi", "10")).
+	// 	Exec(nil)
 	// if e != nil {
-	// 	t.Errorf("Unablet to delete table %s\n", e.Error())
+	// 	t.Errorf("Unable to delete table %s\n", e.Error())
 	// 	return
 	// }
 
-	// ===============================CLEAR ALL TABLE DATA==============================
+	/* ===============================CLEAR ALL TABLE DATA==============================*/
 
 	// e = c.NewQuery().From("tes").Delete().Exec(nil)
 	// if e != nil {
