@@ -2,14 +2,27 @@ package json
 
 import (
 	"fmt"
+	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	. "github.com/eaciit/toolkit"
 	"reflect"
+	// "sort"
 	"strings"
 )
 
 type FilterBuilder struct {
 	dbox.FilterBuilder
+	fields []FieldSorter
+}
+
+type Sorter struct {
+	f      []FieldSorter
+	sorter []M
+}
+
+type FieldSorter struct {
+	field string
+	n     int
 }
 
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
@@ -123,4 +136,120 @@ func (fb *FilterBuilder) CheckFilter(f *dbox.Filter, p M) *dbox.Filter {
 		}
 	}
 	return f
+}
+
+/*type SortCompare func(a, b interface{}) bool
+type Change struct {
+	Age      int    `json:"Age"`
+	Enable   bool   `json:"Enable"`
+	FullName string `json:"FullName"`
+	id       string `json:"_id"`
+}
+type multiSorter struct {
+	less    []SortCompare
+	changes []Change
+}
+
+func (ms *multiSorter) Len() int {
+	return len(ms.changes)
+}
+
+func (ms *multiSorter) Swap(i, j int) {
+	ms.changes[i], ms.changes[j] = ms.changes[j], ms.changes[i]
+}
+func (ms *multiSorter) Less(i, j int) bool {
+	p, q := &ms.changes[i], &ms.changes[j]
+	var k int
+	for k = 0; k < len(ms.less)-1; k++ {
+		less := ms.less[k]
+		switch {
+		case less(p, q):
+			return true
+		case less(q, p):
+			return false
+		}
+	}
+	return ms.less[k](p, q)
+}
+func OrderedBy(less ...SortCompare) *multiSorter {
+	return &multiSorter{
+		less: less,
+	}
+}
+func (ms *multiSorter) Sort(changes []Change) {
+	ms.changes = changes
+	sort.Sort(ms)
+}*/
+
+func (sr *Sorter) SortFetch(s []string, js []M) []M {
+	var i []interface{}
+	var sorter []M
+
+	var order []FieldSorter //[]toolkit.M
+	for _, field := range s {
+		n := 1
+		if field != "" {
+			switch field[0] {
+			case '+':
+				field = field[1:]
+			case '-':
+				n = -1
+				field = field[1:]
+			}
+		}
+		order = append(order, FieldSorter{field, n})
+	}
+
+	for _, v := range js {
+		i = append(i, v)
+	}
+
+	/*age := func(a, b interface{}) bool {
+		return a.(*Change).Age < b.(*Change).Age
+	}
+	fullname := func(a, b interface{}) bool {
+		return a.(*Change).FullName < b.(*Change).FullName
+	}
+
+	jstring := JsonString(js)
+	changes := []Change{}
+	Unjson([]byte(jstring), &changes)
+	OrderedBy(age, fullname).Sort(changes)
+	Printf("a:%v\n", JsonString(changes))*/
+
+	sr.f = order
+	val := crowd.NewSortSlice(i, fsort, sr.fcompare).Sort().Slice()
+
+	for _, v := range val {
+		sorter = append(sorter, v.(M))
+	}
+
+	return sorter
+}
+
+func fsort(so crowd.SortItem) interface{} {
+	return so.Value
+}
+
+func (sr *Sorter) fcompare(a, b interface{}) bool {
+	for _, field := range sr.f {
+		ia := ToInt(a.(M)[field.field], RoundingAuto)
+		ib := ToInt(b.(M)[field.field], RoundingAuto)
+		if ia > 0 && ib > 0 {
+			if field.n == -1 {
+				return ia > ib
+			}
+			return ia < ib
+		}
+
+		as := ToString(a.(M)[field.field])
+		bs := ToString(b.(M)[field.field])
+		if as != "" && bs != "" {
+			if field.n == -1 {
+				return as > bs
+			}
+			return as < bs
+		}
+	}
+	return false
 }
