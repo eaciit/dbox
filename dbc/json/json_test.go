@@ -352,8 +352,8 @@ func TestSelectTake(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().
-		Order("-Age").
-		// Take(10).
+		Order("Age").
+		Take(15).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -416,6 +416,28 @@ func TestSelectAggregate(t *testing.T) {
 }
 */
 
+/*func TestCount(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	count := csr.Count()
+	fmt.Printf("Count data. Result: %v \n", count)
+}
+*/
 func TestDeleteAll(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
@@ -457,7 +479,7 @@ type user struct {
   data.MasterDataSource = "master"
   data.Title = "Test update"*/
 
-/*func TestSave(t *testing.T) {
+func TestSave(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -486,7 +508,7 @@ type user struct {
 
 	}
 	q.Close()
-}*/
+}
 
 func TestInsert(t *testing.T) {
 	c, e := prepareConnection()
