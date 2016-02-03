@@ -146,7 +146,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.(*Cursor).session = session
 	driverName := q.GetDriverDB()
-	// driverName := "postgres"
+	driverName = "oracle"
 	var QueryString string
 
 	/*
@@ -204,22 +204,11 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				/* isi Aggr Info :  {$sum 1 Total Item}*/
 
 				if incAtt == 0 {
-
-					if driverName == "postgres" {
-						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
-							cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
-					} else {
-						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
-							cast.ToString(aggrInfo.Field) + ")" + " as '" + aggrInfo.Alias + "'"
-					}
+					aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+						cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
 				} else {
-					if driverName == "postgres" {
-						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
-							"(" + cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
-					} else {
-						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
-							"(" + cast.ToString(aggrInfo.Field) + ")" + " as '" + aggrInfo.Alias + "'"
-					}
+					aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
+						"(" + cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
 				}
 				incAtt++
 			}
@@ -377,7 +366,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
 		fmt.Println("Isi Proc command : ", procCommand)
 
-		spName := procCommand.(toolkit.M)["name"].(string) + ""
+		spName := procCommand.(toolkit.M)["name"].(string) + " "
 		params, hasParam := procCommand.(toolkit.M)["parms"]
 		orderparam, hasOrder := procCommand.(toolkit.M)["orderparam"]
 		ProcStatement := ""
@@ -421,39 +410,60 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		} else if driverName == "mssql" {
 			paramstring := ""
 			incParam := 0
-			for key, val := range params.(toolkit.M) {
-				if incParam == 0 {
-					paramstring = key + " = '" + val.(string) + "'"
-				} else {
-					paramstring += ", " + key + " = '" + val.(string) + "'"
+			if hasParam {
+				for key, val := range params.(toolkit.M) {
+					if key != "" {
+						if incParam == 0 {
+							paramstring = key + " = " + StringValue(val, driverName) + ""
+
+						} else {
+							paramstring += ", " + key + " = " + StringValue(val, driverName) + ""
+						}
+						incParam += 1
+					}
 				}
-				incParam += 1
+				paramstring += ";"
 			}
-			paramstring += ";"
 
 			ProcStatement = "EXECUTE " + spName + paramstring
 		} else if driverName == "oracle" {
-			paramstring := ""
-			incParam := 0
-			for key, val := range params.(toolkit.M) {
-				if incParam == 0 {
-					if strings.Contains(key, "@@") {
-						paramstring = "(" + strings.Replace(key, "@@", ":", 1)
+			var paramstring string
+			var variable string
+			var isEmpty bool
+			if hasParam && hasOrder {
+				paramToolkit := params.(toolkit.M)
+				orderString := orderparam.([]string)
+				for i := 0; i < len(paramToolkit); i++ {
+					if i == 0 {
+						if strings.Contains(orderString[i], "@@") {
+							variable = "var " + strings.Replace(orderString[i], "@@", "", 1) +
+								" " + cast.ToString(paramToolkit[orderString[i]]) + ";"
+							paramstring = "(" + strings.Replace(orderString[i], "@@", ":", 1)
+							isEmpty = false
+						} else if StringValue(paramToolkit[orderString[i]], driverName) != "''" {
+							paramstring = "(" + StringValue(paramToolkit[orderString[i]], driverName)
+							isEmpty = false
+						}
+
 					} else {
-						paramstring = "('" + val.(string) + "'"
-					}
-				} else {
-					if strings.Contains(key, "@@") {
-						paramstring += "," + strings.Replace(key, "@@", ":", 1)
-					} else {
-						paramstring += ",'" + val.(string) + "'"
+						if strings.Contains(orderString[i], "@@") {
+							variable += "var " + strings.Replace(orderString[i], "@@", "", 1) +
+								" " + cast.ToString(paramToolkit[orderString[i]]) + ";"
+							paramstring += ", " + strings.Replace(orderString[i], "@@", ":", 1)
+						} else {
+							paramstring += ", " + StringValue(paramToolkit[orderString[i]], driverName)
+
+						}
 					}
 				}
-				incParam += 1
+				if !isEmpty {
+					paramstring += ");"
+				}
+			} else if hasParam && !hasOrder {
+				return nil, errorlib.Error(packageName, modQuery, "procedure", "please provide order parameter")
 			}
-			paramstring += ");"
 
-			ProcStatement = "EXECUTE " + spName + paramstring
+			ProcStatement = variable + "EXECUTE " + spName + paramstring
 
 		} else if driverName == "postgres" {
 			paramstring := ""
