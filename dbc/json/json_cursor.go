@@ -57,6 +57,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	}
 
 	if n == 0 {
+		if c.lastFeteched == c.count {
+			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!, please do reset fetch")
+		}
 		last = c.count
 	} else if n > 0 {
 		switch {
@@ -73,6 +76,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 					return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
 				}
 				last = c.count
+				c.lastFeteched = last
 			}
 			// toolkit.Printf("first>%v last>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
 		}
