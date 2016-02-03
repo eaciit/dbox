@@ -7,7 +7,7 @@ import (
 	"github.com/eaciit/errorlib"
 	. "github.com/eaciit/toolkit"
 	"gopkg.in/mgo.v2"
-	//"reflect"
+	"reflect"
 )
 
 const (
@@ -137,19 +137,17 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	} else if n > 1 {
 		fetched := 0
 		fetching := true
+
+		v := reflect.TypeOf(m).Elem().Elem()
+		ivs := reflect.MakeSlice(reflect.SliceOf(v), 0, 0)
 		for fetching {
-			dataHolder, e := GetEmptySliceElement(m)
-			if e != nil {
-				return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
-			}
-			var bOk bool
-			if IsPointer(dataHolder) {
-				bOk = c.mgoIter.Next(dataHolder)
-			} else {
-				bOk = c.mgoIter.Next(&dataHolder)
-			}
+			iv := reflect.New(v).Interface()
+
+			tiv := M{}
+			bOk := c.mgoIter.Next(&tiv)
 			if bOk {
-				AppendSlice(m, dataHolder)
+				Serde(tiv, iv, "json")
+				ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
 				fetched++
 				if fetched == n {
 					fetching = false
@@ -158,6 +156,28 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				fetching = false
 			}
 		}
+		reflect.ValueOf(m).Elem().Set(ivs)
+		// for fetching {
+		// 	dataHolder, e := GetEmptySliceElement(m)
+		// 	if e != nil {
+		// 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+		// 	}
+		// 	var bOk bool
+		// 	if IsPointer(dataHolder) {
+		// 		bOk = c.mgoIter.Next(dataHolder)
+		// 	} else {
+		// 		bOk = c.mgoIter.Next(&dataHolder)
+		// 	}
+		// 	if bOk {
+		// 		AppendSlice(m, dataHolder)
+		// 		fetched++
+		// 		if fetched == n {
+		// 			fetching = false
+		// 		}
+		// 	} else {
+		// 		fetching = false
+		// 	}
+		// }
 	}
 
 	return nil
