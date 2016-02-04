@@ -66,15 +66,110 @@ func TestConnect(t *testing.T) {
 }
 
 func TestProcedure(t *testing.T) {
-	t.Skip("")
+	// t.Skip("")
 	c, _ := prepareConnection()
 	defer c.Close()
 
-	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmur").Set("parms", toolkit.M{}.Set("@nama", "Vidal"))).Cursor(nil)
-	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").Set("parms", toolkit.M{}.Set("@umur1", "20").Set("@umur2", "23"))).Cursor(nil)
-	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.Set("name", "getUmurIn").
-	// 	Set("parms", toolkit.M{}.Set("@p_umur1", "20").Set("@p_umur2", "23").
-	// 	Set("@@o_nama", "varchar2").Set("@@o_umur", "number"))).Cursor(nil)
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+	// 	Set("name", "staticproc").
+	// 	Set("parms", toolkit.M{}.Set("", ""))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+	// 	Set("name", "staticproc")).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+	// 	Set("name", "getUmur").
+	// 	Set("parms", toolkit.M{}.Set("@nama", "Vidal"))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+	// 	Set("name", "getUmurIn").
+	// 	Set("parms", toolkit.M{}.Set("@umur1", 20).Set("@umur2", 23))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "insertdata").
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idIn", "31").
+	// 	Set("@namaIn", "Kolarov").
+	// 	Set("@umurIn", 40))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "updatedata").
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idIn", "ply031").
+	// 	Set("@idCondIn", "31").
+	// 	Set("@namaIn", "Batistuta").
+	// 	Set("@umurIn", 25))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "deletedata").
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idCondIn", "ply031"))).
+	// 	Cursor(nil)
+
+	/*============================ ORACLE =========================*/
+
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+	// 	Set("name", "staticproc").
+	// 	Set("orderparam", []string{""}).
+	// 	Set("parms", toolkit.M{}.Set("", ""))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+	// 	Set("name", "staticproc")).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+	// 	Set("name", "getUmur").
+	// 	Set("orderparam", []string{"@nama", "@@o_umur"}).
+	// 	Set("parms", toolkit.M{}.Set("@nama", "Vidal").
+	// 	Set("@@o_umur", "number"))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+	// 	Set("name", "getUmurIn").
+	// 	Set("orderparam", []string{"@p_umur1", "@p_umur2", "@@o_nama", "@@o_umur"}).
+	// 	Set("parms", toolkit.M{}.Set("@p_umur1", "20").Set("@p_umur2", "20").
+	// 	Set("@@o_nama", "varchar2(255)").Set("@@o_umur", "number"))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "insertdata").
+	// 	Set("orderparam", []string{"@idIn", "@nameIn", "@umurIn"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idIn", "30").
+	// 	Set("@nameIn", "Costacurta").
+	// 	Set("@umurIn", 40))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "updatedata").
+	// 	Set("orderparam", []string{"@idIn", "@idCondIn", "@nameIn", "@umurIn"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idIn", "ply030").
+	// 	Set("@idCondIn", "30").
+	// 	Set("@nameIn", "Payet").
+	// 	Set("@umurIn", 25))).
+	// 	Cursor(nil)
+
+	// csr, e := c.NewQuery().
+	// 	Command("procedure", toolkit.M{}.
+	// 	Set("name", "deletedata").
+	// 	Set("orderparam", []string{"@idCondIn"}).
+	// 	Set("parms", toolkit.M{}.
+	// 	Set("@idCondIn", "ply030"))).
+	// 	Cursor(nil)
+
 	if csr == nil {
 		t.Errorf("Cursor not initialized", e.Error())
 		return
@@ -99,7 +194,7 @@ func TestProcedure(t *testing.T) {
 }
 
 func TestSelectFilter(t *testing.T) {
-	// t.Skip("")
+	t.Skip("")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -135,34 +230,44 @@ func TestSelectFilter(t *testing.T) {
 		// Where(dbox.Contains("nama", "ar", "ov")).
 		// Where(dbox.Startwith("nama", "Ba")).
 		// Where(dbox.Endwith("nama", "ta")).
-		Order("nama").
+		// Order("nama").
 		// Skip(2).
-		Take(1).
-		Cursor(nil)
-	// Where(dbox.Contains("nama", "@name1")).
-	// Cursor(toolkit.M{}.Set("name1", "Os"))
-	// Where(dbox.In("nama", "@nama1", "@nama2")).
-	// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
-	// Where(dbox.Startwith("nama", "@nama1")).
-	// Cursor(toolkit.M{}.Set("nama1", "cl"))
-	// Where(dbox.Endwith("name", "ey")).
-	// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
-	// Where(dbox.Lte("tanggal", "@date")).
-	// Cursor(toolkit.M{}.Set("date", tanggal1))
-	// Where(dbox.Eq("nama", "@nama")).
-	// Cursor(toolkit.M{}.Set("nama", "clyne"))
-	// Where(dbox.Eq("umur", "@age")).
-	// Cursor(toolkit.M{}.Set("age", 25))
-	// Where(dbox.And(dbox.Gt("umur", "@age"), dbox.Eq("nama", "@nama"))).
-	// Cursor(toolkit.M{}.Set("age", 25).Set("nama", "Kane"))
-	// Where(dbox.And(dbox.Or(dbox.Eq("nama", "@nama1"), dbox.Eq("nama", "@nama2"),
-	// dbox.Eq("nama", "@nama3")), dbox.Lt("umur", "@age"))).
-	// Cursor(toolkit.M{}.Set("nama1", "Kane").Set("nama2", "Roy").
-	// Set("nama3", "Oscar").Set("age", 30))
-	// Where(dbox.And(dbox.Or(dbox.Eq("nama", "@nama1"), dbox.Eq("nama", "@nama2"),
-	// dbox.Eq("nama", "@nama3")), dbox.Lt("umur", "@age"))).
-	// Cursor(toolkit.M{}.Set("nama1", "Kane").Set("nama2", "Roy").
-	// Set("nama3", "Oscar").Set("age", 30))
+		// Take(1).
+		// Cursor(nil)
+		// Where(dbox.Eq("nama", "@nama")).
+		// Cursor(toolkit.M{}.Set("nama", "clyne"))
+		// Where(dbox.Eq("umur", "@age")).
+		// Cursor(toolkit.M{}.Set("age", 25))
+		// Where(dbox.Ne("umur", "@age")).
+		// Cursor(toolkit.M{}.Set("age", 25))
+		// Where(dbox.Gt("tanggal", "@date")).
+		// Cursor(toolkit.M{}.Set("date", tanggal1))
+		// Where(dbox.Gt("umur", "@age")).
+		// Cursor(toolkit.M{}.Set("age", 25))
+		// Where(dbox.Gte("umur", "@age")).
+		// Cursor(toolkit.M{}.Set("age", 25))
+		// Where(dbox.Lt("umur", "@age")).
+		// Cursor(toolkit.M{}.Set("age", 25))
+		// Where(dbox.Lte("umur", "@age")).
+		// Cursor(toolkit.M{}.Set("age", 25))
+		// Where(dbox.In("nama", "@nama1", "@nama2")).
+		// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
+		// Where(dbox.Nin("nama", "@nama1", "@nama2")).
+		// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
+		// Where(dbox.And(dbox.Gt("umur", "@age"), dbox.Eq("nama", "@nama"))).
+		// Cursor(toolkit.M{}.Set("age", 25).Set("nama", "Kane"))
+		// Where(dbox.Or(dbox.Lte("umur", "@age"), dbox.Eq("nama", "@nama"))).
+		// Cursor(toolkit.M{}.Set("age", 23).Set("nama", "Kane"))
+		// Where(dbox.And(dbox.Or(dbox.Eq("nama", "@nama1"), dbox.Eq("nama", "@nama2"),
+		// dbox.Eq("nama", "@nama3")), dbox.Lt("umur", "@age"))).
+		// Cursor(toolkit.M{}.Set("nama1", "Kane").Set("nama2", "Roy").
+		// Set("nama3", "Oscar").Set("age", 30))
+		// Where(dbox.Contains("nama", "@name1")).
+		// Cursor(toolkit.M{}.Set("name1", "Os"))
+		// Where(dbox.Startwith("nama", "@nama1")).
+		// Cursor(toolkit.M{}.Set("nama1", "Ba"))
+		Where(dbox.Endwith("nama", "@nama1")).
+		Cursor(toolkit.M{}.Set("nama1", "ta"))
 
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -205,13 +310,14 @@ func TestSelectAggregate(t *testing.T) {
 		Select("nama").
 		Aggr(dbox.AggrSum, 1, "Total Item").
 		Aggr(dbox.AggrMax, "amount", "Max Amount").
+		Aggr(dbox.AggrMin, "amount", "Min Amount").
 		Aggr(dbox.AggrSum, "amount", "Total Amount").
 		Aggr(dbox.AggrAvr, "amount", "Average Amount").
 		From("orders").
 		Group("nama").
 		Order("nama").
-		Skip(2).
-		Take(1).
+		// Skip(2).
+		// Take(1).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
