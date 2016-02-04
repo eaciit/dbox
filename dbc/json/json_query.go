@@ -67,17 +67,15 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 
 		if sort := filters.Get("sort").([]string); toolkit.SliceLen(sort) > 0 {
-			fb := new(Sorter)
-			// fb.Sorters(sort, dataMaps)
+			fb := new(FilterBuilder)
+			// toolkit.Printf("sorter:%v\n", sort)
 			sorter := fb.SortFetch(sort, dataMaps)
-			// toolkit.Printf("sorter:%v\n", sr)
+
 			cursor.(*Cursor).datas = sorter
 		} else {
 			cursor.(*Cursor).datas = dataMaps
 		}
-
 		cursor.(*Cursor).jsonSelect = filters.Get("select").([]string)
-		// cursor.(*Cursor).allcount = toolkit.SliceLen(dataMaps)
 	} else {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", "No Aggregate function")
 	}
