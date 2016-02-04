@@ -93,6 +93,25 @@ func TestCRUD(t *testing.T) {
 	}
 }
 
+func TestCursor(t *testing.T) {
+	skipIfConnectionIsNil(t)
+	cursor, e := ctx.NewQuery().From(tableName).
+		Where(dbox.Lte("enable", false)).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Unable to generate cursor. %s", e.Error())
+	}
+	defer cursor.Close()
+
+	results := make([]toolkit.M, 0)
+	e = cursor.Fetch(&results, 0, false)
+	if e != nil {
+		t.Errorf("Unable to iterate cursor %s", e.Error())
+	} else {
+		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(results))
+	}
+}
+
 func TestQueryAggregate(t *testing.T) {
 	skipIfConnectionIsNil(t)
 	cursor, e := ctx.NewQuery().From(tableName).
