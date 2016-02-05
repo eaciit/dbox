@@ -51,11 +51,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	if hasAggregate {
 		aggregate = true
 	}
-	// toolkit.Printf("sort:%v\n", filters.Get("sort"))
-	if !aggregate {
-		var dataInterface interface{}
-		json.Unmarshal(toolkit.Jsonify(dataMaps), &dataInterface)
 
+	if !aggregate {
 		if hasWhere {
 			cursor.(*Cursor).whereFields = filters.Get("where").([]*dbox.Filter)
 			cursor.(*Cursor).isWhere = true
@@ -70,11 +67,15 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 
 		if sort := filters.Get("sort").([]string); toolkit.SliceLen(sort) > 0 {
-			cursor.(*Cursor).sort = sort
-		}
+			fb := new(FilterBuilder)
+			// toolkit.Printf("sorter:%v\n", sort)
+			sorter := fb.SortFetch(sort, dataMaps)
 
+			cursor.(*Cursor).datas = sorter
+		} else {
+			cursor.(*Cursor).datas = dataMaps
+		}
 		cursor.(*Cursor).jsonSelect = filters.Get("select").([]string)
-		cursor.(*Cursor).readFile = toolkit.Jsonify(dataMaps)
 	} else {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", "No Aggregate function")
 	}

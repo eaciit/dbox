@@ -352,8 +352,8 @@ func TestSelectTake(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().
-		Order("-Age").
-		// Take(10).
+		Order("Age").
+		Take(15).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -376,23 +376,14 @@ func TestSelectTake(t *testing.T) {
 	}
 }*/
 
-/*
-func TestSelectAggregate(t *testing.T) {
+/*func TestCount(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 	}
 	defer c.Close()
 
-	fb := c.Fb()
-	csr, e := c.NewQuery().
-		//Select("_id", "email").
-		//Where(c.Fb().Eq("email", "arief@eaciit.com")).
-		Aggr(dbox.AggSum, 1, "Count").
-		Aggr(dbox.AggSum, 1, "Avg").
-		From("appusers").
-		Group("").
-		Cursor(nil)
+	csr, e := c.NewQuery().Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -403,19 +394,10 @@ func TestSelectAggregate(t *testing.T) {
 	}
 	defer csr.Close()
 
-	//rets := []toolkit.M{}
-
-	ds, e := csr.Fetch(nil, 0, false)
-	if e != nil {
-		t.Errorf("Unable to fetch: %s \n", e.Error())
-	} else {
-		fmt.Printf("Fetch OK. Result: %v \n",
-			toolkit.JsonString(ds.Data[0]))
-
-	}
+	count := csr.Count()
+	fmt.Printf("Count data. Result: %v \n", count)
 }
 */
-
 func TestDeleteAll(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
@@ -437,27 +419,7 @@ type user struct {
 	Email string `json:"email"`
 }
 
-/*type field struct {
-  	Id         int    `json:"_id"`
-  	DataSource string `json:"dataSource"`
-  	Field      string `json:"field"`
-  }
-  type user struct {
-  	Id               string  `json:"ID"`
-  	Fields           []field `json:"fields"`
-  	MasterDataSource string  `json:"masterDataSource"`
-  	Title            string  `json:"title"`
-  }
-
-  data.Id = "1"
-  data.Fields = []field{
-  	{1, "John", "Doe"},
-  	{2, "Barrack", "Obama"},
-  }
-  data.MasterDataSource = "master"
-  data.Title = "Test update"*/
-
-/*func TestSave(t *testing.T) {
+func TestSave(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -486,7 +448,7 @@ type user struct {
 
 	}
 	q.Close()
-}*/
+}
 
 func TestInsert(t *testing.T) {
 	c, e := prepareConnection()
@@ -726,26 +688,3 @@ func TestUpdateLte(t *testing.T) {
 		t.Fatalf("Update fail: %s", e.Error())
 	}
 }*/
-
-/*func TestQueryAggregate(t *testing.T) {
-	skipIfConnectionIsNil(t)
-	cursor, e := ctx.NewQuery().From(tableName).
-		//Where(dbox.Lte("_id", "user600")).
-		Aggr(dbox.AggrSum, 1, "Count").
-		Aggr(dbox.AggrAvr, "$age", "AgeAverage").
-		Group("enable").
-		Cursor(nil)
-	if e != nil {
-		t.Errorf("Unable to generate cursor. %s", e.Error())
-	}
-	defer cursor.Close()
-
-	results := make([]toolkit.M, 0)
-	e = cursor.Fetch(&results, 0, false)
-	if e != nil {
-		t.Errorf("Unable to iterate cursor %s", e.Error())
-	} else {
-		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(results))
-	}
-}
-*/

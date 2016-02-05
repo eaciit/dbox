@@ -346,11 +346,11 @@ func (q *Query) Exec(parm toolkit.M) error {
 		e = q.execQueryPartUpdate(data, execCond)
 	}
 
+	q.Connection().(*Connection).ExecOpr = true
 	if e != nil {
-		return e
+		q.Connection().(*Connection).ExecOpr = false
 	}
 
-	q.Connection().(*Connection).ExecOpr = true
 	if commandType != dbox.QueryPartSave || q.updatessave {
 		e = q.Connection().(*Connection).EndSessionWrite()
 		q.Connection().(*Connection).TypeOpenFile = TypeOpenFile_Append
