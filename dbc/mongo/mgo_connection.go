@@ -96,12 +96,29 @@ func (c *Connection) ObjectNames(obj dbox.ObjTypeEnum) []string {
 		}
 
 		for _, col := range cols {
-			if cond, _ := regexp.MatchString("^(.*)(\\.(indexes))$", col); !cond {
+			if cond, _ := regexp.MatchString("^(.*)((\\.(indexes)|\\.(js)))$", col); !cond {
 				astr = append(astr, col)
 			}
 		}
 
 	}
+
+	if obj == dbox.ObjTypeAll || obj == dbox.ObjTypeProcedure {
+		cols := mgoDb.C("system.js")
+		res := []toolkit.M{}
+		err := cols.Find(nil).All(&res)
+		if err != nil {
+			toolkit.Printf("%v\n", err.Error())
+			return []string{}
+		}
+
+		// toolkit.Printf("%v\n", res)
+		for _, col := range res {
+			astr = append(astr, col["_id"].(string))
+		}
+
+	}
+
 	return astr
 }
 

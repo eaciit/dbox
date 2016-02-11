@@ -2,6 +2,7 @@ package csvs
 
 import (
 	"encoding/csv"
+	"fmt"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
@@ -27,12 +28,18 @@ type Query struct {
 
 	filePath string
 	file     *os.File
-	reader   *csv.Reader
+	tempfile *os.File
+
+	reader *csv.Reader
+	writer *csv.Writer
 
 	isUseHeader  bool
 	headerColumn []headerstruct
 
 	fileHasBeenOpened bool
+	indexes           []int
+	newFileWrite      bool
+	execOpr           bool
 }
 
 func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
@@ -71,203 +78,86 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 }
 
 func (q *Query) Exec(in toolkit.M) error {
-	// 	setting, e := q.prepare(in)
-	// 	commandType := setting["commandtype"].(string)
-	// 	//toolkit.Printf("Command type: %s\n", commandType)
-	// 	if e != nil {
-	// 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
-	// 	}
+	setting, e := q.prepare(in)
+	commandType := setting["commandtype"].(string)
 
-	// 	if setting.GetString("commandtype") == dbox.QueryPartSelect {
-	// 		return err.Error(packageName, modQuery, "Exec: "+commandType, "Exec is not working with select command, please use .Cursor instead")
-	// 	}
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
+	}
 
-	// 	q.Lock()
-	// 	defer q.Unlock()
+	if commandType == dbox.QueryPartSelect {
+		return err.Error(packageName, modQuery, "Exec: "+commandType, "Exec is not working with select command, please use .Cursor instead")
+	}
 
-	// 	var dataM toolkit.M
-	// 	var dataMs []toolkit.M
+	q.Lock()
+	defer q.Unlock()
 
-	// 	hasData := in.Has("data")
-	// 	dataIsSlice := false
-	// 	data := in.Get("data")
-	// 	if toolkit.IsSlice(data) {
-	// 		dataIsSlice = true
-	// 		e = toolkit.Unjson(toolkit.Jsonify(data), dataMs)
-	// 		if e != nil {
-	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data encoding error: "+e.Error())
-	// 		}
-	// 	} else {
-	// 		dataM, e = toolkit.ToM(data)
-	// 		dataMs = append(dataMs, dataM)
-	// 		if e != nil {
-	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data encoding error: "+e.Error())
-	// 		}
-	// 	}
+	datam := toolkit.M{}
 
-	// 	hasWhere := setting.Has("where")
-	// 	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
+	if in.Has("data") {
+		datam, e = toolkit.ToM(in["data"])
+		if e != nil {
+			return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
+		}
+	}
 
-	// 	if hasData && hasWhere == false && toolkit.HasMember([]interface{}{dbox.QueryPartInsert, dbox.QueryPartUpdate, dbox.QueryPartSave}, commandType) {
-	// 		hasWhere = true
-	// 		if toolkit.IsSlice(data) {
-	// 			ids := []interface{}{}
-	// 			idField := ""
-	// 			if idField == "" {
-	// 				return err.Error(packageName, modQuery, "Exec: "+commandType, "Data send is a slice, but its element has no ID")
-	// 			}
-	// 			dataCount := toolkit.SliceLen(data)
-	// 			for i := 0; i < dataCount; i++ {
-	// 				dataI := toolkit.SliceItem(data, i)
-	// 				if i == 0 {
-	// 					idField = toolkit.IdField(dataI)
-	// 				}
-	// 				ids = append(ids, toolkit.Id(dataI))
-	// 			}
-	// 			where = []*dbox.Filter{dbox.In(idField, ids)}
-	// 		} else {
-	// 			id := toolkit.Id(data)
-	// 			if toolkit.IsNilOrEmpty(id) {
-	// 				where = []*dbox.Filter{dbox.Eq(toolkit.IdField(id), id)}
-	// 			} else {
-	// 				where = nil
-	// 				hasWhere = false
-	// 			}
-	// 		}
-	// 	}
-	// 	//toolkit.Printf("Where: %s\n", toolkit.JsonString(where))
-	// 	e = q.openFile()
-	// 	//toolkit.Printf(commandType+" Open File, found record: %d\nData:%s\n", len(q.data), toolkit.JsonString(q.data))
-	// 	if e != nil {
-	// 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
-	// 	}
+	if commandType != dbox.QueryPartDelete && len(datam) == 0 {
+		return err.Error(packageName, modQuery, "Exec: "+commandType, "Exec is not working, need data to param input")
+	}
 
-	// 	var indexes []interface{}
-	// 	if hasWhere && commandType != dbox.QueryPartInsert {
-	// 		whereIndex := dbox.Find(q.data, where)
-	// 		indexes = toolkit.ToInterfaceArray(&whereIndex)
-	// 		//toolkit.Printf("Where Index: %s Index:%s\n", toolkit.JsonString(whereIndex), toolkit.JsonString(indexes))
-	// 	}
-	// 	if commandType == dbox.QueryPartInsert {
-	// 		if !hasData {
-	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
-	// 		}
-	// 		if !dataIsSlice {
-	// 			dataMs = []toolkit.M{dataM}
-	// 		}
+	e = q.openFile()
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec ", e.Error())
+	}
 
-	// 		//-- validate
-	// 		for _, datam := range dataMs {
-	// 			idField, idValue := toolkit.IdInfo(datam)
-	// 			toolkit.Serde(dbox.Find(q.data, []*dbox.Filter{dbox.Eq(idField, idValue)}), &indexes, "")
-	// 			if len(indexes) > 0 {
-	// 				return err.Error(packageName, modQuery, "Exec: "+commandType, toolkit.Sprintf("Data %v already exist", idValue))
-	// 			}
-	// 		}
+	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
+	if nameid := toolkit.IdField(datam); nameid != "" {
+		if commandType == dbox.QueryPartInsert || commandType == dbox.QueryPartSave {
+			where = make([]*dbox.Filter, 0, 0)
+		}
+		where = append(where, dbox.Eq(strings.ToLower(nameid), datam[nameid]))
+	}
 
-	// 		//-- insert the data
-	// 		q.data = append(q.data, dataMs...)
-	// 	} else if commandType == dbox.QueryPartUpdate {
+	q.indexes = make([]int, 0, 0)
+	if len(where) > 0 {
+		q.indexes, e = q.generateIndex(where)
+		if e != nil {
+			return err.Error(packageName, modQuery, "Exec: ", e.Error())
+		}
+	}
 
-	// 		//-- valida
-	// 		if !hasData {
-	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
-	// 		}
+	q.newFileWrite = false
+	q.execOpr = false
+	switch commandType {
+	case dbox.QueryPartSave:
+		if len(q.indexes) > 0 {
+			q.newFileWrite = true
+			e = q.execQueryPartUpdate(datam)
+		} else {
+			e = q.execQueryPartInsert(datam)
+		}
+	case dbox.QueryPartInsert:
+		if len(q.indexes) > 0 {
+			e = fmt.Errorf("Id found, cannot insert with same Id")
+		} else {
+			e = q.execQueryPartInsert(datam)
+		}
+	case dbox.QueryPartDelete:
+		q.newFileWrite = true
+		if len(q.indexes) > 0 {
+			e = q.execQueryPartDelete()
+		}
+	case dbox.QueryPartUpdate:
+		q.newFileWrite = true
+		if len(q.indexes) > 0 {
+			e = q.execQueryPartUpdate(datam)
+		}
+	}
 
-	// 		var dataUpdate toolkit.M
-	// 		var updateDataIndex int
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec: ", e.Error())
+	}
 
-	// 		// if it is a slice then we need to update each data passed on its slice
-	// 		isDataSlice := toolkit.IsSlice(data)
-	// 		if isDataSlice == false {
-	// 			isDataSlice = false
-	// 			e = toolkit.Serde(data, &dataUpdate, "")
-	// 			if e != nil {
-	// 				return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
-	// 			}
-	// 		}
-
-	// 		var idField string
-	// 		//toolkit.Printf("Indexes: %s\n", toolkit.JsonString(indexes))
-	// 		for i, v := range q.data {
-	// 			// update only data that match given index
-	// 			if toolkit.HasMember(indexes, i) || !hasWhere {
-	// 				if idField == "" {
-	// 					idField = toolkit.IdField(v)
-	// 					if idField == "" {
-	// 						return err.Error(packageName, modQuery, "Exec: "+commandType, "No ID")
-	// 					}
-	// 				}
-
-	// 				// If dataslice is sent, iterate f
-	// 				if isDataSlice {
-	// 					e = toolkit.Serde(toolkit.SliceItem(data, updateDataIndex), &dataUpdate, "")
-	// 					if e != nil {
-	// 						return err.Error(packageName, modQuery, "Exec: "+commandType, "Serde data fail"+e.Error())
-	// 					}
-	// 					updateDataIndex++
-	// 				}
-	// 				dataOrigin := q.data[i]
-	// 				toolkit.CopyM(&dataUpdate, &dataOrigin, false, []string{"_id"})
-	// 				toolkit.Serde(dataOrigin, &v, "")
-	// 				q.data[i] = v
-	// 			}
-	// 		}
-	// 	} else if commandType == dbox.QueryPartDelete {
-	// 		if hasWhere && len(where) > 0 {
-	// 			var indexes []interface{}
-	// 			toolkit.Serde(dbox.Find(q.data, where), &indexes, "")
-	// 			if len(indexes) > 0 {
-	// 				newdata := []toolkit.M{}
-	// 				for index, v := range q.data {
-	// 					if toolkit.HasMember(indexes, index) == false {
-	// 						newdata = append(newdata, v)
-	// 					}
-	// 				}
-	// 				q.data = newdata
-	// 			}
-	// 		} else {
-	// 			q.data = []toolkit.M{}
-	// 		}
-	// 		//toolkit.Printf("Data now: %s\n", toolkit.JsonString(q.data))
-	// 	} else if commandType == dbox.QueryPartSave {
-	// 		if !hasData {
-	// 			return err.Error(packageName, modQuery, "Exec: "+commandType, "Data is empty")
-	// 		}
-
-	// 		var dataMs []toolkit.M
-	// 		var dataM toolkit.M
-	// 		if !toolkit.IsSlice(data) {
-	// 			e = toolkit.Serde(&data, &dataM, "json")
-	// 			if e != nil {
-	// 				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
-	// 			}
-	// 			dataMs = append(dataMs, dataM)
-	// 		} else {
-	// 			e = toolkit.Serde(&data, &dataMs, "json")
-	// 			if e != nil {
-	// 				return err.Error(packageName, modQuery, "Exec: "+commandType+" Serde data fail", e.Error())
-	// 			}
-	// 		}
-	// 		//toolkit.Printf("Saving: %s\n", toolkit.JsonString(dataMs))
-
-	// 		for _, v := range dataMs {
-	// 			idField, idValue := toolkit.IdInfo(v)
-	// 			indexes := dbox.Find(q.data, []*dbox.Filter{dbox.Eq(idField, idValue)})
-	// 			if len(indexes) == 0 {
-	// 				q.data = append(q.data, v)
-	// 			} else {
-	// 				dataOrigin := q.data[indexes[0]]
-	// 				//toolkit.Printf("Copy data %s to %s\n", toolkit.JsonString(v), toolkit.JsonString(dataOrigin))
-	// 				toolkit.CopyM(&v, &dataOrigin, false, []string{idField})
-	// 				q.data[indexes[0]] = dataOrigin
-	// 			}
-	// 		}
-	// 	}
-	// e = q.writeFile()
-	// if e != nil {
-	// 	return err.Error(packageName, modQuery, "Exec: "+commandType+" Write fail", e.Error())
-	// }
 	return nil
 }
 
@@ -439,8 +329,9 @@ func (q *Query) setConfigParam() {
 func (q *Query) resetReader() error {
 	// ci := q.Connection().(*Connection).Info()
 	var e error
-
-	q.file.Close()
+	if q.file != nil {
+		q.file.Close()
+	}
 	q.file, e = os.Open(q.filePath)
 	if e != nil {
 		return err.Error(packageName, modQuery, "open file for reset fail", e.Error())
@@ -468,11 +359,12 @@ func (q *Query) generateIndex(filters []*dbox.Filter) (output []int, e error) {
 		tm := toolkit.M{}
 
 		for i, v := range tdread {
-			tm.Set(q.headerColumn[i].name, v)
+			tolower := strings.ToLower(q.headerColumn[i].name)
+			tm.Set(tolower, v)
 			if q.headerColumn[i].dataType == "int" {
-				tm[q.headerColumn[i].name] = cast.ToInt(v, cast.RoundingAuto)
+				tm[tolower] = cast.ToInt(v, cast.RoundingAuto)
 			} else if q.headerColumn[i].dataType == "float" {
-				tm[q.headerColumn[i].name] = cast.ToF64(v, (len(v) - (strings.IndexAny(v, "."))), cast.RoundingAuto)
+				tm[tolower] = cast.ToF64(v, (len(v) - (strings.IndexAny(v, "."))), cast.RoundingAuto)
 			}
 		}
 
@@ -630,9 +522,7 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
-				if len(in) > 0 {
-					f = ReadVariable(f, in)
-				}
+				f = ReadVariable(f, in)
 				filters = append(filters, f)
 			}
 		}
@@ -641,7 +531,285 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	return
 }
 
+func (q *Query) startWriteMode() error {
+	var e error
+	ci := q.Connection().(*Connection).Info()
+	if q.newFileWrite {
+		q.tempfile, e = os.OpenFile(q.filePath+".temp", os.O_CREATE, 0666)
+	} else {
+		q.tempfile, e = os.OpenFile(q.filePath, os.O_RDWR|os.O_APPEND, 0666)
+	}
+
+	if e != nil {
+		return e
+	}
+
+	q.writer = csv.NewWriter(q.tempfile)
+
+	if delimiter := ci.Settings.Get("delimiter", "").(string); delimiter != "" {
+		q.writer.Comma = rune(delimiter[0])
+	}
+
+	if q.newFileWrite && q.isUseHeader && len(q.headerColumn) > 0 {
+		datatemp := make([]string, 0)
+		for _, v := range q.headerColumn {
+			datatemp = append(datatemp, v.name)
+		}
+
+		q.writer.Write(datatemp)
+		q.writer.Flush()
+	}
+
+	return nil
+}
+
+func (q *Query) endWriteMode() error {
+	var e error
+	q.writer = nil
+	e = q.file.Close()
+	if e != nil {
+		return e
+	}
+
+	if q.newFileWrite {
+		e = q.tempfile.Close()
+		if e != nil {
+			return e
+		}
+		if q.execOpr {
+			e = os.Remove(q.filePath)
+			if e != nil {
+				return e
+			} else {
+				e = os.Rename(q.filePath+".temp", q.filePath)
+			}
+		} else {
+			e = os.Remove(q.filePath + ".temp")
+		}
+	}
+
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+// func (q *Query) execQueryPartSave(dt toolkit.M) error {
+// 	if len(dt) == 0 {
+// 		return errorlib.Error(packageName, modQuery, "save", "data to insert is not found")
+// 	}
+
+// 	writer := q.writer
+// 	reader := q.reader
+// 	tempHeader := []string{}
+
+// 	for _, val := range q.headerColumn {
+// 		tempHeader = append(tempHeader, val.name)
+// 	}
+
+// 	// Check ID Before Insert
+// 	checkidfound := false
+// 	if nameid := toolkit.IdField(dt); nameid != "" {
+// 		q.updatessave = true
+
+// 		var colsid int
+// 		for i, val := range q.headerColumn {
+// 			if val.name == nameid {
+// 				colsid = i
+// 			}
+// 		}
+
+// 		for {
+// 			dataTempSearch, e := reader.Read()
+// 			for i, val := range dataTempSearch {
+// 				if i == colsid && val == dt[nameid] {
+// 					checkidfound = true
+// 					break
+// 				}
+// 			}
+// 			if e == io.EOF {
+// 				break
+// 			} else if e != nil {
+// 				return errorlib.Error(packageName, modQuery, "Save", e.Error())
+// 			}
+// 		}
+// 	}
+
+// 	if checkidfound {
+// 		e := q.EndSessionWrite()
+// 		if e != nil {
+// 			return errorlib.Error(packageName, modQuery, "Save", e.Error())
+// 		}
+
+// 		q.TypeOpenFile = TypeOpenFile_Create
+
+// 		e = q.StartSessionWrite()
+// 		if e != nil {
+// 			return errorlib.Error(packageName, modQuery, "Save", e.Error())
+// 		}
+
+// 		e = q.execQueryPartUpdate(dt, QueryCondition{})
+// 		if e != nil {
+// 			return errorlib.Error(packageName, modQuery, "Save", e.Error())
+// 		}
+// 		// time.Sleep(1000 * time.Millisecond)
+// 	} else {
+// 		//Change to Do Insert
+// 		dataTemp := []string{}
+
+// 		for _, v := range q.headerColumn {
+// 			if dt.Has(v.name) {
+// 				dataTemp = append(dataTemp, cast.ToString(dt[v.name]))
+// 			} else {
+// 				dataTemp = append(dataTemp, "")
+// 			}
+// 		}
+
+// 		if len(dataTemp) > 0 {
+// 			writer.Write(dataTemp)
+// 			writer.Flush()
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+func (q *Query) execQueryPartInsert(dt toolkit.M) error {
+	var e error
+	e = q.startWriteMode()
+
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec-Insert: ", e.Error())
+	}
+
+	writer := q.writer
+	// reader := q.reader
+	dataTemp := []string{}
+
+	for _, v := range q.headerColumn {
+		if dt.Has(v.name) {
+			dataTemp = append(dataTemp, cast.ToString(dt[v.name]))
+		} else {
+			dataTemp = append(dataTemp, "")
+		}
+	}
+
+	if len(dataTemp) > 0 {
+		writer.Write(dataTemp)
+		writer.Flush()
+	}
+
+	q.execOpr = true
+	e = q.endWriteMode()
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec-Insert: ", e.Error())
+	}
+
+	return nil
+}
+
+func (q *Query) execQueryPartDelete() error {
+	var e error
+	e = q.startWriteMode()
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec-Delete: ", e.Error())
+	}
+
+	writer := q.writer
+	reader := q.reader
+	tempHeader := []string{}
+
+	for _, val := range q.headerColumn {
+		tempHeader = append(tempHeader, val.name)
+	}
+
+	var i int = 0
+	for {
+		i += 1
+
+		dataTemp, e := reader.Read()
+		if e == io.EOF {
+			if !toolkit.HasMember(q.indexes, i) && len(dataTemp) > 0 {
+				writer.Write(dataTemp)
+				writer.Flush()
+			}
+			break
+		} else if e != nil {
+			_ = q.endWriteMode()
+			return err.Error(packageName, modQuery, "Exec-Delete: ", e.Error())
+		}
+
+		if !toolkit.HasMember(q.indexes, i) && len(dataTemp) > 0 {
+			writer.Write(dataTemp)
+			writer.Flush()
+		}
+	}
+
+	q.execOpr = true
+	e = q.endWriteMode()
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec-Delete: ", e.Error())
+	}
+	return nil
+
+}
+
+func (q *Query) execQueryPartUpdate(dt toolkit.M) error {
+	var e error
+	e = q.startWriteMode()
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec-Update: ", e.Error())
+	}
+
+	writer := q.writer
+	reader := q.reader
+	tempHeader := []string{}
+
+	for _, val := range q.headerColumn {
+		tempHeader = append(tempHeader, val.name)
+	}
+
+	var i int = 0
+
+	for {
+		i += 1
+
+		dataTemp, e := reader.Read()
+		if toolkit.HasMember(q.indexes, i) && len(dataTemp) > 0 {
+			for n, v := range tempHeader {
+				if dt.Has(v) {
+					dataTemp[n] = cast.ToString(dt[v])
+				}
+			}
+		}
+
+		if e == io.EOF {
+			if len(dataTemp) > 0 {
+				writer.Write(dataTemp)
+				writer.Flush()
+			}
+			break
+		} else if e != nil {
+			_ = q.endWriteMode()
+			return err.Error(packageName, modQuery, "Exec-Update:", e.Error())
+		}
+		if len(dataTemp) > 0 {
+			writer.Write(dataTemp)
+			writer.Flush()
+		}
+	}
+
+	q.execOpr = true
+	e = q.endWriteMode()
+	if e != nil {
+		return err.Error(packageName, modQuery, "Exec-Update: ", e.Error())
+	}
+	return nil
+}
+
 func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
+	f.Field = strings.ToLower(f.Field)
 	if (f.Op == "$and" || f.Op == "$or") && strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
 		fs := f.Value.([]*dbox.Filter)
 		for i, ff := range fs {
@@ -656,12 +824,12 @@ func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
 			for i := 0; i < len(fSlice); i++ {
 				// nilai fSlice [i] : @name1
 				if string(cast.ToString(fSlice[i])[0]) == "@" {
-					fSlice[i] = in.Get(strings.Replace(cast.ToString(fSlice[i]), "@", "", 1), "")
+					fSlice[i] = in.Get(cast.ToString(fSlice[i]), "")
 				}
 			}
 			f.Value = fSlice
 		} else if string(cast.ToString(f.Value)[0]) == "@" {
-			f.Value = in.Get(strings.Replace(cast.ToString(f.Value), "@", "", 1), "")
+			f.Value = in.Get(cast.ToString(f.Value), "")
 		}
 	}
 	return f

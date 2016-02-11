@@ -34,28 +34,29 @@ func TestConnect(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// func TestFilter(t *testing.T) {
-// 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
-// 	fb.AddFilter(dbox.Or(
-// 		dbox.Contains("regfield", "1"),
-// 		dbox.Ne("nefield", 1),
-// 		dbox.Eq("group", "administrators")))
-// 	b, e := fb.Build()
-// 	if e != nil {
-// 		t.Errorf("Error %s", e.Error())
-// 	} else {
-// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
-// 	}
+func TestFilter(t *testing.T) {
+	t.Skip("Just Skip Test")
+	fb := dbox.NewFilterBuilder(new(FilterBuilder))
+	fb.AddFilter(dbox.Or(
+		dbox.Contains("regfield", "1"),
+		dbox.Ne("nefield", 1),
+		dbox.Eq("group", "administrators")))
+	b, e := fb.Build()
+	if e != nil {
+		t.Errorf("Error %s", e.Error())
+	} else {
+		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
+	}
 
-// 	fb = dbox.NewFilterBuilder(new(FilterBuilder))
-// 	fb.AddFilter(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30")))
-// 	c, e := fb.Build()
-// 	if e != nil {
-// 		t.Errorf("Error %s", e.Error())
-// 	} else {
-// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(c))
-// 	}
-// }
+	fb = dbox.NewFilterBuilder(new(FilterBuilder))
+	fb.AddFilter(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30")))
+	c, e := fb.Build()
+	if e != nil {
+		t.Errorf("Error %s", e.Error())
+	} else {
+		fmt.Printf("Result:\n%v\n", toolkit.JsonString(c))
+	}
+}
 
 type employee struct {
 	Id        string
@@ -117,8 +118,9 @@ func TestSelect(t *testing.T) {
 	}
 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Endwith("FirstName", "Sidik")).Cursor(nil)
-	//csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Startwith("FirstName", "Alip")).Cursor(nil)
+	// csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Startwith("FirstName", "Alip")).Cursor(nil)
+	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Endwith("FirstName", "@consfirst")).
+		Cursor(toolkit.M{}.Set("@confirst", "v"))
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -173,7 +175,7 @@ func TestSelectFreeQuery(t *testing.T) {
 	}
 	defer c.Close()
 
-	tq, e := dbox.NewQueryFromSQL(c, `SELECT Id, FirstName, LastName FROM tab WHERE ((Email = "userAA@yahoo.com" or Email = "userBB@yahoo.com") or (Email = "userCC@yahoo.com" or Id = '12345'))`)
+	tq, e := dbox.NewQueryFromSQL(c, `SELECT Id, FirstName, LastName FROM tab WHERE ((Email = "userAA@yahoo.com" or Email = "userBB@yahoo.com") or (Email = "userCC@yahoo.com" or id = '12345'))`)
 	if e != nil {
 		t.Errorf("Query pre error: %s \n", e.Error())
 		return

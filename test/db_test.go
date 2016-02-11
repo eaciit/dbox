@@ -4,8 +4,13 @@ import (
 	"github.com/eaciit/dbox"
 	_ "github.com/eaciit/dbox/dbc/mongo"
 	"github.com/eaciit/toolkit"
+	"os"
 	"testing"
 )
+
+func killApp() {
+	os.Exit(1000)
+}
 
 var ctx dbox.IConnection
 
@@ -13,7 +18,7 @@ func connect() error {
 	var e error
 	if ctx == nil {
 		ctx, e = dbox.NewConnection("mongo",
-			&dbox.ConnectionInfo{"localhost:27017", "eccolony", "", "", nil})
+			&dbox.ConnectionInfo{"localhost:27123", "eccolony", "", "", nil})
 		if e != nil {
 			return e
 		}
@@ -52,6 +57,12 @@ type testUser struct {
 	Enable   bool
 }
 
+func TestParse(t *testing.T) {
+	//defer killApp()
+	f := dbox.ParseFilter("city", "!Surabaya,Medan..", "", "")
+	toolkit.Printf("F Value: %s \n", toolkit.JsonString(f))
+}
+
 func TestCRUD(t *testing.T) {
 	skipIfConnectionIsNil(t)
 	e := ctx.NewQuery().Delete().From(tableName).SetConfig("multiexec", true).Exec(nil)
@@ -79,6 +90,25 @@ func TestCRUD(t *testing.T) {
 	e = ctx.NewQuery().Update().From(tableName).Where(dbox.Lte("_id", "user200")).Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("enable", false)))
 	if e != nil {
 		t.Fatalf("Update fail: %s", e.Error())
+	}
+}
+
+func TestCursor(t *testing.T) {
+	skipIfConnectionIsNil(t)
+	cursor, e := ctx.NewQuery().From(tableName).
+		Where(dbox.Lte("enable", false)).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Unable to generate cursor. %s", e.Error())
+	}
+	defer cursor.Close()
+
+	results := make([]toolkit.M, 0)
+	e = cursor.Fetch(&results, 0, false)
+	if e != nil {
+		t.Errorf("Unable to iterate cursor %s", e.Error())
+	} else {
+		toolkit.Printf("Result:\n%s\n", toolkit.JsonString(results))
 	}
 }
 

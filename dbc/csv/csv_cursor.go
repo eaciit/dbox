@@ -59,10 +59,50 @@ func (c *Cursor) prepIter() error {
 }
 
 func (c *Cursor) Count() int {
-	return c.count
+	return len(c.ConditionVal.indexes)
 }
 
-func (c *Cursor) ResetFetch() error {
+func (c *Cursor) generateIndexes() error {
+	var e error
+	output := []int{}
+	var n int = 0
+	for {
+		tdread, e := c.reader.Read()
+		if e != nil && e != io.EOF {
+			break
+		}
+		n++
+		tm := toolkit.M{}
+
+		for i, v := range tdread {
+			lowername := strings.ToLower(c.headerColumn[i].name)
+			tm.Set(lowername, v)
+			if c.headerColumn[i].dataType == "int" {
+				tm[lowername] = cast.ToInt(v, cast.RoundingAuto)
+			} else if c.headerColumn[i].dataType == "float" {
+				tm[lowername] = cast.ToF64(v, (len(v) - (strings.IndexAny(v, "."))), cast.RoundingAuto)
+			}
+		}
+
+		if c.ConditionVal.getCondition(tm) { //len(c.ConditionVal.where) == 0 || dbox.MatchM(tm, c.ConditionVal.where) {
+			output = append(output, n)
+		}
+
+		if e == io.EOF {
+			break
+		}
+	}
+	c.ConditionVal.indexes = output
+
+	e = c.resetConnection()
+	if e != nil {
+		return errorlib.Error(packageName, modCursor, "Reset Fetch", e.Error())
+	}
+
+	return e
+}
+
+func (c *Cursor) resetConnection() error {
 	var e error
 	c.Connection().(*Connection).Close()
 	e = c.Connection().(*Connection).Connect()
@@ -77,14 +117,23 @@ func (c *Cursor) ResetFetch() error {
 
 	e = c.prepIter()
 	if e != nil {
-		return errorlib.Error(packageName, modCursor, "ResetFetch", e.Error())
+		return errorlib.Error(packageName, modCursor, "Reset Connection", e.Error())
 	}
+	return e
+}
 
-	// c.PrepareCursor()
-	// if e != nil {
-	// 	return errorlib.Error(packageName, modCursor, "Prepare Cursor", e.Error())
-	// }
-
+func (c *Cursor) ResetFetch() error {
+	var e error
+	e = c.resetConnection()
+	if e != nil {
+		return errorlib.Error(packageName, modCursor, "Reset Fetch", e.Error())
+	}
+	if len(c.ConditionVal.where) > 0 {
+		e = c.generateIndexes()
+		if e != nil {
+			return errorlib.Error(packageName, modCursor, "Reset Fetch", e.Error())
+		}
+	}
 	return nil
 }
 
@@ -130,7 +179,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	lineCount := 0
 
 	//=============================
-	// fmt.Println("Qursor 133 : ", c.ConditionVal.Find)
+	// fmt.Println("Qursor 133 : ", c.ConditionVal.indexes)
 	for {
 		iv := reflect.New(v).Interface()
 

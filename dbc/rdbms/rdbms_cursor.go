@@ -3,7 +3,7 @@ package rdbms
 import (
 	"database/sql"
 	"errors"
-	"fmt"
+	// "fmt"
 	"github.com/eaciit/dbox"
 	//"github.com/eaciit/errorlib"
 	"github.com/eaciit/cast"
@@ -48,10 +48,7 @@ func (c *Cursor) ResetFetch() error {
 }
 
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
-	fmt.Println(c.QueryString)
-
 	rows, e := c.session.Query(c.QueryString)
-
 	var valueType reflect.Type
 
 	if n == 1 {

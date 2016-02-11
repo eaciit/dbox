@@ -4,6 +4,9 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	// "regexp"
+	// "strconv"
+	// "strings"
 )
 
 const (
@@ -12,15 +15,19 @@ const (
 
 type Cursor struct {
 	dbox.Cursor
-	count, lastFeteched int
-	whereFields         []*dbox.Filter
-	readFile            []byte
-	isWhere             bool
-	jsonSelect          []string
+	count, lastFeteched, skip, take, allcount int
+	whereFields                               []*dbox.Filter
+	datas                                     []toolkit.M
+	isWhere                                   bool
+	jsonSelect                                []string
 }
 
 func (c *Cursor) Close() {
 
+}
+
+func (c *Cursor) Count() int {
+	return toolkit.SliceLen(c.datas)
 }
 
 func (c *Cursor) ResetFetch() error {
@@ -38,11 +45,21 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	var first, last int
 	dataJson := []toolkit.M{}
-	var datas []toolkit.M
-	toolkit.Unjson(c.readFile, &datas)
 
-	c.count = len(datas)
+	c.count = len(c.datas)
+	if c.skip > 0 {
+		first = c.skip
+	}
+
+	if c.take > 0 {
+		c.count = c.take
+		// last = c.take
+	}
+
 	if n == 0 {
+		if c.lastFeteched == c.count {
+			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!, please do reset fetch")
+		}
 		last = c.count
 	} else if n > 0 {
 		switch {
@@ -59,36 +76,29 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 					return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
 				}
 				last = c.count
+				c.lastFeteched = last
 			}
 			// toolkit.Printf("first>%v last>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
+		}
+
+		if first > last {
+			return errorlib.Error(packageName, modCursor, "Fetch", "Wrong fetched data!")
 		}
 	}
 
 	if c.isWhere {
-		i := dbox.Find(datas, c.whereFields)
+		i := dbox.Find(c.datas, c.whereFields)
 		last = len(i)
 		for _, index := range i[first:last] {
-			dataJson = append(dataJson, datas[index])
+			dataJson = append(dataJson, c.datas[index])
 		}
 
 	} else {
-		dataJson = datas[first:last]
+		dataJson = c.datas[first:last]
 	}
 
 	if toolkit.SliceLen(c.jsonSelect) > 0 {
-		var getRemField = toolkit.M{}
-		for _, v := range dataJson {
-			for i, _ := range v {
-				getRemField.Set(i, i)
-			}
-
-			if c.jsonSelect[0] != "*" {
-				fields := c.removeDuplicatesUnordered(getRemField, c.jsonSelect)
-				for _, field := range fields {
-					v.Unset(field)
-				}
-			}
-		}
+		dataJson = c.GetSelected(dataJson, c.jsonSelect)
 	}
 
 	e := toolkit.Serde(dataJson, m, "json")
@@ -96,6 +106,23 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 	return nil
+}
+
+func (c *Cursor) GetSelected(js []toolkit.M, field []string) []toolkit.M {
+	var getRemField = toolkit.M{}
+	for _, v := range js {
+		for i, _ := range v {
+			getRemField.Set(i, i)
+		}
+
+		if field[0] != "*" {
+			fields := c.removeDuplicatesUnordered(getRemField, field)
+			for _, field := range fields {
+				v.Unset(field)
+			}
+		}
+	}
+	return js
 }
 
 func (c *Cursor) removeDuplicatesUnordered(elements toolkit.M, key []string) []string {
