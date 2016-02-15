@@ -9,6 +9,7 @@ import (
 	//"github.com/eaciit/database/base"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
+	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
 	"reflect"
 	"strings"
@@ -21,6 +22,7 @@ const (
 
 type Query struct {
 	dbox.Query
+	Hive       *hive.Hive
 	Sql        sql.DB
 	usePooling bool
 	DriverDB   string
@@ -36,6 +38,11 @@ func (q *Query) Session() sql.DB {
 	}
 	// }
 	return q.Sql
+}
+
+func (q *Query) SessionHive() *hive.Hive {
+	q.Hive = q.Connection().(*Connection).Hive
+	return q.Hive
 }
 
 func (q *Query) GetDriverDB() string {
@@ -142,11 +149,16 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	*/
 
 	dbname := q.Connection().Info().Database
-	session := q.Session()
 	cursor := dbox.NewCursor(new(Cursor))
-	cursor.(*Cursor).session = session
+	if q.GetDriverDB() == "Hive" {
+		session := q.SessionHive()
+		cursor.(*Cursor).sessionHive = session
+	} else {
+		session := q.Session()
+		cursor.(*Cursor).session = session
+	}
 	driverName := q.GetDriverDB()
-	driverName = "oracle"
+	// driverName = "oracle"
 	var QueryString string
 
 	/*
@@ -317,7 +329,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			QueryString += " ORDER BY " + orderExpression
 		}
 
-		if driverName == "mysql" {
+		if driverName == "mysql" || driverName == "hive" {
 			if hasSkip && hasTake {
 				QueryString += " LIMIT " + cast.ToString(take) +
 					" OFFSET " + cast.ToString(skip)
@@ -359,7 +371,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
 		}
-		fmt.Println(QueryString)
+		fmt.Println("query string : ", QueryString)
 		cursor.(*Cursor).QueryString = QueryString
 
 	} else if hasProcedure {

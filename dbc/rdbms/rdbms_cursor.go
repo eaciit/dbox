@@ -3,10 +3,11 @@ package rdbms
 import (
 	"database/sql"
 	"errors"
-	// "fmt"
+	"fmt"
 	"github.com/eaciit/dbox"
 	//"github.com/eaciit/errorlib"
 	"github.com/eaciit/cast"
+	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
 	"reflect"
 	"strings"
@@ -20,11 +21,19 @@ const (
 	QueryResultPipe   = "SQLPipe"
 )
 
+type Sample7 struct {
+	Code        string `tag_name:"code"`
+	Description string `tag_name:"description"`
+	Total_emp   string `tag_name:"total_emp"`
+	Salary      string `tag_name:"salary"`
+}
+
 type Cursor struct {
 	dbox.Cursor
 	ResultType  string
 	count       int
 	start       int
+	sessionHive *hive.Hive
 	session     sql.DB
 	QueryString string
 }
@@ -48,6 +57,20 @@ func (c *Cursor) ResetFetch() error {
 }
 
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
+	h := c.sessionHive
+	if h != nil {
+		var DoSomething = func(res string) {
+			tmp := Sample7{}
+			h.ParseOutput(res, &tmp)
+			fmt.Println(tmp)
+		}
+
+		e := h.ExecLine(c.QueryString, DoSomething)
+		fmt.Printf("error: \n%v\n", e)
+
+		return nil
+	}
+
 	rows, e := c.session.Query(c.QueryString)
 	var valueType reflect.Type
 
