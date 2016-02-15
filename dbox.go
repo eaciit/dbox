@@ -129,8 +129,10 @@ func MatchV(v interface{}, f *Filter) bool {
 		toolkit.FromBytes(toolkit.ToBytes(f.Value, ""), "", &values)
 
 		for _, val := range values {
-			value := toolkit.Sprintf(".*%s.*", val.(string))
-			b, _ = regexp.Match(value, []byte(v.(string)))
+			// value := toolkit.Sprintf(".*%s.*", val.(string))
+			// b, _ = regexp.Match(value, []byte(v.(string)))
+			r := regexp.MustCompile(`(?i)` + val.(string))
+			b = r.Match([]byte(v.(string)))
 			if b {
 				return true
 			}
