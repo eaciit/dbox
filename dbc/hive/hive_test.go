@@ -2,8 +2,8 @@ package hive
 
 import (
 	"fmt"
+	"github.com/eaciit/toolkit"
 	"github.com/rinosukmandityo/dbox"
-	// "github.com/eaciit/toolkit"
 	"testing"
 )
 
@@ -78,22 +78,22 @@ func TestSelect(t *testing.T) {
 	// defer csr.Close()
 
 	// // results := make([]map[string]interface{}, 0)
-	// results := make([]User, 0)
+	results := make([]User, 0)
 
-	// err := csr.Fetch(&results, 0, false)
-	// if err != nil {
-	// 	t.Errorf("Unable to fetch: %s \n", err.Error())
-	// } else {
-	// 	fmt.Println("======================")
-	// 	fmt.Println("Select with FILTER")
-	// 	fmt.Println("======================")
+	err := csr.Fetch(&results, 0, false)
+	if err != nil {
+		t.Errorf("Unable to fetch: %s \n", err.Error())
+	} else {
+		fmt.Println("======================")
+		fmt.Println("Select with FILTER")
+		fmt.Println("======================")
 
-	// 	fmt.Printf("Fetch N OK. Result:\n")
-	// 	for i := 0; i < len(results); i++ {
-	// 		fmt.Printf("%v \n", toolkit.JsonString(results[i]))
-	// 	}
+		fmt.Printf("Fetch N OK. Result:\n")
+		for i := 0; i < len(results); i++ {
+			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
+		}
 
-	// }
+	}
 
 	// if e != nil {
 	// 	t.Errorf("Cursor pre error: %s \n", e.Error())
