@@ -1,4 +1,4 @@
-package mysql
+package hive
 
 import (
 	"fmt"
@@ -6,12 +6,11 @@ import (
 	// err "github.com/eaciit/errorlib"
 	"github.com/eaciit/dbox/dbc/rdbms"
 	"github.com/eaciit/toolkit"
-	_ "github.com/go-sql-driver/mysql"
 	// "database/sql"
 )
 
 const (
-	packageName   = "eaciit.dbox.dbc.mysql"
+	packageName   = "eaciit.dbox.dbc.hive"
 	modConnection = "Connection"
 )
 
@@ -20,7 +19,7 @@ type Connection struct {
 }
 
 func init() {
-	dbox.RegisterConnector("mysql", NewConnection)
+	dbox.RegisterConnector("hive", NewConnection)
 }
 func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 	if ci.Settings == nil {
@@ -38,13 +37,11 @@ func (c *Connection) Connect() error {
 	db := ci.Database
 	username := ci.UserName
 	pass := ci.Password
-	ConnectionString := username + ":" + pass + "@tcp(" + host + ")/" + db //user:password@tcp(127.0.0.1:3306)/hello"
-	// sqlcon, e := sql.Open("mysql", ConnectionString)
-	// if e != nil {
-	// 	return err.Error(packageName, modConnection, "Connect", e.Error())
-	// }
-	// c.Sql = *sqlcon
-	err := c.RdbmsConnect("mysql", ConnectionString)
+	// ConnectionString := username + ":" + pass + "@tcp(" + host + ")/" + db //user:password@tcp(127.0.0.1:3306)/hello"
+	ConnectionString := host + ", " + db + ", " + username + ", " + pass
+	// h = HiveConfig("192.168.0.223:10000", "default", "developer", "b1gD@T@")
+
+	err := c.RdbmsConnect("hive", ConnectionString)
 	if err != nil {
 		fmt.Println(err)
 	}
