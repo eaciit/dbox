@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/eaciit/dbox"
+	"github.com/rinosukmandityo/dbox"
 	//"github.com/eaciit/errorlib"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/hdc/hive"
@@ -58,14 +58,22 @@ func (c *Cursor) ResetFetch() error {
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	h := c.sessionHive
 	if h != nil {
-		var DoSomething = func(res string) {
-			tmp := Sample7{}
-			h.ParseOutput(res, &tmp)
-			fmt.Println(tmp)
+		// var DoSomething = func(res string) {
+		// 	tmp := Sample7{}
+		// 	h.ParseOutput(res, &tmp)
+		// 	fmt.Println(tmp)
+		// }
+
+		// e := h.ExecLine(c.QueryString, DoSomething)
+		// fmt.Printf("error: \n%v\n", e)
+
+		_, e := h.Exec(c.QueryString)
+
+		if e != nil {
+			fmt.Printf("error: \n%v\n", e)
 		}
 
-		e := h.ExecLine(c.QueryString, DoSomething)
-		fmt.Printf("error: \n%v\n", e)
+		h.ParseOutput("", m)
 
 		return nil
 	}
