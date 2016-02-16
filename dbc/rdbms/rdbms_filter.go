@@ -3,7 +3,7 @@ package rdbms
 import (
 	//"fmt"
 	"github.com/eaciit/cast"
-	"github.com/rinosukmandityo/dbox"
+	"github.com/eaciit/dbox"
 )
 
 type FilterBuilder struct {
