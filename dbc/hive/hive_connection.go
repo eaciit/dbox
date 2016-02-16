@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/rinosukmandityo/dbox"
 	// err "github.com/eaciit/errorlib"
-	"github.com/eaciit/dbox/dbc/rdbms"
 	"github.com/eaciit/toolkit"
+	"github.com/rinosukmandityo/dbox/dbc/rdbms"
 	// "database/sql"
 )
 
