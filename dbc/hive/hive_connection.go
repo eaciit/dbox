@@ -38,7 +38,7 @@ func (c *Connection) Connect() error {
 	username := ci.UserName
 	pass := ci.Password
 	// ConnectionString := username + ":" + pass + "@tcp(" + host + ")/" + db //user:password@tcp(127.0.0.1:3306)/hello"
-	ConnectionString := host + ", " + db + ", " + username + ", " + pass
+	ConnectionString := host + "," + db + "," + username + "," + pass + "," + ""
 	// h = HiveConfig("192.168.0.223:10000", "default", "developer", "b1gD@T@")
 
 	err := c.RdbmsConnect("hive", ConnectionString)
