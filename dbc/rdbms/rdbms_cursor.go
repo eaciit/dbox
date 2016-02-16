@@ -58,6 +58,7 @@ func (c *Cursor) ResetFetch() error {
 
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	h := c.sessionHive
+	fmt.Println("session in rdbms cursor : ", c.sessionHive)
 	if h != nil {
 		var DoSomething = func(res string) {
 			tmp := Sample7{}

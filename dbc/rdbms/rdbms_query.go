@@ -152,6 +152,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	cursor := dbox.NewCursor(new(Cursor))
 	if q.GetDriverDB() == "Hive" {
 		session := q.SessionHive()
+		fmt.Println("set session from rdbms query : ", session)
 		cursor.(*Cursor).sessionHive = session
 	} else {
 		session := q.Session()
