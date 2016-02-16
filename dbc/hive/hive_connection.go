@@ -5,7 +5,6 @@ import (
 	"github.com/eaciit/dbox"
 	// err "github.com/eaciit/errorlib"
 	"github.com/eaciit/dbox/dbc/rdbms"
-	// . "github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
 	// "database/sql"
 )
