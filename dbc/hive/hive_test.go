@@ -59,6 +59,17 @@ func TestSelect(t *testing.T) {
 		return
 	}
 
+	// var DoSomething = func(res string) {
+	// 	tmp := Sample7{}
+	// 	h.ParseOutput(res, &tmp)
+	// 	fmt.Println(tmp)
+	// }
+
+	// e = h.ExecLine(q, DoSomething)
+	// fmt.Printf("error: \n%v\n", e)
+	// defer csr.Close()
+
+	// // results := make([]map[string]interface{}, 0)
 	results := make([]Sample7, 0)
 
 	err := csr.Fetch(&results, 0, false)
@@ -75,4 +86,32 @@ func TestSelect(t *testing.T) {
 		}
 
 	}
+
+	// if e != nil {
+	// 	t.Errorf("Cursor pre error: %s \n", e.Error())
+	// 	return
+	// }
+	// if csr == nil {
+	// 	t.Errorf("Cursor not initialized")
+	// 	return
+	// }
+	// defer csr.Close()
+
+	// // results := make([]map[string]interface{}, 0)
+	// results := make([]User, 0)
+
+	// err := csr.Fetch(&results, 0, false)
+	// if err != nil {
+	// 	t.Errorf("Unable to fetch: %s \n", err.Error())
+	// } else {
+	// 	fmt.Println("======================")
+	// 	fmt.Println("Select with FILTER")
+	// 	fmt.Println("======================")
+
+	// 	fmt.Printf("Fetch N OK. Result:\n")
+	// 	for i := 0; i < len(results); i++ {
+	// 		fmt.Printf("%v \n", toolkit.JsonString(results[i]))
+	// 	}
+
+	// }
 }
