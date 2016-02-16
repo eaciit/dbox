@@ -3,7 +3,7 @@ package hive
 import (
 	"fmt"
 	"github.com/eaciit/dbox"
-	"github.com/eaciit/toolkit"
+	// "github.com/eaciit/toolkit"
 	"testing"
 )
 
@@ -29,10 +29,14 @@ func prepareConnection() (dbox.IConnection, error) {
 }
 
 func TestConnect(t *testing.T) {
-	_, e := prepareConnection()
+	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect: %s \n", e.Error())
+		fmt.Println(e)
+	} else {
+		fmt.Println(c)
 	}
+	// defer c.Close()
 }
 
 func TestSelect(t *testing.T) {
@@ -40,7 +44,11 @@ func TestSelect(t *testing.T) {
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 		return
+	} else {
+		fmt.Println(c)
 	}
+
+	// defer c.Close()
 
 	csr, e := c.NewQuery().
 		Select("code", "description", "total_emp", "salary").
@@ -69,22 +77,22 @@ func TestSelect(t *testing.T) {
 	// defer csr.Close()
 
 	// // results := make([]map[string]interface{}, 0)
-	results := make([]Sample7, 0)
+	// results := make([]User, 0)
 
-	err := csr.Fetch(&results, 0, false)
-	if err != nil {
-		t.Errorf("Unable to fetch: %s \n", err.Error())
-	} else {
-		fmt.Println("======================")
-		fmt.Println("Select with FILTER")
-		fmt.Println("======================")
+	// err := csr.Fetch(&results, 0, false)
+	// if err != nil {
+	// 	t.Errorf("Unable to fetch: %s \n", err.Error())
+	// } else {
+	// 	fmt.Println("======================")
+	// 	fmt.Println("Select with FILTER")
+	// 	fmt.Println("======================")
 
-		fmt.Printf("Fetch N OK. Result:\n")
-		for i := 0; i < len(results); i++ {
-			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
-		}
+	// 	fmt.Printf("Fetch N OK. Result:\n")
+	// 	for i := 0; i < len(results); i++ {
+	// 		fmt.Printf("%v \n", toolkit.JsonString(results[i]))
+	// 	}
 
-	}
+	// }
 
 	// if e != nil {
 	// 	t.Errorf("Cursor pre error: %s \n", e.Error())

@@ -149,7 +149,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	dbname := q.Connection().Info().Database
 	cursor := dbox.NewCursor(new(Cursor))
-	if q.GetDriverDB() == "hive" {
+	if q.GetDriverDB() == "Hive" {
 		session := q.SessionHive()
 		cursor.(*Cursor).sessionHive = session
 	} else {
@@ -370,7 +370,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
 		}
-		// fmt.Println("query string : ", QueryString)
+		fmt.Println("query string : ", QueryString)
 		cursor.(*Cursor).QueryString = QueryString
 
 	} else if hasProcedure {
