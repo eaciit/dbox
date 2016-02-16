@@ -90,7 +90,7 @@ func (c *Connection) Connect() error {
 		c.file, err = os.Open(filePath)
 		if err != nil {
 			if isNewFile {
-				c.file, err = os.OpenFile(filePath, os.O_CREATE, 0666)
+				c.file, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
 				if err != nil {
 					return errorlib.Error(packageName, modConnection, "Connect", "Cannot Create New File")
 				}
@@ -342,7 +342,7 @@ func (c *Connection) StartSessionWrite() error {
 
 		if c.TypeOpenFile == TypeOpenFile_Create {
 
-			c.tempfile, err = os.OpenFile(filePath+".temp", os.O_CREATE, 0666)
+			c.tempfile, err = os.OpenFile(filePath+".temp", os.O_RDWR|os.O_CREATE, 0666)
 			c.writer = csv.NewWriter(c.tempfile)
 
 			if c.isUseHeader {
