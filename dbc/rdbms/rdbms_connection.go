@@ -35,7 +35,6 @@ func (c *Connection) RdbmsConnect(drivername string, stringConnection string) er
 		c.Sql = *sqlcon
 		c.Drivername = drivername
 	}
-
 	return nil
 }
 

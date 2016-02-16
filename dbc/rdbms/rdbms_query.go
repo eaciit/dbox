@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
-	//"github.com/eaciit/database/base"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/hdc/hive"
