@@ -106,7 +106,7 @@ func (c *Connection) Connect() error {
 			}
 
 			if !isNewFile || err != nil {
-				return errorlib.Error(packageName, modConnection, "Connect", "Cannot Open File")
+				return errorlib.Error(packageName, modConnection, "Connect", "Cannot Open File "+filePath)
 			}
 		}
 		c.reader = csv.NewReader(c.file)
@@ -329,7 +329,7 @@ func (c *Connection) StartSessionWrite() error {
 
 		c.file, err = os.OpenFile(filePath, os.O_RDWR|os.O_APPEND, 0666)
 		if err != nil {
-			return errorlib.Error(packageName, modConnection, "SessionWrite", "Cannot Open File")
+			return errorlib.Error(packageName, modConnection, "SessionWrite", "Cannot Open File "+filePath)
 		}
 
 		c.reader = csv.NewReader(c.file)
