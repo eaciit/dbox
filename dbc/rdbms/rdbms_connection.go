@@ -3,10 +3,10 @@ package rdbms
 import (
 	"database/sql"
 	"fmt"
+	"github.com/eaciit/dbox"
 	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
-	"github.com/rinosukmandityo/dbox"
 	"strings"
 )
 
@@ -26,8 +26,6 @@ func (c *Connection) RdbmsConnect(drivername string, stringConnection string) er
 	if drivername == "hive" {
 		connInfo := strings.Split(stringConnection, ",")
 		c.Hive = hive.HiveConfig(connInfo[0], connInfo[1], connInfo[2], connInfo[3])
-		fmt.Println("string connection : ", stringConnection)
-		fmt.Println("c.Hive : ", c.Hive)
 		c.Drivername = drivername
 	} else {
 		sqlcon, e := sql.Open(drivername, stringConnection)

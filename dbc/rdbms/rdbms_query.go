@@ -7,10 +7,10 @@ import (
 	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
 	//"github.com/eaciit/database/base"
+	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
-	"github.com/rinosukmandityo/dbox"
 	"reflect"
 	"strings"
 	"time"
@@ -152,7 +152,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	cursor := dbox.NewCursor(new(Cursor))
 	if q.GetDriverDB() == "hive" {
 		session := q.SessionHive()
-		fmt.Println("set session from rdbms query : ", session)
 		cursor.(*Cursor).sessionHive = session
 	} else {
 		session := q.Session()
@@ -372,7 +371,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
 		}
-		fmt.Println("query string : ", QueryString)
+		// fmt.Println("query string : ", QueryString)
 		cursor.(*Cursor).QueryString = QueryString
 
 	} else if hasProcedure {

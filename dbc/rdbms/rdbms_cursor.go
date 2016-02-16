@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/rinosukmandityo/dbox"
+	"github.com/eaciit/dbox"
 	//"github.com/eaciit/errorlib"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/hdc/hive"
@@ -58,7 +58,6 @@ func (c *Cursor) ResetFetch() error {
 
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	h := c.sessionHive
-	fmt.Println("session in rdbms cursor : ", c.sessionHive)
 	if h != nil {
 		var DoSomething = func(res string) {
 			tmp := Sample7{}
