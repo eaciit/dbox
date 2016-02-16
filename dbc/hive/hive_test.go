@@ -2,8 +2,8 @@ package hive
 
 import (
 	"fmt"
-	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
+	"github.com/rinosukmandityo/dbox"
 	"testing"
 )
 
@@ -30,10 +30,14 @@ func prepareConnection() (dbox.IConnection, error) {
 }
 
 func TestConnect(t *testing.T) {
-	_, e := prepareConnection()
+	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect: %s \n", e.Error())
+		fmt.Println(e)
+	} else {
+		fmt.Println(c)
 	}
+	// defer c.Close()
 }
 
 func TestSelect(t *testing.T) {
@@ -41,7 +45,11 @@ func TestSelect(t *testing.T) {
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 		return
+	} else {
+		fmt.Println(c)
 	}
+
+	// defer c.Close()
 
 	csr, e := c.NewQuery().
 		Select("code", "description", "total_emp", "salary").
