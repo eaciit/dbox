@@ -78,7 +78,7 @@ func TestSelect(t *testing.T) {
 	// defer csr.Close()
 
 	// // results := make([]map[string]interface{}, 0)
-	results := make([]User, 0)
+	results := make([]Sample7, 0)
 
 	err := csr.Fetch(&results, 0, false)
 	if err != nil {
