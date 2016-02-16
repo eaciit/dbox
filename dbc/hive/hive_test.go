@@ -15,7 +15,6 @@ type Sample7 struct {
 }
 
 func prepareConnection() (dbox.IConnection, error) {
-	// ci := &dbox.ConnectionInfo{"localhost:3306", "test", "root", "root", nil}
 	ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "developer", "b1gD@T@", nil}
 	c, e := dbox.NewConnection("hive", ci)
 	if e != nil {
