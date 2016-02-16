@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/eaciit/dbox"
+	"github.com/rinosukmandityo/dbox"
 	//"github.com/eaciit/errorlib"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/hdc/hive"

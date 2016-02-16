@@ -2,7 +2,7 @@ package hive
 
 import (
 	"fmt"
-	"github.com/eaciit/dbox"
+	"github.com/rinosukmandityo/dbox"
 	// "github.com/eaciit/toolkit"
 	"testing"
 )

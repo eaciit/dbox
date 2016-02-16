@@ -2,9 +2,9 @@ package hive
 
 import (
 	"fmt"
-	"github.com/eaciit/dbox"
+	"github.com/rinosukmandityo/dbox"
 	// err "github.com/eaciit/errorlib"
-	"github.com/eaciit/dbox/dbc/rdbms"
+	"github.com/eaciit/rinosukmandityo/dbc/rdbms"
 	// . "github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
 	// "database/sql"
