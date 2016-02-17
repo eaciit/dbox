@@ -3,17 +3,7 @@ package rdbms
 import (
 	"database/sql"
 	"errors"
-<<<<<<< HEAD
 	"github.com/eaciit/dbox"
-=======
-<<<<<<< HEAD
-	"fmt"
-	"github.com/rinosukmandityo/dbox"
-=======
-	//"fmt"
-	"github.com/ranggadablues/dbox"
->>>>>>> bbe204ed9e388ba424883a5ce94877c03ef0bba5
->>>>>>> refs/remotes/origin/master
 	//"github.com/eaciit/errorlib"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/hdc/hive"
@@ -69,24 +59,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	tableData := []toolkit.M{}
 	h := c.sessionHive
 	if h != nil {
-<<<<<<< HEAD
-		// var DoSomething = func(res string) {
-		// 	tmp := Sample7{}
-		// 	h.ParseOutput(res, &tmp)
-		// 	fmt.Println(tmp)
-		// }
-
-		// e := h.ExecLine(c.QueryString, DoSomething)
-		// fmt.Printf("error: \n%v\n", e)
-
-		_, e := h.Exec(c.QueryString)
-
-		if e != nil {
-			fmt.Printf("error: \n%v\n", e)
-		}
-
-		h.ParseOutput("", m)
-=======
 		var e error
 		var DoSomething = func(res string) {
 			fields := toolkit.M{}
@@ -107,7 +79,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		} else {
 			last = n
 		}
->>>>>>> bbe204ed9e388ba424883a5ce94877c03ef0bba5
 
 		tableData = c.datas[first:last]
 
