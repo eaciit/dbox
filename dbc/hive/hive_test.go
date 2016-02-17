@@ -2,7 +2,7 @@ package hive
 
 import (
 	"fmt"
-	"github.com/eaciit/dbox"
+	"github.com/ranggadablues/dbox"
 	"github.com/eaciit/toolkit"
 	"testing"
 )
@@ -42,7 +42,7 @@ func TestSelect(t *testing.T) {
 		return
 	}
 
-	csr, e := c.NewQuery().
+	csr,e:= c.NewQuery().
 		Select("code", "description", "total_emp", "salary").
 		From("sample_07").
 		Take(5).
@@ -58,19 +58,7 @@ func TestSelect(t *testing.T) {
 		return
 	}
 
-	// var DoSomething = func(res string) {
-	// 	tmp := Sample7{}
-	// 	h.ParseOutput(res, &tmp)
-	// 	fmt.Println(tmp)
-	// }
-
-	// e = h.ExecLine(q, DoSomething)
-	// fmt.Printf("error: \n%v\n", e)
-	// defer csr.Close()
-
-	// // results := make([]map[string]interface{}, 0)
-	results := make([]Sample7, 0)
-
+	results := []Sample7{}
 	err := csr.Fetch(&results, 0, false)
 	if err != nil {
 		t.Errorf("Unable to fetch: %s \n", err.Error())
@@ -79,38 +67,38 @@ func TestSelect(t *testing.T) {
 		fmt.Println("Select with FILTER")
 		fmt.Println("======================")
 
-		fmt.Printf("Fetch N OK. Result:\n")
-		for i := 0; i < len(results); i++ {
-			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
-		}
+		fmt.Printf("Fetch limit 5 OK. Result:\n")
+		fmt.Printf("%v \n", toolkit.JsonString(results))
+	}
+}
 
+func TestFetch(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
 	}
 
-	// if e != nil {
-	// 	t.Errorf("Cursor pre error: %s \n", e.Error())
-	// 	return
-	// }
-	// if csr == nil {
-	// 	t.Errorf("Cursor not initialized")
-	// 	return
-	// }
-	// defer csr.Close()
+	csr,e:= c.NewQuery().
+		Select("code", "description", "total_emp", "salary").
+		From("sample_07").
+		// Where(dbox.Eq("name", "Bourne")).
+		Cursor(nil)
 
-	// // results := make([]map[string]interface{}, 0)
-	// results := make([]User, 0)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
 
-	// err := csr.Fetch(&results, 0, false)
-	// if err != nil {
-	// 	t.Errorf("Unable to fetch: %s \n", err.Error())
-	// } else {
-	// 	fmt.Println("======================")
-	// 	fmt.Println("Select with FILTER")
-	// 	fmt.Println("======================")
-
-	// 	fmt.Printf("Fetch N OK. Result:\n")
-	// 	for i := 0; i < len(results); i++ {
-	// 		fmt.Printf("%v \n", toolkit.JsonString(results[i]))
-	// 	}
-
-	// }
+	results := []Sample7{}
+	err := csr.Fetch(&results, 2, false)
+	if err != nil {
+		t.Errorf("Unable to fetch: %s \n", err.Error())
+	} else {
+		fmt.Printf("Fetch N2 OK. Result:%v \n", toolkit.JsonString(results))
+	}
 }
