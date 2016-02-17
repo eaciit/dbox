@@ -3,7 +3,7 @@ package rdbms
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ranggadablues/dbox"
+	"github.com/eaciit/dbox"
 	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"

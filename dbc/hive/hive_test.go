@@ -3,9 +3,13 @@ package hive
 import (
 	"fmt"
 <<<<<<< HEAD
+	"github.com/eaciit/dbox"
+=======
+<<<<<<< HEAD
 =======
 	"github.com/ranggadablues/dbox"
 >>>>>>> bbe204ed9e388ba424883a5ce94877c03ef0bba5
+>>>>>>> refs/remotes/origin/master
 	"github.com/eaciit/toolkit"
 	"github.com/rinosukmandityo/dbox"
 	"testing"
@@ -46,7 +50,7 @@ func TestSelect(t *testing.T) {
 		return
 	}
 
-	csr,e:= c.NewQuery().
+	csr, e := c.NewQuery().
 		Select("code", "description", "total_emp", "salary").
 		From("sample_07").
 		Take(5).
@@ -83,7 +87,7 @@ func TestFetch(t *testing.T) {
 		return
 	}
 
-	csr,e:= c.NewQuery().
+	csr, e := c.NewQuery().
 		Select("code", "description", "total_emp", "salary").
 		From("sample_07").
 		// Where(dbox.Eq("name", "Bourne")).
