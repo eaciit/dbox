@@ -2,7 +2,7 @@ package rdbms
 
 import (
 	"github.com/eaciit/cast"
-	"github.com/ranggadablues/dbox"
+	"github.com/eaciit/dbox"
 )
 
 type FilterBuilder struct {
