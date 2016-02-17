@@ -91,7 +91,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 		count := len(columns)
 
-		//tableData := []toolkit.M{}
 		values := make([]interface{}, count)
 		valuePtrs := make([]interface{}, count)
 
