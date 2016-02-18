@@ -638,7 +638,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 			multi = true
 		}
 	}
+
 	session := q.Session()
+	sessionHive := q.SessionHive()
 	multiExec := q.Config("multiexec", false).(bool)
 
 	if dbname != "" && tablename != "" && multi == true {
@@ -646,9 +648,15 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 	if commandType == dbox.QueryPartInsert {
 		if attributes != "" && values != "" {
-			statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+			if driverName == "hive" {
+				statement := "INSERT INTO " + tablename + " VALUES " + values
+				_, e = sessionHive.Exec(statement)
+			} else {
+				statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+				_, e = session.Exec(statement)
+			}
+
 			fmt.Println("Insert Statement : ", statement)
-			_, e = session.Exec(statement)
 			if e != nil {
 				fmt.Println(e.Error())
 			}
