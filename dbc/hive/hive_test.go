@@ -8,20 +8,21 @@ import (
 )
 
 type Sample7 struct {
-	Code        string `tag_name:"code"`
-	Description string `tag_name:"description"`
-	Total_emp   string `tag_name:"total_emp"`
-	Salary      string `tag_name:"salary"`
+	Code        string  `tag_name:"code"`
+	Description string  `tag_name:"description"`
+	Total_emp   float64 `tag_name:"total_emp"`
+	Salary      float64 `tag_name:"salary"`
 }
 
 type Students struct {
-	Name  string `tag_name:"name"`
-	Age   int    `tag_name:"age"`
-	Phone string `tag_name:"phone"`
+	Name    string `tag_name:"name"`
+	Age     int    `tag_name:"age"`
+	Phone   string `tag_name:"phone"`
+	Address string `tag_name:"address"`
 }
 
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "developer", "b1gD@T@", nil}
+	ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "hdfs", "", nil}
 	c, e := dbox.NewConnection("hive", ci)
 	if e != nil {
 		return nil, e
@@ -47,6 +48,7 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Unable to connect %s \n", e.Error())
 		return
 	}
+	defer c.Close()
 
 	csr, e := c.NewQuery().
 		Select("code", "description", "total_emp", "salary").
@@ -70,7 +72,7 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Unable to fetch: %s \n", err.Error())
 	} else {
 		fmt.Println("======================")
-		fmt.Println("Select with FILTER")
+		fmt.Println("Select with LIMIT")
 		fmt.Println("======================")
 
 		fmt.Printf("Fetch limit 5 OK. Result:\n")
@@ -79,11 +81,13 @@ func TestSelect(t *testing.T) {
 }
 
 func TestFetch(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 		return
 	}
+	defer c.Close()
 
 	csr, e := c.NewQuery().
 		Select("code", "description", "total_emp", "salary").
@@ -99,22 +103,33 @@ func TestFetch(t *testing.T) {
 		t.Errorf("Cursor not initialized")
 		return
 	}
+	defer csr.Close()
 
 	results := []Sample7{}
 	err := csr.Fetch(&results, 2, false)
 	if err != nil {
 		t.Errorf("Unable to fetch: %s \n", err.Error())
 	} else {
+		fmt.Println("======================")
+		fmt.Println("Select with FETCH")
+		fmt.Println("======================")
+
 		fmt.Printf("Fetch N2 OK. Result:%v \n", toolkit.JsonString(results))
 	}
+
+	/*e = csr.ResetFetch()
+	if err != nil {
+		t.Errorf("Unable to reset fetch: %s \n", err.Error())
+	} */
 }
 
 func TestSelectAggregate(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 	}
-	defer c.Close()
+	defer c.Close() //temporary unused
 
 	csr, e := c.NewQuery().
 		Select("name").
@@ -151,27 +166,38 @@ func TestSelectAggregate(t *testing.T) {
 				toolkit.JsonString(val))
 		}
 	}
+
+	/*e = csr.ResetFetch()
+	if err != nil {
+		t.Errorf("Unable to reset fetch: %s \n", err.Error())
+	} */
 }
 
 func TestCRUD(t *testing.T) {
-	//t.Skip()
+	// t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 		return
 	}
+	defer c.Close()
 
 	// ===============================INSERT==============================
-	q := c.NewQuery().SetConfig("multiexec", true).From("students").Insert()
-	dataInsert := Students{}
-	dataInsert.Name = "John Terry"
-	dataInsert.Age = 45
-	dataInsert.Phone = "0856768686"
+	// q := c.NewQuery().SetConfig("multiexec", true).From("students").Insert()
+	// dataInsert := Students{}
+	// dataInsert.Name = "aje buset dah"
+	// dataInsert.Age = 45
+	// dataInsert.Phone = "mau tau aja!!"
+	// dataInsert.Address = "mau tau aja!!"
 
-	e = q.Exec(toolkit.M{"data": dataInsert})
-	if e != nil {
-		t.Errorf("Unable to insert data : %s \n", e.Error())
-	}
+	// e = q.Exec(toolkit.M{"data": dataInsert})
+	// if e != nil {
+	// 	t.Errorf("Unable to insert data : %s \n", e.Error())
+	// }else{
+	// 	fmt.Println("======================")
+	// 	fmt.Println("Test Insert OK")
+	// 	fmt.Println("======================")
+	// }
 
 	// ===============================INSERT MANY==============================
 	// q := c.NewQuery().SetConfig("multiexec", true).From("tes").Insert()
@@ -210,30 +236,39 @@ func TestCRUD(t *testing.T) {
 
 	/* ===============================UPDATE============================== */
 
-	// data := User{}
+	data := Students{}
 	// data.Id = "7"
-	// data.Name = "Oscar"
-	// data.Tanggal = time.Now()
-	// data.Umur = 24
-	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "7")).Update().Exec(toolkit.M{"data": data})
-	// if e != nil {
-	// 	t.Errorf("Unable to update: %s \n", e.Error())
-	// }
+	data.Name = "busyet"
+	data.Age = 20
+	data.Phone = "24"
+	data.Address = "alamat palsu"
+	e = c.NewQuery().From("students").Where(dbox.Eq("name", "aje buset dah")).Update().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	} else {
+		fmt.Println("======================")
+		fmt.Println("Test Update OK")
+		fmt.Println("======================")
+	}
 	// with where and data
 
-	// data := Coba{}
-	// data.Id = "1"
-	// data.Name = "Jamme"
-	// e = c.NewQuery().From("coba").Where(dbox.Eq("id", "1")).Update().Exec(toolkit.M{"data": data})
+	// data := Students{}
+	// // data.Id = "7"
+	// data.Name = "busyet"
+	// // data.Age = 20
+	// // data.Phone = "24"
+	// e = c.NewQuery().From("students").Where(dbox.Eq("name", "cakep")).Update().Exec(toolkit.M{"data": data})
 	// if e != nil {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
 
 	/* with config */
-	// data := Coba{}
-	// data.Id = "2"
-	// data.Name = "false, no where, with data 2"
-	// e = c.NewQuery().SetConfig("multiexec", false).From("coba").Update().Exec(toolkit.M{"data": data})
+	// data := Students{}
+	// // data.Id = "7"
+	// data.Name = "busyet"
+	// data.Age = 20
+	// data.Phone = "24"
+	// e = c.NewQuery().SetConfig("multiexec", false).From("students").Update().Exec(toolkit.M{"data": data})
 	// if e != nil {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
