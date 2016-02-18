@@ -374,7 +374,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
 		}
-		// fmt.Println("query string : ", QueryString)
+		fmt.Println(QueryString)
 		cursor.(*Cursor).QueryString = QueryString
 
 	} else if hasProcedure {
@@ -682,9 +682,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 			var rowCount int
 			if driverName == "hive" {
 				rowCount = 1
+				// row := sessionHive.Exec(querystmt)
+				// rowCount = toolkit.ToInt(row[0], "auto")
 			} else {
 				rows, _ := session.Query(querystmt)
-
 				for rows.Next() {
 					rows.Scan(&rowCount)
 				}
@@ -729,10 +730,16 @@ func (q *Query) Exec(parm toolkit.M) error {
 			querystmt = "select count(*) from " + tablename
 		}
 
-		rows, _ := session.Query(querystmt)
 		var rowCount int
-		for rows.Next() {
-			rows.Scan(&rowCount)
+		if driverName == "hive" {
+			rowCount = 1
+			// row := sessionHive.Exec(querystmt)
+			// rowCount = toolkit.ToInt(row[0], "auto")
+		} else {
+			rows, _ := session.Query(querystmt)
+			for rows.Next() {
+				rows.Scan(&rowCount)
+			}
 		}
 
 		if rowCount == 0 {
@@ -746,7 +753,11 @@ func (q *Query) Exec(parm toolkit.M) error {
 				statement = "DELETE FROM " + tablename
 			}
 			fmt.Println("Delete Statement : ", statement)
-			_, e = session.Exec(statement)
+			if driverName == "hive" {
+				_, e = sessionHive.Exec(statement)
+			} else {
+				_, e = session.Exec(statement)
+			}
 			if e != nil {
 				fmt.Println(e.Error())
 			}
@@ -761,16 +772,26 @@ func (q *Query) Exec(parm toolkit.M) error {
 				querystmt = "select count(*) from " + tablename +
 					" where " + cast.ToString(where)
 			}
-			rows, _ := session.Query(querystmt)
 			var rowCount int
-			for rows.Next() {
-				rows.Scan(&rowCount)
+			if driverName == "hive" {
+				rowCount = 1
+				// row := sessionHive.Exec(querystmt)
+				// rowCount = toolkit.ToInt(row[0], "auto")
+			} else {
+				rows, _ := session.Query(querystmt)
+				for rows.Next() {
+					rows.Scan(&rowCount)
+				}
 			}
 
 			var statement string
 			if rowCount == 0 || where == nil {
-				statement = "INSERT INTO " + tablename + " " +
-					attributes + " VALUES " + values
+				if driverName == "hive" {
+					statement = "INSERT INTO " + tablename + " VALUES " + values
+				} else {
+					statement = "INSERT INTO " + tablename + " " +
+						attributes + " VALUES " + values
+				}
 			} else if rowCount == 1 || (rowCount > 1 && multiExec) {
 				statement = "UPDATE " + tablename + " SET " + setUpdate +
 					" WHERE " + cast.ToString(where)
@@ -780,7 +801,14 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 
 			fmt.Println("Save Statement : ", statement)
-			_, e = session.Exec(statement)
+			if driverName == "hive" {
+				_, e = sessionHive.Exec(statement)
+			} else {
+				_, e = session.Exec(statement)
+			}
+			if e != nil {
+				fmt.Println(e.Error())
+			}
 			if e != nil {
 				fmt.Println(e.Error())
 			}
