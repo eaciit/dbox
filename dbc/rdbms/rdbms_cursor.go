@@ -145,8 +145,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		if end > len(tableData) {
 			e = errors.New("index out of range")
 		} else {
-			e = toolkit.Serde(tableData[0:n], m, "json")
+			e = toolkit.Serde(tableData[c.start:n], m, "json")
 		}
 	}
+
 	return e
 }

@@ -47,3 +47,7 @@ func (c *Connection) Connect() error {
 	}
 	return nil
 }
+
+func (c *Connection) Close() {
+
+}
