@@ -19,13 +19,6 @@ const (
 	QueryResultPipe   = "SQLPipe"
 )
 
-type Sample7 struct {
-	Code        string `tag_name:"code"`
-	Description string `tag_name:"description"`
-	Total_emp   string `tag_name:"total_emp"`
-	Salary      string `tag_name:"salary"`
-}
-
 type Cursor struct {
 	dbox.Cursor
 	ResultType  string
@@ -145,8 +138,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		if end > len(tableData) {
 			e = errors.New("index out of range")
 		} else {
-			e = toolkit.Serde(tableData[0:n], m, "json")
+			e = toolkit.Serde(tableData[c.start:n], m, "json")
 		}
 	}
+
 	return e
 }
