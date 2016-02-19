@@ -53,9 +53,9 @@ func (q *Query) Close() {
 	if q.GetDriverDB() != "hive" {
 		q.Sql.Close()
 	} else {
-		if q.SessionHive().Conn.Open() != nil {
-			q.SessionHive().Conn.Close()
-		}
+		// if q.SessionHive().Conn.Open() != nil {
+		// 	q.SessionHive().Conn.Close()
+		// }
 	}
 }
 
@@ -219,11 +219,21 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				/* isi Aggr Info :  {$sum 1 Total Item}*/
 
 				if incAtt == 0 {
-					aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
-						cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					if driverName == "hive" {
+						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as " + aggrInfo.Alias
+					} else {
+						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					}
 				} else {
-					aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
-						"(" + cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					if driverName == "hive" {
+						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as " + aggrInfo.Alias
+					} else {
+						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					}
 				}
 				incAtt++
 			}
@@ -374,7 +384,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
 		}
-		fmt.Println(QueryString)
+		// fmt.Println(QueryString)
 		cursor.(*Cursor).QueryString = QueryString
 
 	} else if hasProcedure {
