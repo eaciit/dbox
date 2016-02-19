@@ -25,9 +25,9 @@ type Connection struct {
 func (c *Connection) RdbmsConnect(drivername string, stringConnection string) error {
 	if drivername == "hive" {
 		connInfo := strings.Split(stringConnection, ",")
-		c.Hive = hive.HiveConfig(connInfo[0], connInfo[1], connInfo[2], connInfo[3], connInfo[4])
+		c.Hive = hive.HiveConfig(connInfo[0], connInfo[1], connInfo[2], connInfo[3], "")
 		c.Drivername = drivername
-		// c.Hive.Conn.Open()
+		c.Hive.Conn.Open()
 	} else {
 		sqlcon, e := sql.Open(drivername, stringConnection)
 		if e != nil {
@@ -52,9 +52,9 @@ func (c *Connection) GetDriver() string {
 
 func (c *Connection) Close() {
 	if c.GetDriver() == "hive" {
-		// if c.Hive.Conn.Open() != nil {
-		// 	c.Hive.Conn.Close()
-		// }
+		if c.Hive.Conn.Open() != nil {
+			c.Hive.Conn.Close()
+		}
 	} else {
 		c.Sql.Close()
 	}

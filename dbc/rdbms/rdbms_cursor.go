@@ -30,7 +30,12 @@ type Cursor struct {
 }
 
 func (c *Cursor) Close() {
-
+	h := c.sessionHive
+	if h != nil {
+		if h.Conn.Open() != nil {
+			h.Conn.Close()
+		}
+	}
 }
 
 func (c *Cursor) validate() error {
@@ -52,53 +57,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	var e error
 	h := c.sessionHive
 	if h != nil {
-		// toolkit.Printf("n:%#v\n", c.sessionHive.Conn.Stdin)
-		///// use exec only
-		/*h.Conn.Open()
-		result, e := h.Exec(c.QueryString)
-		if e != nil {
-			return e
-
-		}
-
-		for _, res := range result {
-			var tmp toolkit.M
-			h.ParseOutput(res, &tmp)
-			tableData = append(tableData, tmp)
-			// toolkit.Printf("n:%#v\n", tmp)
-		}
-
-		h.Conn.Close()*/
-
-		/////// use populate
-		//if c.QueryString == "SELECT code, description, total_emp, salary FROM sample_07" {
-		c.sessionHive.Conn.Open()
 		e := h.Populate(c.QueryString, &tableData)
 		if e != nil {
 			return e
 		}
-		c.sessionHive.Conn.Close()
-		/*} else {
-			c.sessionHive.Conn.Open()
-			e := h.Populate("SELECT nama, sum(amount) as TotalAmount, avg(amount) as AverageAmount, max(amount) as MaxAmount FROM orders GROUP BY nama", &tableData)
-			if e != nil {
-		 		return e
-			}
-			c.sessionHive.Conn.Close()
-		}*/
-
-		/////// use exec line
-		// var DoSomething = func(res string) {
-		// 	fields := toolkit.M{}
-		// 	h.ParseOutput(res, &fields)
-		// 	tableData = append(tableData, fields)
-		// }
-
-		// e = h.ExecLine(c.QueryString, DoSomething)
-		// if e != nil {
-		// 	return e
-		// }
-		// toolkit.Printf("tabledata:%v\n", tableData)
 	} else {
 
 		rows, e := c.session.Query(c.QueryString)
