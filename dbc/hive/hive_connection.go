@@ -49,5 +49,5 @@ func (c *Connection) Connect() error {
 }
 
 func (c *Connection) Close() {
-	c.Close()
+	c.Connection.Close()
 }

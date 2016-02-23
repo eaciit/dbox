@@ -664,7 +664,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 		if attributes != "" && values != "" {
 			if driverName == "hive" {
 				statement = "INSERT INTO " + tablename + " VALUES " + values
-				_, e = sessionHive.Exec(statement)
+				e = sessionHive.Exec(statement, nil)
 			} else {
 				statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
 				_, e = session.Exec(statement)
@@ -714,7 +714,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 				}
 				fmt.Println("Update Statement : ", statement)
 				if driverName == "hive" {
-					_, e = sessionHive.Exec(statement)
+					e = sessionHive.Exec(statement, nil)
 				} else {
 					_, e = session.Exec(statement)
 				}
@@ -764,7 +764,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 			fmt.Println("Delete Statement : ", statement)
 			if driverName == "hive" {
-				_, e = sessionHive.Exec(statement)
+				e = sessionHive.Exec(statement, nil)
 			} else {
 				_, e = session.Exec(statement)
 			}
@@ -812,7 +812,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 			fmt.Println("Save Statement : ", statement)
 			if driverName == "hive" {
-				_, e = sessionHive.Exec(statement)
+				e = sessionHive.Exec(statement, nil)
 			} else {
 				_, e = session.Exec(statement)
 			}
