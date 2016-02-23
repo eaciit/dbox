@@ -200,7 +200,7 @@ func TestSelectAggregate(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-	t.Skip()
+	//t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -210,10 +210,10 @@ func TestInsert(t *testing.T) {
 
 	q := c.NewQuery().SetConfig("multiexec", true).From("students").Insert()
 	dataInsert := Students{}
-	dataInsert.Name = "aje buset dah"
+	dataInsert.Name = "zz top"
 	dataInsert.Age = 45
-	dataInsert.Phone = "mau tau aja!!"
-	dataInsert.Address = "mau tau aja!!"
+	dataInsert.Phone = "+62856"
+	dataInsert.Address = "sesame street"
 
 	e = q.Exec(toolkit.M{"data": dataInsert})
 	if e != nil {
