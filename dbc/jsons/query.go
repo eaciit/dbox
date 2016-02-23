@@ -25,6 +25,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	var cursor *Cursor
 
 	setting, e := q.prepare(in)
+
 	if e != nil {
 		return nil, err.Error(packageName, modQuery, "Cursor", e.Error())
 	}
@@ -40,6 +41,23 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 	//toolkit.Printf("Data count: %d \n", len(q.data))
 	cursor = newCursor(q)
+
+	if skip := setting.Get("skip").(int); skip > 0 {
+		cursor.skip = skip
+	}
+
+	if take := setting.Get("take").(int); take > 0 {
+		cursor.take = take
+	}
+	if sort := setting.Get("sort").([]string); toolkit.SliceLen(sort) > 0 {
+		fb := new(FilterBuilder)
+		// toolkit.Printf("sorter:%v\n", sort)
+		sorter := fb.SortFetch(sort, q.data)
+
+		q.data = sorter
+	}
+
+	cursor.jsonSelect = setting.Get("fields").([]string)
 	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
 	if len(where) > 0 {
 		cursor.where = where
@@ -392,14 +410,13 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	output.Set("aggregate", aggregate)
 	output.Set("aggrExpression", aggrExpression)
 
-	var fields toolkit.M
+	var fields []string
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
 	if hasSelect {
-		fields = toolkit.M{}
 		for _, sl := range selectParts.([]interface{}) {
 			qp := sl.(*dbox.QueryPart)
 			for _, fid := range qp.Value.([]string) {
-				fields.Set(fid, 1)
+				fields = append(fields, fid)
 			}
 		}
 		output.Set("commandtype", dbox.QueryPartSelect)

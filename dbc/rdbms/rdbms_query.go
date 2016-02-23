@@ -107,7 +107,7 @@ func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
 					/* nilai fSlice [i] : @name1*/
 					if string(cast.ToString(fSlice[i])[0]) == "@" {
 						for key, val := range in {
-							if strings.Replace(cast.ToString(fSlice[i]), "@", "", 1) == key {
+							if cast.ToString(fSlice[i]) == key {
 								fSlice[i] = val
 							}
 						}
@@ -119,7 +119,7 @@ func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
 				for i := 0; i < len(fSlice); i++ {
 					if string(fSlice[i][0]) == "@" {
 						for key, val := range in {
-							if strings.Replace(fSlice[i], "@", "", 1) == key {
+							if fSlice[i] == key {
 								fSlice[i] = val.(string)
 							}
 						}
@@ -131,7 +131,7 @@ func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
 		} else {
 			if string(cast.ToString(f.Value)[0]) == "@" {
 				for key, val := range in {
-					if strings.Replace(cast.ToString(f.Value), "@", "", 1) == key {
+					if cast.ToString(f.Value) == key {
 						f.Value = val
 					}
 				}
