@@ -208,29 +208,29 @@ func TestSelectParm(t *testing.T) {
 
 	csr, e := c.NewQuery().
 		// Where(dbox.Ne("id", "@userid1")).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4"))
 		// Where(dbox.Gt("id", "@userid1")).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4"))
 		// Where(dbox.Gte("id", "@userid1")).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4"))
 		// Where(dbox.Lt("id", "@userid1")).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4"))
 		// Where(dbox.Lte("id", "@userid1")).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4"))
 		// Where(dbox.In("id", "@userid1", "@userid2")).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4").Set("@userid2", "User-5"))
 		// Where(dbox.Nin("id", "@userid1", "@userid2")).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4").Set("@userid2", "User-5"))
 		// Where(dbox.Eq("id", "@userid1")).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4"))
 		// Where(dbox.And(dbox.Eq("id", "@userid1"), dbox.Eq("title", "@userid2"))).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-400's name"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4").Set("@userid2", "User-400's name"))
 		// Where(dbox.Lt("title", "@title")).
-		// Cursor(toolkit.M{}.Set("title", "User-8's name"))
+		// Cursor(toolkit.M{}.Set("@title", "User-8's name"))
 		// Where(dbox.Or(dbox.Eq("id", "@userid1"), dbox.Eq("id", "@userid2"))).
-		// Cursor(toolkit.M{}.Set("userid1", "User-4").Set("userid2", "User-5"))
+		// Cursor(toolkit.M{}.Set("@userid1", "User-4").Set("@userid2", "User-5"))
 		Where(dbox.Contains("title", "@userid1", "@userid2")).
-		Cursor(toolkit.M{}.Set("userid1", "Own").Set("userid2", "Lima"))
+		Cursor(toolkit.M{}.Set("@userid1", "Own").Set("@userid2", "Lima"))
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
