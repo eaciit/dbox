@@ -2,14 +2,17 @@ package csv
 
 import (
 	"encoding/csv"
+	// "encoding/json"
 	"errors"
 	"fmt"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io"
 	"os"
-	// "reflect"
+	"reflect"
+	"strings"
 )
 
 const (
@@ -56,10 +59,50 @@ func (c *Cursor) prepIter() error {
 }
 
 func (c *Cursor) Count() int {
-	return c.count
+	return len(c.ConditionVal.indexes)
 }
 
-func (c *Cursor) ResetFetch() error {
+func (c *Cursor) generateIndexes() error {
+	var e error
+	output := []int{}
+	var n int = 0
+	for {
+		tdread, e := c.reader.Read()
+		if e != nil && e != io.EOF {
+			break
+		}
+		n++
+		tm := toolkit.M{}
+
+		for i, v := range tdread {
+			lowername := strings.ToLower(c.headerColumn[i].name)
+			tm.Set(lowername, v)
+			if c.headerColumn[i].dataType == "int" {
+				tm[lowername] = cast.ToInt(v, cast.RoundingAuto)
+			} else if c.headerColumn[i].dataType == "float" {
+				tm[lowername] = cast.ToF64(v, (len(v) - (strings.IndexAny(v, "."))), cast.RoundingAuto)
+			}
+		}
+
+		if c.ConditionVal.getCondition(tm) { //len(c.ConditionVal.where) == 0 || dbox.MatchM(tm, c.ConditionVal.where) {
+			output = append(output, n)
+		}
+
+		if e == io.EOF {
+			break
+		}
+	}
+	c.ConditionVal.indexes = output
+
+	e = c.resetConnection()
+	if e != nil {
+		return errorlib.Error(packageName, modCursor, "Reset Fetch", e.Error())
+	}
+
+	return e
+}
+
+func (c *Cursor) resetConnection() error {
 	var e error
 	c.Connection().(*Connection).Close()
 	e = c.Connection().(*Connection).Connect()
@@ -74,14 +117,23 @@ func (c *Cursor) ResetFetch() error {
 
 	e = c.prepIter()
 	if e != nil {
-		return errorlib.Error(packageName, modCursor, "ResetFetch", e.Error())
+		return errorlib.Error(packageName, modCursor, "Reset Connection", e.Error())
 	}
+	return e
+}
 
-	// c.PrepareCursor()
-	// if e != nil {
-	// 	return errorlib.Error(packageName, modCursor, "Prepare Cursor", e.Error())
-	// }
-
+func (c *Cursor) ResetFetch() error {
+	var e error
+	e = c.resetConnection()
+	if e != nil {
+		return errorlib.Error(packageName, modCursor, "Reset Fetch", e.Error())
+	}
+	if len(c.ConditionVal.where) > 0 {
+		e = c.generateIndexes()
+		if e != nil {
+			return errorlib.Error(packageName, modCursor, "Reset Fetch", e.Error())
+		}
+	}
 	return nil
 }
 
@@ -95,8 +147,7 @@ func (c *Cursor) ResetFetch() error {
 // 	return nil
 // }
 
-func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
-	*dbox.DataSet, error) {
+func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	if closeWhenDone {
 		defer c.Close()
@@ -104,14 +155,34 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 
 	e := c.prepIter()
 	if e != nil {
-		return nil, errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	ds := dbox.NewDataSet(m)
+	if !toolkit.IsPointer(m) {
+		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
+	}
+
+	if n != 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
+		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer of slice")
+	}
+
+	var v reflect.Type
+
+	if n == 1 {
+		v = reflect.TypeOf(m).Elem()
+	} else {
+		v = reflect.TypeOf(m).Elem().Elem()
+	}
+
+	ivs := reflect.MakeSlice(reflect.SliceOf(v), 0, 0)
+
 	lineCount := 0
 
 	//=============================
+	// fmt.Println("Qursor 133 : ", c.ConditionVal.indexes)
 	for {
+		iv := reflect.New(v).Interface()
+
 		isAppend := true
 		c.count += 1
 		recData := toolkit.M{}
@@ -120,13 +191,23 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		dataTemp, e := c.reader.Read()
 
 		for i, val := range dataTemp {
-			recData[c.headerColumn[i].name] = val
+			orgname := c.headerColumn[i].name
+			lowername := strings.ToLower(c.headerColumn[i].name)
 
-			if c.ConditionVal.Select == nil || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
-				appendData[c.headerColumn[i].name] = val
+			switch c.headerColumn[i].dataType {
+			case "int":
+				recData[lowername] = cast.ToInt(val, cast.RoundingAuto)
+			case "float":
+				recData[lowername] = cast.ToF64(val, 2, cast.RoundingAuto)
+			default:
+				recData[lowername] = val
+			}
+
+			if len(c.ConditionVal.Select) == 0 || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
+				appendData[orgname] = recData[lowername]
 			} else {
-				if c.ConditionVal.Select.Get(c.headerColumn[i].name, 0).(int) == 1 {
-					appendData[c.headerColumn[i].name] = val
+				if c.ConditionVal.Select.Get(strings.ToLower(c.headerColumn[i].name), 0).(int) == 1 {
+					appendData[orgname] = recData[lowername]
 				}
 			}
 		}
@@ -137,18 +218,32 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			isAppend = false
 		}
 
+		if v.Kind() == reflect.Struct {
+			for i := 0; i < v.NumField(); i++ {
+				if appendData.Has(v.Field(i).Name) {
+					switch v.Field(i).Type.Kind() {
+					case reflect.Int:
+						appendData.Set(v.Field(i).Name, cast.ToInt(appendData[v.Field(i).Name], cast.RoundingAuto))
+					}
+				}
+			}
+		}
+
 		if e == io.EOF {
 			if isAppend && len(appendData) > 0 {
-				ds.Data = append(ds.Data, appendData)
+				toolkit.Serde(appendData, iv, "json")
+				ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
 				lineCount += 1
 			}
 			break
 		} else if e != nil {
-			return ds, errorlib.Error(packageName, modCursor,
+			return errorlib.Error(packageName, modCursor,
 				"Fetch", e.Error())
 		}
+
 		if isAppend && len(appendData) > 0 {
-			ds.Data = append(ds.Data, appendData)
+			toolkit.Serde(appendData, iv, "json")
+			ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
 			lineCount += 1
 		}
 
@@ -158,5 +253,18 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			}
 		}
 	}
-	return ds, nil
+
+	if e != nil {
+		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+	}
+
+	if n == 1 {
+		if ivs.Len() > 0 {
+			reflect.ValueOf(m).Elem().Set(ivs.Index(0))
+		}
+	} else {
+		reflect.ValueOf(m).Elem().Set(ivs)
+	}
+
+	return nil
 }

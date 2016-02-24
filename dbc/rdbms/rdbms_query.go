@@ -1,16 +1,14 @@
-
-
 package rdbms
 
 import (
 	"database/sql"
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
-	//"github.com/eaciit/database/base"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
+	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
 	"reflect"
 	"strings"
@@ -23,9 +21,10 @@ const (
 
 type Query struct {
 	dbox.Query
-	Sql            sql.DB
-	usePooling     bool
-	DriverDB       string
+	Hive       *hive.Hive
+	Sql        sql.DB
+	usePooling bool
+	DriverDB   string
 }
 
 func (q *Query) Session() sql.DB {
@@ -40,22 +39,107 @@ func (q *Query) Session() sql.DB {
 	return q.Sql
 }
 
-func (q *Query) GetDriverDB() string { 
-	q.DriverDB = q.Connection().(*Connection).Drivername 
+func (q *Query) SessionHive() *hive.Hive {
+	q.Hive = q.Connection().(*Connection).Hive
+	return q.Hive
+}
+
+func (q *Query) GetDriverDB() string {
+	q.DriverDB = q.Connection().(*Connection).Drivername
 	return q.DriverDB
 }
 
- 
-
-
 func (q *Query) Close() {
-	// if q.Sql != nil && q.usePooling == false {
-	q.Sql.Close()
-	// }
+	if q.GetDriverDB() != "hive" {
+		q.Sql.Close()
+	} else {
+		// if q.SessionHive().Conn.Open() != nil {
+		// 	q.SessionHive().Conn.Close()
+		// }
+	}
 }
 
 func (q *Query) Prepare() error {
 	return nil
+}
+
+func StringValue(v interface{}, db string) string {
+	var ret string
+	switch v.(type) {
+	case string:
+		ret = fmt.Sprintf("%s", "'"+v.(string)+"'")
+	case time.Time:
+		t := v.(time.Time).UTC()
+		if strings.Contains(db, "oracle") {
+			ret = "to_date('" + t.Format("2006-01-02 15:04:05") + "','yyyy-mm-dd hh24:mi:ss')"
+		} else {
+			ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
+		}
+	case int, int32, int64, uint, uint32, uint64:
+		ret = fmt.Sprintf("%d", v.(int))
+	case nil:
+		ret = ""
+	default:
+		ret = fmt.Sprintf("%v", v)
+	}
+	return ret
+}
+
+func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
+	if (f.Op == "$and" || f.Op == "$or") &&
+		strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
+		fs := f.Value.([]*dbox.Filter)
+		/* nilai fs :  [0xc082059590 0xc0820595c0]*/
+		for i, ff := range fs {
+			/* nilai ff[0] : &{umur $gt @age} && ff[1] : &{name $eq @nama}*/
+			bf := ReadVariable(ff, in)
+			/* nilai bf[0] :  &{umur $gt 25} && bf[1] : &{name $eq Kane}*/
+			fs[i] = bf
+		}
+		f.Value = fs
+		return f
+	} else {
+		if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
+			if strings.Contains(reflect.TypeOf(f.Value).String(), "interface") {
+				fSlice := f.Value.([]interface{})
+				/*nilai fSlice : [@name1 @name2]*/
+				for i := 0; i < len(fSlice); i++ {
+					/* nilai fSlice [i] : @name1*/
+					if string(cast.ToString(fSlice[i])[0]) == "@" {
+						for key, val := range in {
+							if cast.ToString(fSlice[i]) == key {
+								fSlice[i] = val
+							}
+						}
+					}
+				}
+				f.Value = fSlice
+			} else if strings.Contains(reflect.TypeOf(f.Value).String(), "string") {
+				fSlice := f.Value.([]string)
+				for i := 0; i < len(fSlice); i++ {
+					if string(fSlice[i][0]) == "@" {
+						for key, val := range in {
+							if fSlice[i] == key {
+								fSlice[i] = val.(string)
+							}
+						}
+					}
+				}
+				f.Value = fSlice
+			}
+			return f
+		} else {
+			if string(cast.ToString(f.Value)[0]) == "@" {
+				for key, val := range in {
+					if cast.ToString(f.Value) == key {
+						f.Value = val
+					}
+				}
+			}
+			return f
+		}
+	}
+	return f
 }
 
 func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
@@ -67,9 +151,18 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 	*/
 
-	aggregate := false
 	dbname := q.Connection().Info().Database
-	tablename := ""
+	cursor := dbox.NewCursor(new(Cursor))
+	if q.GetDriverDB() == "hive" {
+		session := q.SessionHive()
+		cursor.(*Cursor).sessionHive = session
+	} else {
+		session := q.Session()
+		cursor.(*Cursor).session = session
+	}
+	driverName := q.GetDriverDB()
+	// driverName = "oracle"
+	var QueryString string
 
 	/*
 		parts will return E - map{interface{}}interface{}
@@ -81,131 +174,367 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}, nil).Data
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
-	if hasFrom == false {
-		return nil, errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
-	}
-	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+	procedureParts, hasProcedure := parts["procedure"]
 
-	skip := 0
-	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-		skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
-			Value.(int)
-	}
+	if hasFrom {
+		tablename := ""
+		tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
 
-	take := 0
-	if takeParts, has := parts[dbox.QueryPartTake]; has {
-		take = takeParts.([]interface{})[0].(*dbox.QueryPart).
-			Value.(int)
-	}
+		selectParts, hasSelect := parts[dbox.QueryPartSelect]
+		var attribute string
+		incAtt := 0
+		if hasSelect {
+			for _, sl := range selectParts.([]interface{}) {
+				qp := sl.(*dbox.QueryPart)
+				for _, fid := range qp.Value.([]string) {
+					if incAtt == 0 {
+						attribute = fid
+					} else {
+						attribute = attribute + ", " + fid
+					}
+					incAtt++
+				}
+			}
+		} else {
+			_, hasUpdate := parts[dbox.QueryPartUpdate]
+			_, hasInsert := parts[dbox.QueryPartInsert]
+			_, hasDelete := parts[dbox.QueryPartDelete]
+			_, hasSave := parts[dbox.QueryPartSave]
 
-	var fields toolkit.M
-	selectParts, hasSelect := parts[dbox.QueryPartSelect]
-	var attribute string
-	incAtt := 0
-	if hasSelect {
-		fields = toolkit.M{}
-		for _, sl := range selectParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+			if hasUpdate || hasInsert || hasDelete || hasSave {
+				return nil, errorlib.Error(packageName, modQuery, "Cursor",
+					"Valid operation for a cursor is select only")
+			}
+		}
+
+		aggrParts, hasAggr := parts[dbox.QueryPartAggr]
+
+		var aggrExpression string
+		if hasAggr {
+			incAtt := 0
+			for _, aggr := range aggrParts.([]interface{}) {
+				qp := aggr.(*dbox.QueryPart)
+				/* isi qp :  &{AGGR {$sum 1 Total Item}}*/
+				aggrInfo := qp.Value.(dbox.AggrInfo)
+				/* isi Aggr Info :  {$sum 1 Total Item}*/
+
 				if incAtt == 0 {
-					attribute = fid
+					if driverName == "hive" {
+						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as " + aggrInfo.Alias
+					} else {
+						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					}
 				} else {
-					attribute = attribute + "," + fid
+					if driverName == "hive" {
+						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as " + aggrInfo.Alias
+					} else {
+						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					}
 				}
 				incAtt++
-				fields.Set(fid, 1)
 			}
+			/* isi Aggr Expression :  sum(1) as 'Total Item', max(amount) as 'Max Amount', avg(amount) as 'Average Amount'*/
 		}
-	} else {
-		_, hasUpdate := parts[dbox.QueryPartUpdate]
-		_, hasInsert := parts[dbox.QueryPartInsert]
-		_, hasDelete := parts[dbox.QueryPartDelete]
-		_, hasSave := parts[dbox.QueryPartSave]
 
-		if hasUpdate || hasInsert || hasDelete || hasSave {
-			return nil, errorlib.Error(packageName, modQuery, "Cursor",
-				"Valid operation for a cursor is select only")
-		}
-	}
-	//fmt.Printf("Result: %s \n", toolkit.JsonString(fields))
-	//fmt.Printf("Database:%s table:%s \n", dbname, tablename)
-	var sort []string
-	sortParts, hasSort := parts[dbox.QueryPartSelect]
-	if hasSort {
-		sort = []string{}
-		for _, sl := range sortParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
-				sort = append(sort, fid)
+		var where interface{}
+		whereParts, hasWhere := parts[dbox.QueryPartWhere]
+		if hasWhere {
+			fb := q.Connection().Fb()
+			for _, p := range whereParts.([]interface{}) {
+				fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+				for _, f := range fs {
+					if in != nil {
+						f = ReadVariable(f, in)
+					}
+					fb.AddFilter(f)
+				}
+			}
+			where, e = fb.Build()
+			if e != nil {
+				return nil, errorlib.Error(packageName, modQuery, "Cursor",
+					e.Error())
 			}
 		}
-	}
 
-	//where := toolkit.M{}
-	var where interface{}
-	whereParts, hasWhere := parts[dbox.QueryPartWhere]
-	if hasWhere {
-		fb := q.Connection().Fb()
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
-			for _, f := range fs {
-				fb.AddFilter(f)
+		var orderExpression string
+		orderParts, hasOrder := parts[dbox.QueryPartOrder]
+		if hasOrder {
+			for _, oval := range orderParts.([]interface{}) {
+				qp := oval.(*dbox.QueryPart)
+				for i, fid := range qp.Value.([]string) {
+					if i == 0 {
+						if string(fid[0]) == "-" {
+							orderExpression = strings.Replace(fid, "-", "", 1) + " DESC"
+						} else {
+							orderExpression = fid + " ASC"
+						}
+					} else {
+						if string(fid[0]) == "-" {
+							orderExpression += ", " + strings.Replace(fid, "-", "", 1) + " DESC"
+						} else {
+							orderExpression += ", " + fid + " ASC"
+						}
+					}
+				}
 			}
 		}
-		where, e = fb.Build()
-		if e != nil {
-			return nil, errorlib.Error(packageName, modQuery, "Cursor",
-				e.Error())
+
+		skip := 0
+		skipParts, hasSkip := parts[dbox.QueryPartSkip]
+		if hasSkip {
+			skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
+				Value.(int)
+		}
+
+		take := 0
+		takeParts, hasTake := parts[dbox.QueryPartTake]
+		if hasTake {
+			take = takeParts.([]interface{})[0].(*dbox.QueryPart).
+				Value.(int)
+		}
+
+		partGroup, hasGroup := parts[dbox.QueryPartGroup]
+		var groupExpression string
+		if hasGroup {
+			for _, aggr := range partGroup.([]interface{}) {
+				qp := aggr.(*dbox.QueryPart)
+				groupValue := qp.Value.([]string)
+				for i, val := range groupValue {
+					if i == 0 {
+						groupExpression += val
+					} else {
+						groupExpression += ", " + val
+					}
+				}
+			}
+			/* isi group expression :  GROUP BY nama*/
+		}
+
+		if dbname != "" && tablename != "" && e != nil && skip == 0 && take == 0 && where == nil {
+
+		}
+		if hasAggr {
+			if hasSelect && attribute != "" {
+				QueryString = "SELECT " + attribute + ", " + aggrExpression + " FROM " + tablename
+			} else {
+				QueryString = "SELECT " + aggrExpression + " FROM " + tablename
+			}
+
 		} else {
-			//fmt.Printf("Where: %s", toolkit.JsonString(where))
+			if attribute == "" {
+				QueryString = "SELECT * FROM " + tablename
+			} else {
+				QueryString = "SELECT " + attribute + " FROM " + tablename
+			}
 		}
-		//where = iwhere.(toolkit.M)
-	}
 
-	session := q.Session()
-	cursor := dbox.NewCursor(new(Cursor))
-	cursor.(*Cursor).session = session
-	if dbname != "" && tablename != "" && e != nil && skip == 0 && take == 0 && where == nil {
+		if hasWhere {
+			QueryString += " WHERE " + cast.ToString(where)
+		}
+		if hasGroup {
+			QueryString += " GROUP BY " + groupExpression
+		}
+		if hasOrder {
+			QueryString += " ORDER BY " + orderExpression
+		}
 
-	}
-	if !aggregate {
-		QueryString := ""
-		if attribute == "" {
-			QueryString = "SELECT * FROM " + tablename
-		} else {
-			QueryString = "SELECT " + attribute + " FROM " + tablename
+		if driverName == "mysql" || driverName == "hive" {
+			if hasSkip && hasTake {
+				QueryString += " LIMIT " + cast.ToString(take) +
+					" OFFSET " + cast.ToString(skip)
+			} else if hasSkip && !hasTake {
+				QueryString += " LIMIT " + cast.ToString(9999999) +
+					" OFFSET " + cast.ToString(skip)
+			} else if hasTake && !hasSkip {
+				QueryString += " LIMIT " + cast.ToString(take)
+			}
+		} else if driverName == "mssql" {
+			if hasSkip && hasTake {
+				QueryString += " OFFSET " + cast.ToString(skip) + " ROWS FETCH NEXT " +
+					cast.ToString(take) + " ROWS ONLY "
+			} else if hasSkip && !hasTake {
+				QueryString += " OFFSET " + cast.ToString(skip) + " ROWS"
+			} else if hasTake && !hasSkip {
+				top := "SELECT TOP " + cast.ToString(take) + " "
+				QueryString = strings.Replace(QueryString, "SELECT", top, 1)
+			}
+
+		} else if driverName == "oracle" {
+			if hasSkip && hasTake {
+				QueryString += " ROWNUM <= " + cast.ToString(take) + " OFFSET " + cast.ToString(skip)
+			} else if hasSkip && !hasTake {
+
+			} else if hasTake && !hasSkip {
+				QueryString = "select * from (" + QueryString +
+					") WHERE ROWNUM <= " + cast.ToString(take)
+			}
+
+		} else if driverName == "postgres" {
+			if hasSkip && hasTake {
+				QueryString += " LIMIT " + cast.ToString(take) +
+					" OFFSET " + cast.ToString(skip)
+			} else if hasSkip && !hasTake {
+				QueryString += " LIMIT ALL" +
+					" OFFSET " + cast.ToString(skip)
+			} else if hasTake && !hasSkip {
+				QueryString += " LIMIT " + cast.ToString(take)
+			}
 		}
-		if cast.ToString(where) != "" {
-			QueryString = QueryString + " WHERE " + cast.ToString(where)
-		}
+		// fmt.Println(QueryString)
 		cursor.(*Cursor).QueryString = QueryString
-	} else {
 
+	} else if hasProcedure {
+		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
+		fmt.Println("Isi Proc command : ", procCommand)
+
+		spName := procCommand.(toolkit.M)["name"].(string) + " "
+		params, hasParam := procCommand.(toolkit.M)["parms"]
+		orderparam, hasOrder := procCommand.(toolkit.M)["orderparam"]
+		ProcStatement := ""
+
+		if driverName == "mysql" {
+			paramstring := ""
+			if hasParam && hasOrder {
+				paramToolkit := params.(toolkit.M)
+				orderString := orderparam.([]string)
+				for i := 0; i < len(paramToolkit); i++ {
+					if i == 0 {
+						if strings.Contains(orderString[i], "@@") {
+							paramstring = "(" + strings.Replace(orderString[i], "@@", "@", 1)
+						} else if StringValue(paramToolkit[orderString[i]], driverName) != "''" {
+							paramstring = "(" + StringValue(paramToolkit[orderString[i]], driverName)
+
+						} else {
+							paramstring = "("
+						}
+
+					} else {
+						if strings.Contains(orderString[i], "@@") {
+							paramstring += ", " + strings.Replace(orderString[i], "@@", "@", 1)
+						} else {
+							paramstring += ", " + StringValue(paramToolkit[orderString[i]], driverName)
+
+						}
+					}
+
+					fmt.Println("Print value order", paramstring)
+				}
+
+			} else if hasParam && !hasOrder {
+				return nil, errorlib.Error(packageName, modQuery, "procedure", "please provide order parameter")
+			} else {
+				paramstring = "("
+			}
+			paramstring += ");"
+
+			ProcStatement = "CALL " + spName + paramstring
+		} else if driverName == "mssql" {
+			paramstring := ""
+			incParam := 0
+			if hasParam {
+				for key, val := range params.(toolkit.M) {
+					if key != "" {
+						if incParam == 0 {
+							paramstring = key + " = " + StringValue(val, driverName) + ""
+
+						} else {
+							paramstring += ", " + key + " = " + StringValue(val, driverName) + ""
+						}
+						incParam += 1
+					}
+				}
+				paramstring += ";"
+			}
+
+			ProcStatement = "EXECUTE " + spName + paramstring
+		} else if driverName == "oracle" {
+			var paramstring string
+			var variable string
+			var isEmpty bool
+			if hasParam && hasOrder {
+				paramToolkit := params.(toolkit.M)
+				orderString := orderparam.([]string)
+				for i := 0; i < len(paramToolkit); i++ {
+					if i == 0 {
+						if strings.Contains(orderString[i], "@@") {
+							variable = "var " + strings.Replace(orderString[i], "@@", "", 1) +
+								" " + cast.ToString(paramToolkit[orderString[i]]) + ";"
+							paramstring = "(" + strings.Replace(orderString[i], "@@", ":", 1)
+							isEmpty = false
+						} else if StringValue(paramToolkit[orderString[i]], driverName) != "''" {
+							paramstring = "(" + StringValue(paramToolkit[orderString[i]], driverName)
+							isEmpty = false
+						}
+
+					} else {
+						if strings.Contains(orderString[i], "@@") {
+							variable += "var " + strings.Replace(orderString[i], "@@", "", 1) +
+								" " + cast.ToString(paramToolkit[orderString[i]]) + ";"
+							paramstring += ", " + strings.Replace(orderString[i], "@@", ":", 1)
+						} else {
+							paramstring += ", " + StringValue(paramToolkit[orderString[i]], driverName)
+
+						}
+					}
+				}
+				if !isEmpty {
+					paramstring += ");"
+				}
+			} else if hasParam && !hasOrder {
+				return nil, errorlib.Error(packageName, modQuery, "procedure", "please provide order parameter")
+			}
+
+			ProcStatement = variable + "EXECUTE " + spName + paramstring
+
+		} else if driverName == "postgres" {
+			paramstring := ""
+			if hasParam && hasOrder {
+				paramToolkit := params.(toolkit.M)
+				orderString := orderparam.([]string)
+				for i := 0; i < len(paramToolkit); i++ {
+					if i == 0 {
+						if strings.Contains(orderString[i], "@@") {
+							paramstring = "(" + strings.Replace(orderString[i], "@@", "@", 1)
+						} else if StringValue(paramToolkit[orderString[i]], driverName) != "''" {
+							paramstring = "(" + StringValue(paramToolkit[orderString[i]], driverName)
+
+						} else {
+							paramstring = "("
+						}
+
+					} else {
+						if strings.Contains(orderString[i], "@@") {
+							paramstring += ", " + strings.Replace(orderString[i], "@@", "@", 1)
+						} else {
+							paramstring += ", " + StringValue(paramToolkit[orderString[i]], driverName)
+
+						}
+					}
+
+					fmt.Println("Print value order", paramstring)
+				}
+
+			} else if hasParam && !hasOrder {
+
+				return nil, errorlib.Error(packageName, modQuery, "procedure", "please provide order parameter")
+
+			} else {
+				paramstring = "("
+			}
+			paramstring += ")"
+
+			ProcStatement = "SELECT " + spName + paramstring
+		}
+
+		cursor.(*Cursor).QueryString = ProcStatement
+
+		fmt.Println("Proc Statement : ", ProcStatement)
 	}
 	return cursor, nil
-}
-
-func  StringValue(v interface{},db string) string {
-	var ret string
-	switch v.(type) {
-	case string:
-		ret = fmt.Sprintf("%s","'"+ v.(string)+"'")
-	case time.Time:
-		t := v.(time.Time).UTC() 
-		if(strings.Contains(db,"oracle")){  
-			ret = "to_date('"+t.Format("2006-01-02 15:04:05")+"','yyyy-mm-dd hh24:mi:ss')" 	
-		}else{ 
-			ret = "'"+t.Format("2006-01-02 15:04:05")+"'" 
-		} 
-	case int, int32, int64, uint, uint32, uint64:
-		ret = fmt.Sprintf("%d", v.(int))
-	case nil:
-		ret = ""
-	default:
-		ret = fmt.Sprintf("%v", v)
-		//-- do nothing
-	}
-	return ret
 }
 
 func (q *Query) Exec(parm toolkit.M) error {
@@ -213,64 +542,62 @@ func (q *Query) Exec(parm toolkit.M) error {
 	if parm == nil {
 		parm = toolkit.M{}
 	}
-	// fmt.Println("Parameter Exec : ", parm)
-	
+
 	dbname := q.Connection().Info().Database
+	driverName := q.GetDriverDB()
+	// driverName = "oracle"
 	tablename := ""
 
 	if parm == nil {
 		parm = toolkit.M{}
 	}
-	data := parm.Get("data", nil)  
-	 
+	data := parm.Get("data", nil)
 	// fmt.Println("Hasil ekstraksi Param : ", data)
 
-	//========================EXTRACT FIELD, DATA AND FORMAT DATE=============================
-    var attributes string
-	var tanya string
-	var values string //[]interface{}{}
-   if(data!=nil){
+	/*========================EXTRACT FIELD, DATA AND FORMAT DATE=============================*/
+
+	var attributes string
+	var values string
+	var setUpdate, statement string
+
+	if data != nil {
+
 		var reflectValue = reflect.ValueOf(data)
-		if  reflectValue.Kind() == reflect.Ptr {
+		if reflectValue.Kind() == reflect.Ptr {
 			reflectValue = reflectValue.Elem()
 		}
-		var reflectType = reflectValue.Type() 
+		var reflectType = reflectValue.Type()
 
 		for i := 0; i < reflectValue.NumField(); i++ {
 			namaField := reflectType.Field(i).Name
-			//tipeData := reflectType.Field(i).Type
 			dataValues := reflectValue.Field(i).Interface()
+			stringValues := StringValue(dataValues, driverName)
 			if i == 0 {
 				attributes = "(" + namaField
-				tanya = "(" + "?"
-				values = StringValue(dataValues,q.GetDriverDB())
-
+				values = "(" + stringValues
+				setUpdate = namaField + " = " + stringValues
 			} else {
-				attributes = attributes + "," + namaField
-				tanya = tanya + "," + "?"
-				values = values+","+StringValue(dataValues,q.GetDriverDB())
-
+				attributes += ", " + namaField
+				values += ", " + stringValues
+				setUpdate += ", " + namaField + " = " + stringValues
 			}
-			// values = append(values, StringValue(dataValues))
-
 		}
+		attributes += ")"
+		values += ")"
 	}
-	//=================================END OF EXTRACTION=======================================
 
-	 
+	/*=================================END OF EXTRACTION=======================================*/
+
 	temp := ""
 	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
-		// fmt.Printf("[%s] QP = %s \n",
-		// 	toolkit.Id(data),
-		// 	toolkit.JsonString(qp))
 		temp = toolkit.JsonString(qp)
 		return qp.PartType
 	}, nil).Data
 
-	fromParts, hasFrom := parts[dbox.QueryPartFrom] 
+	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	if !hasFrom {
-		 
+
 		return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
 	}
 	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
@@ -287,12 +614,12 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 		where, e = fb.Build()
 		if e != nil {
-			 
+
 		} else {
-			 
+
 		}
-		 
-	} 
+
+	}
 	commandType := ""
 	multi := false
 
@@ -311,110 +638,196 @@ func (q *Query) Exec(parm toolkit.M) error {
 		commandType = dbox.QueryPartSave
 	}
 
+	var id string
+	var idVal interface{}
 	if data == nil {
-		//---
 		multi = true
 	} else {
 		if where == nil {
-			id := toolkit.Id(data)
-			if id != nil {
-				where = (toolkit.M{}).Set("_id", id)
+			id, idVal = toolkit.IdInfo(data)
+			if id != "" {
+				where = id + " = " + StringValue(idVal, "non")
 			}
 		} else {
 			multi = true
 		}
 	}
+
 	session := q.Session()
-	row, _ := json.Marshal(data)
-	result := string(row) 
-	result = strings.Replace(result, "{", "", -1)
-	result = strings.Replace(result, "}", "", -1)
-	result = strings.Replace(result, "\\", "", -1) 
+	sessionHive := q.SessionHive()
+	multiExec := q.Config("multiexec", false).(bool)
 
 	if dbname != "" && tablename != "" && multi == true {
 
 	}
 	if commandType == dbox.QueryPartInsert {
-	 
-	} else if commandType == dbox.QueryPartUpdate {
-		result := strings.Replace(result, ":", "=", -1)
-		datas := strings.Split(result, ",")
-		var attribute []string
-		var set string
-		var vals []string
-		for i := 0; i < len(datas); i++ {
-			rows := strings.Split(datas[i], "=")
-			for j := 0; j < len(rows); j++ {
-				if j == 0 {
-					rows[j] = strings.Replace(rows[j], "\"", "", -1)
-					attribute = append(attribute, rows[j])
-				} else {
-					vals = append(vals, rows[j])
-				}
-			}
-		}
-		for i := 0; i < len(attribute); i++ {
-			if i == 0 {
-				vals[i] = strings.Replace(vals[i], "\"", "'", -1)
-				set = set + attribute[i] + "=" + vals[i]
+		if attributes != "" && values != "" {
+			if driverName == "hive" {
+				statement = "INSERT INTO " + tablename + " VALUES " + values
+				e = sessionHive.Exec(statement, nil)
 			} else {
-				vals[i] = strings.Replace(vals[i], "\"", "'", -1)
-				set = set + "," + attribute[i] + "=" + vals[i]
+				statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+				_, e = session.Exec(statement)
 			}
-		}
-		statement := "UPDATE " + tablename + " SET " + set + " WHERE " + cast.ToString(where)
-		fmt.Println(statement)
-		_, e = session.Exec(statement)
-		if e != nil {
-			fmt.Println(e.Error())
-		}
-	} else if commandType == dbox.QueryPartDelete {
-		if where == nil {
-			statement :="DELETE FROM "+ tablename
-			fmt.Println(statement)
-			_, e = session.Exec(statement)
+
 			if e != nil {
 				fmt.Println(e.Error())
 			}
 		} else {
-			statement :="DELETE FROM " + tablename + " where " + cast.ToString(where)
-			fmt.Println(statement)
-			_, e = session.Exec(statement)
-			if e != nil {
-				fmt.Println(e.Error())
+			return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				"please provide the data")
+		}
+
+	} else if commandType == dbox.QueryPartUpdate {
+		if setUpdate != "" {
+			var querystmt string
+
+			if where != nil {
+				querystmt = "select count(*) from " + tablename +
+					" where " + cast.ToString(where)
+			} else {
+				querystmt = "select count(*) from " + tablename
+			}
+
+			var rowCount int
+			if driverName == "hive" {
+				rowCount = 1
+				// row := sessionHive.Exec(querystmt)
+				// rowCount = toolkit.ToInt(row[0], "auto")
+			} else {
+				rows, _ := session.Query(querystmt)
+				for rows.Next() {
+					rows.Scan(&rowCount)
+				}
+			}
+
+			if rowCount == 0 {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					"can't find any related record")
+			} else if rowCount == 1 || (rowCount > 1 && multiExec) {
+				var statement string
+				if where != nil {
+					statement = "UPDATE " + tablename + " SET " + setUpdate +
+						" WHERE " + cast.ToString(where)
+				} else {
+					statement = "UPDATE " + tablename + " SET " + setUpdate
+				}
+				fmt.Println("Update Statement : ", statement)
+				if driverName == "hive" {
+					e = sessionHive.Exec(statement, nil)
+				} else {
+					_, e = session.Exec(statement)
+				}
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType,
+						cast.ToString(e.Error()))
+				}
+			} else {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					"please use multiexec to update more than one row")
+			}
+		} else if setUpdate == "" {
+			return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				"please provide the data")
+		}
+
+	} else if commandType == dbox.QueryPartDelete {
+		var querystmt string
+		if where != nil {
+			querystmt = "select count(*) from " + tablename +
+				" where " + cast.ToString(where)
+		} else {
+			querystmt = "select count(*) from " + tablename
+		}
+
+		var rowCount int
+		if driverName == "hive" {
+			rowCount = 1
+			// row := sessionHive.Exec(querystmt)
+			// rowCount = toolkit.ToInt(row[0], "auto")
+		} else {
+			rows, _ := session.Query(querystmt)
+			for rows.Next() {
+				rows.Scan(&rowCount)
 			}
 		}
 
-	} else if commandType == dbox.QueryPartSave {
-		attributes = attributes + ")"
-		tanya = tanya + ")"
-		
-		// sqlStr := "INSERT INTO " + tablename + " " + attributes + " VALUES " + tanya
-		// val :=""
-		// for i := 0; i < len(values); i++ {
-		// 	if(i==0){
-		// 		val="("+cast.ToString(values[i])
-		// 	}else{
-		// 		val=val+","+cast.ToString(values[i])
-		// 	}
-		// }
-
-		// val=val+")"
-		statement := "INSERT INTO " + tablename + " " + attributes + " VALUES ( "+values+ " )"		
-		// fmt.Println("Syntax Insert : ", sqlStr)
-		// fmt.Println("Data yang akan di insert : ", values)
-		// stmt, _ := session.Prepare(sqlStr)
-		// fmt.Println("Session data : ", stmt)
-
-		// res, e := stmt.Exec(values...)
-		// if e != nil {
-		// 	fmt.Println(res)
-		// }
-		// fmt.Println(statement)
-		_, e = session.Exec(statement)
+		if rowCount == 0 {
+			return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				"can't find any related record")
+		} else if rowCount == 1 || (rowCount > 1 && multiExec) {
+			var statement string
+			if where != nil {
+				statement = "DELETE FROM " + tablename + " where " + cast.ToString(where)
+			} else {
+				statement = "DELETE FROM " + tablename
+			}
+			fmt.Println("Delete Statement : ", statement)
+			if driverName == "hive" {
+				e = sessionHive.Exec(statement, nil)
+			} else {
+				_, e = session.Exec(statement)
+			}
 			if e != nil {
 				fmt.Println(e.Error())
 			}
+		} else if rowCount > 1 && !multiExec {
+			return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				"please use multiexec to delete more than one row")
+		}
+	} else if commandType == dbox.QueryPartSave {
+		if attributes != "" && values != "" {
+			var querystmt string
+			if where != nil {
+				querystmt = "select count(*) from " + tablename +
+					" where " + cast.ToString(where)
+			}
+			var rowCount int
+			if driverName == "hive" {
+				rowCount = 1
+				// row := sessionHive.Exec(querystmt)
+				// rowCount = toolkit.ToInt(row[0], "auto")
+			} else {
+				rows, _ := session.Query(querystmt)
+				for rows.Next() {
+					rows.Scan(&rowCount)
+				}
+			}
+
+			var statement string
+			if rowCount == 0 || where == nil {
+				if driverName == "hive" {
+					statement = "INSERT INTO " + tablename + " VALUES " + values
+				} else {
+					statement = "INSERT INTO " + tablename + " " +
+						attributes + " VALUES " + values
+				}
+			} else if rowCount == 1 || (rowCount > 1 && multiExec) {
+				statement = "UPDATE " + tablename + " SET " + setUpdate +
+					" WHERE " + cast.ToString(where)
+			} else {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					"please use multiexec to save more than one row")
+			}
+
+			fmt.Println("Save Statement : ", statement)
+			if driverName == "hive" {
+				e = sessionHive.Exec(statement, nil)
+			} else {
+				_, e = session.Exec(statement)
+			}
+			if e != nil {
+				fmt.Println(e.Error())
+			}
+			if e != nil {
+				fmt.Println(e.Error())
+			}
+
+		} else if values == "" {
+			return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				"please provide the data")
+		}
+
 	}
 	if e != nil {
 		return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())

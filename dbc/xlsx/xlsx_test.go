@@ -18,8 +18,10 @@ func prepareConnection() (dbox.IConnection, error) {
 	// mapHeader[5] = toolkit.M{}.Set("F", "int")
 	// mapHeader[6] = toolkit.M{}.Set("G", "int")
 	// mapHeader := []toolkit.M{} //AddMap Header
-	var config = map[string]interface{}{}
+	// var config = map[string]interface{}{}
 	// var config = map[string]interface{}{"mapheader": mapHeader}
+
+	config := toolkit.M{}.Set("rowstart", 6).Set("colsstart", 2).Set("useheader", true)
 	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\IO Price Indices.xlsm", "", "", "", config}
 	c, e := dbox.NewConnection("xlsx", ci)
 	if e != nil {
@@ -75,18 +77,19 @@ func TestSelect(t *testing.T) {
 	}
 	defer csr.Close()
 
-	ds, e := csr.Fetch(nil, 5, false)
+	results := make([]map[string]interface{}, 0)
+	e = csr.Fetch(&results, 5, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N1: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch N1 OK. Result: %v \n", ds.Data)
+		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
 	}
 
-	ds, e = csr.Fetch(nil, 3, false)
+	e = csr.Fetch(&results, 3, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N2: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch N2 OK. Result: %v \n", ds.Data)
+		fmt.Printf("Fetch N2 OK. Result: %v \n", results)
 	}
 
 	// e = csr.ResetFetch()

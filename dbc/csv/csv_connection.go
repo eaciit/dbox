@@ -90,7 +90,7 @@ func (c *Connection) Connect() error {
 		c.file, err = os.Open(filePath)
 		if err != nil {
 			if isNewFile {
-				c.file, err = os.OpenFile(filePath, os.O_CREATE, 0)
+				c.file, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
 				if err != nil {
 					return errorlib.Error(packageName, modConnection, "Connect", "Cannot Create New File")
 				}
@@ -327,20 +327,26 @@ func (c *Connection) StartSessionWrite() error {
 	if filePath := ci.Host; filePath != "" {
 		var err error
 
-		c.file, err = os.OpenFile(filePath, os.O_RDWR|os.O_APPEND, 0)
+		c.file, err = os.OpenFile(filePath, os.O_RDWR|os.O_APPEND, 0666)
 		if err != nil {
 			return errorlib.Error(packageName, modConnection, "SessionWrite", "Cannot Open File")
 		}
 
-		if c.TypeOpenFile == TypeOpenFile_Create {
-			c.reader = csv.NewReader(c.file)
-			c.SetReaderParam()
+		c.reader = csv.NewReader(c.file)
+		c.SetReaderParam()
+		dataTemp := make([]string, 0)
 
-			c.tempfile, err = os.OpenFile(filePath+".temp", os.O_CREATE, 0)
+		if c.isUseHeader {
+			dataTemp, _ = c.reader.Read()
+		}
+
+		if c.TypeOpenFile == TypeOpenFile_Create {
+
+			c.tempfile, err = os.OpenFile(filePath+".temp", os.O_RDWR|os.O_CREATE, 0666)
 			c.writer = csv.NewWriter(c.tempfile)
 
 			if c.isUseHeader {
-				dataTemp, _ := c.reader.Read()
+				// dataTemp, _ := c.reader.Read()
 				c.writer.Write(dataTemp)
 				c.writer.Flush()
 			}

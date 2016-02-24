@@ -177,7 +177,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			return nil, errorlib.Error(packageName, modQuery, "Cursor",
 				e.Error())
 		} else {
-			//fmt.Printf("Where: %s", toolkit.JsonString(where))
+			//fmt.Printf("Where: %s\n", toolkit.JsonString(where))
 		}
 		//where = iwhere.(toolkit.M)
 	}
@@ -240,6 +240,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	if cursor == nil {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", "Unable to initialize cursor. This is likely caused by unimplemented command or invalid series of query")
 	}
+
+	//fmt.Println("Where: " + toolkit.JsonString(where))
 	return cursor, nil
 }
 
@@ -364,6 +366,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 		}
 	} else if commandType == dbox.QueryPartSave {
+		//fmt.Println("Saving ", toolkit.JsonString(data))
 		_, e = mgoColl.Upsert(where, data)
 	}
 	if e != nil {

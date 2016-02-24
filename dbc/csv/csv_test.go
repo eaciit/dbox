@@ -35,6 +35,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestFilter(t *testing.T) {
+	t.Skip("Just Skip Test")
 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
 	fb.AddFilter(dbox.Or(
 		dbox.Contains("regfield", "1"),
@@ -57,14 +58,20 @@ func TestFilter(t *testing.T) {
 	}
 }
 
-// func TestSelect(t *testing.T) {
+type employee struct {
+	Id        string
+	FirstName string
+	Age       int
+}
+
+// func TestHasSelect(t *testing.T) {
 // 	c, e := prepareConnection()
 // 	if e != nil {
 // 		t.Errorf("Unable to connect %s \n", e.Error())
 // 	}
 // 	defer c.Close()
 
-// 	csr, e := c.NewQuery().Select("EmployeeId", "FirstName", "LastName").
+// 	csr, e := c.NewQuery().Select().
 // 		Cursor(nil)
 // 	if e != nil {
 // 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -74,34 +81,133 @@ func TestFilter(t *testing.T) {
 // 		t.Errorf("Cursor not initialized")
 // 		return
 // 	}
-// 	defer csr.Close()
 
-// 	ds, e := csr.Fetch(nil, 2, false)
+// 	csr.Close()
+
+// 	results := make([]map[string]interface{}, 0)
+// 	e = csr.Fetch(&results, 2, false)
 // 	if e != nil {
 // 		t.Errorf("Unable to fetch N1: %s \n", e.Error())
 // 	} else {
-// 		fmt.Printf("Fetch N1 OK. Result: %v \n", ds.Data)
+// 		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
 // 	}
 
-// 	ds, e = csr.Fetch(nil, 3, false)
+// 	csr, e = c.NewQuery().Cursor(nil)
+// 	if e != nil {
+// 		t.Errorf("Cursor pre error: %s \n", e.Error())
+// 		return
+// 	}
+// 	if csr == nil {
+// 		t.Errorf("Cursor not initialized")
+// 		return
+// 	}
+
+// 	e = csr.Fetch(&results, 3, false)
 // 	if e != nil {
 // 		t.Errorf("Unable to fetch N2: %s \n", e.Error())
 // 	} else {
-// 		fmt.Printf("Fetch N2 OK. Result: %v \n", ds.Data)
+// 		fmt.Printf("Fetch N2 OK. Result: %v \n", results)
 // 	}
 
-// 	e = csr.ResetFetch()
-// 	if e != nil {
-// 		t.Errorf("Unable to reset fetch: %s \n", e.Error())
-// 	}
-
-// 	ds, e = csr.Fetch(nil, 5, false)
-// 	if e != nil {
-// 		t.Errorf("Unable to fetch N3: %s \n", e.Error())
-// 	} else {
-// 		fmt.Printf("Fetch N3 OK. Result: %v \n", ds.Data)
-// 	}
 // }
+
+func TestSelect(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	// csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Startwith("FirstName", "Alip")).Cursor(nil)
+	csr, e := c.NewQuery().Select("Id", "FirstName", "LastName", "Age").Where(dbox.Endwith("FirstName", "@consfirst")).
+		Cursor(toolkit.M{}.Set("@confirst", "v"))
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := make([]map[string]interface{}, 0)
+	e = csr.Fetch(&results, 2, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
+	}
+
+	e = csr.Fetch(&results, 3, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N2: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N2 OK. Result: %v \n", results)
+	}
+
+	e = csr.ResetFetch()
+	if e != nil {
+		t.Errorf("Unable to reset fetch: %s \n", e.Error())
+	}
+
+	resultsstruct := make([]employee, 0)
+	e = csr.Fetch(&resultsstruct, 5, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N3: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N3 OK. Result: %v \n", resultsstruct)
+	}
+
+	resultstruct := employee{}
+	e = csr.Fetch(&resultstruct, 1, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N3: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch N4 OK. Result: %v \n", resultstruct)
+	}
+}
+
+func TestSelectFreeQuery(t *testing.T) {
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	tq, e := dbox.NewQueryFromSQL(c, `SELECT Id, FirstName, LastName FROM tab WHERE ((Email = "userAA@yahoo.com" or Email = "userBB@yahoo.com") or (Email = "userCC@yahoo.com" or id = '12345'))`)
+	if e != nil {
+		t.Errorf("Query pre error: %s \n", e.Error())
+		return
+	}
+
+	csr, e := tq.Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 3, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch FN1 OK. Result: %v \n", results)
+	}
+
+	results = make([]toolkit.M, 0)
+	e = csr.Fetch(&results, 2, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N1: %s \n", e.Error())
+	} else {
+		fmt.Printf("Fetch FN2 OK. Result: %v \n", results)
+	}
+}
 
 // func TestSelectFilter(t *testing.T) {
 // 	c, e := prepareConnection()
@@ -113,7 +219,7 @@ func TestFilter(t *testing.T) {
 
 // 	csr, e := c.NewQuery().
 // 		Select("EmployeeId", "FirstName", "LastName", "Age").
-// 		// Where(dbox.Eq("EmployeeId", "101-102-4")).Cursor(nil)
+// 		// Where(dbox.Eq("Age", "@age")).Cursor(toolkit.M{}.Set("age",15))
 // 		// Where(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4"))).Cursor(nil)
 // 		Where(dbox.And(dbox.Or(dbox.Eq("EmployeeId", "101-102-10"), dbox.Eq("EmployeeId", "101-102-3"), dbox.Eq("EmployeeId", "101-102-4")), dbox.Eq("Age", "30"))).Cursor(nil)
 // 	if e != nil {
@@ -182,19 +288,19 @@ func TestCRUD(t *testing.T) {
 		return
 	}
 	defer c.Close()
-
-	type employee struct {
-		EmployeeId string
-		FirstName  string
-		LastName   string
-		Age        string
-		JoinDate   string
-		Email      string
-		Phone      string
+	// ===================================================
+	/*type employee struct {
+		Id        string
+		FirstName string
+		LastName  string
+		Age       string
+		JoinDate  string
+		Email     string
+		Phone     string
 	}
 
 	data := employee{}
-	data.EmployeeId = fmt.Sprintf("90012019")
+	data.Id = fmt.Sprintf("90012021")
 	data.FirstName = fmt.Sprintf("Alip Sidik")
 	data.LastName = fmt.Sprintf("Prayitno")
 	data.Age = fmt.Sprintf("2C")
@@ -207,67 +313,59 @@ func TestCRUD(t *testing.T) {
 		t.Errorf("Unable to Insert: %s \n", e.Error())
 	}
 
-	// dataStr := []string{"90013012", "AABBCC", "DDEEFF", "10", "2015-11-01", "AABB@CC.com"}
-	// e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataStr})
-	// if e != nil {
-	// 	t.Errorf("Unable to Insert: %s \n", e.Error())
-	// }
-
-	// dataJson := `{
-	// 	"EmployeeId": "901-999-1",
-	// 	"FirstName": "Quail",
-	// 	"LastName": "Boyd",
-	// 	"Email": "adipiscing.lacus@diamdictum.ca"
-	// }`
-
-	// e = c.NewQuery().Insert().Exec(toolkit.M{"data": dataJson})
-	// if e != nil {
-	// 	t.Errorf("Unable to Insert: %s \n", e.Error())
-	// }
-
 	data = employee{}
-	data.FirstName = fmt.Sprintf("Alip")
-	data.LastName = fmt.Sprintf("Sidik")
-	data.Age = fmt.Sprintf("2X")
-	data.JoinDate = fmt.Sprintf("1990-11-01")
-	data.Email = fmt.Sprintf("user15@gmail.com")
-	data.Phone = fmt.Sprintf("085-0000-0000")
+	data.Id = fmt.Sprintf("90012022")
+	data.FirstName = fmt.Sprintf("Test Name 01")
+	data.LastName = fmt.Sprintf("AA")
+	data.Age = fmt.Sprintf("2C")
+	data.JoinDate = fmt.Sprintf("2015-11-01")
+	data.Email = fmt.Sprintf("userAA@yahoo.com")
+	data.Phone = fmt.Sprintf("085-XXX-XXX-XX")
 
-	e = c.NewQuery().Where(dbox.Eq("EmployeeId", "90012019")).Update().Exec(toolkit.M{"data": data})
+	e = c.NewQuery().Insert().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to Insert: %s \n", e.Error())
+	}*/
+	// ===================================================
+
+	// ===================================================
+	/*dataupdate := toolkit.M{}.Set("Id", "90012019").Set("FirstName", "Alip").Set("LastName", "Sidik")
+
+	e = c.NewQuery().Where(dbox.Eq("Id", "90012019")).Update().Exec(toolkit.M{"data": dataupdate})
 	if e != nil {
 		t.Errorf("Unable to update: %s \n", e.Error())
 	}
 
-	// e = c.NewQuery().
-	// 	Delete().
-	// 	Where(dbox.Eq("EmployeeId", "90012019")).
-	// 	Exec(nil)
-	// if e != nil {
-	// 	t.Errorf("Unable to Delete: %s \n", e.Error())
-	// }
+	dataupdate = toolkit.M{}.Set("Id", "90012021").Set("FirstName", "Prayitno").Set("LastName", "Alip")
 
-	// q := c.NewQuery().SetConfig("multiexec", true).From("testtables").Save()
-	// type user struct {
-	// 	Id    string `bson:"_id"`
-	// 	Title string
-	// 	Email string
-	// }
-	// for i := 1; i <= 10000; i++ {
-	// 	//go func(q dbox.IQuery, i int) {
-	// 	data := user{}
-	// 	data.Id = fmt.Sprintf("User-%d", i)
-	// 	data.Title = fmt.Sprintf("User-%d's name", i)
-	// 	data.Email = fmt.Sprintf("User-%d@myco.com", i)
-	// 	if i == 10 || i == 20 || i == 30 {
-	// 		data.Email = fmt.Sprintf("User-%d@myholding.com", i)
-	// 	}
-	// 	e = q.Exec(toolkit.M{
-	// 		"data": data,
-	// 	})
-	// 	if e != nil {
-	// 		t.Errorf("Unable to save: %s \n", e.Error())
-	// 	}
-	// }
-	// q.Close()
+	e = c.NewQuery().Update().Exec(toolkit.M{"data": dataupdate})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	}
+
+	e = c.NewQuery().
+		Delete().
+		Where(dbox.Eq("Id", "90012020")).
+		Exec(nil)
+
+	if e != nil {
+		t.Errorf("Unable to Delete: %s \n", e.Error())
+	}*/
+	// ===================================================
+
+	// ===================================================
+	/*q := c.NewQuery().SetConfig("multiexec", true).Save()
+
+	for i := 1; i <= 5; i++ {
+		datasave := toolkit.M{}.Set("Id", fmt.Sprintf("ID-%d", i+3)).Set("FirstName", fmt.Sprintf("BB-%d", i)).Set("LastName", fmt.Sprintf("BB-%d", i))
+		datasave.Set("Email", "userAA@yahoo.com").Set("Phone", "XXX-0856")
+		e = q.Exec(toolkit.M{
+			"data": datasave,
+		})
+		if e != nil {
+			t.Errorf("Unable to save: %s \n", e.Error())
+		}
+	}
+	q.Close()*/
 
 }

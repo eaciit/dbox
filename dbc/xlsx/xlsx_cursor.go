@@ -1,6 +1,7 @@
 package xlsx
 
 import (
+	// "encoding/json"
 	"errors"
 	"fmt"
 	"github.com/eaciit/dbox"
@@ -9,7 +10,7 @@ import (
 	"github.com/tealeg/xlsx"
 	// "io"
 	// "os"
-	// "reflect"
+	"reflect"
 )
 
 const (
@@ -106,25 +107,32 @@ func (c *Cursor) ResetFetch() error {
 // 	return nil
 // }
 
-func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
-	*dbox.DataSet, error) {
+func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	if closeWhenDone {
 		defer c.Close()
 	}
 
-	e := c.prepIter()
-	if e != nil {
-		return nil, errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+	// if !toolkit.IsPointer(m) {
+	// 	return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
+	// }
+	if n != 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
+		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer of slice")
 	}
 
-	ds := dbox.NewDataSet(m)
+	e := c.prepIter()
+	if e != nil {
+		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+	}
+
+	datas := []toolkit.M{}
 	// lineCount := 0
 	//=============================
 	maxGetData := c.count
 	if n > 0 {
 		maxGetData = c.fetchRow + n
 	}
+
 	linecount := 0
 
 	for _, row := range c.reader.Sheet[c.sheetname].Rows {
@@ -136,7 +144,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			if i < len(c.headerColumn) {
 				recData.Set(c.headerColumn[i].name, cell.Value)
 
-				if c.ConditionVal.Select == nil || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
+				if len(c.ConditionVal.Select) == 0 || c.ConditionVal.Select.Get("*", 0).(int) == 1 {
 					appendData.Set(c.headerColumn[i].name, cell.Value)
 				} else {
 					if c.ConditionVal.Select.Get(c.headerColumn[i].name, 0).(int) == 1 {
@@ -155,7 +163,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 		if isAppend && len(appendData) > 0 {
 			linecount += 1
 			if linecount > c.fetchRow {
-				ds.Data = append(ds.Data, appendData)
+				datas = append(datas, appendData)
 				c.fetchRow += 1
 			}
 		}
@@ -164,5 +172,11 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 			break
 		}
 	}
-	return ds, nil
+
+	e = toolkit.Unjson(toolkit.Jsonify(datas), m)
+	if e != nil {
+		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+	}
+
+	return nil
 }
