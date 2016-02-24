@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	err "github.com/eaciit/errorlib"
+	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
 	"strings"
 )
@@ -16,17 +17,25 @@ const (
 
 type Connection struct {
 	dbox.Connection
+	Hive       *hive.Hive
 	Sql        sql.DB
 	Drivername string
 }
 
 func (c *Connection) RdbmsConnect(drivername string, stringConnection string) error {
-	sqlcon, e := sql.Open(drivername, stringConnection)
-	if e != nil {
-		return err.Error(packageName, modConnection, "Connect", e.Error())
+	if drivername == "hive" {
+		connInfo := strings.Split(stringConnection, ",")
+		c.Hive = hive.HiveConfig(connInfo[0], connInfo[1], connInfo[2], connInfo[3], "")
+		c.Drivername = drivername
+		c.Hive.Conn.Open()
+	} else {
+		sqlcon, e := sql.Open(drivername, stringConnection)
+		if e != nil {
+			return err.Error(packageName, modConnection, "Connect", e.Error())
+		}
+		c.Sql = *sqlcon
+		c.Drivername = drivername
 	}
-	c.Sql = *sqlcon
-	c.Drivername = drivername
 	return nil
 }
 
@@ -42,7 +51,13 @@ func (c *Connection) GetDriver() string {
 }
 
 func (c *Connection) Close() {
-	c.Sql.Close()
+	if c.GetDriver() == "hive" {
+		if c.Hive.Conn.Open() != nil {
+			c.Hive.Conn.Close()
+		}
+	} else {
+		c.Sql.Close()
+	}
 }
 
 func (c *Connection) OnQuery(query string, name string) []string {

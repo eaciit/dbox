@@ -186,6 +186,7 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 			switch field[0] {
 			case '-':
 				n = -1
+				field = field[1:]
 			}
 		}
 

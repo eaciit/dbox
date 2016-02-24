@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
-	//"github.com/eaciit/database/base"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
+	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
 	"reflect"
 	"strings"
@@ -21,6 +21,7 @@ const (
 
 type Query struct {
 	dbox.Query
+	Hive       *hive.Hive
 	Sql        sql.DB
 	usePooling bool
 	DriverDB   string
@@ -38,15 +39,24 @@ func (q *Query) Session() sql.DB {
 	return q.Sql
 }
 
+func (q *Query) SessionHive() *hive.Hive {
+	q.Hive = q.Connection().(*Connection).Hive
+	return q.Hive
+}
+
 func (q *Query) GetDriverDB() string {
 	q.DriverDB = q.Connection().(*Connection).Drivername
 	return q.DriverDB
 }
 
 func (q *Query) Close() {
-	// if q.Sql != nil && q.usePooling == false {
-	q.Sql.Close()
-	// }
+	if q.GetDriverDB() != "hive" {
+		q.Sql.Close()
+	} else {
+		// if q.SessionHive().Conn.Open() != nil {
+		// 	q.SessionHive().Conn.Close()
+		// }
+	}
 }
 
 func (q *Query) Prepare() error {
@@ -142,11 +152,16 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	*/
 
 	dbname := q.Connection().Info().Database
-	session := q.Session()
 	cursor := dbox.NewCursor(new(Cursor))
-	cursor.(*Cursor).session = session
+	if q.GetDriverDB() == "hive" {
+		session := q.SessionHive()
+		cursor.(*Cursor).sessionHive = session
+	} else {
+		session := q.Session()
+		cursor.(*Cursor).session = session
+	}
 	driverName := q.GetDriverDB()
-	driverName = "oracle"
+	// driverName = "oracle"
 	var QueryString string
 
 	/*
@@ -204,11 +219,21 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				/* isi Aggr Info :  {$sum 1 Total Item}*/
 
 				if incAtt == 0 {
-					aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
-						cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					if driverName == "hive" {
+						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as " + aggrInfo.Alias
+					} else {
+						aggrExpression = strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					}
 				} else {
-					aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) +
-						"(" + cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					if driverName == "hive" {
+						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as " + aggrInfo.Alias
+					} else {
+						aggrExpression += ", " + strings.Replace(aggrInfo.Op, "$", "", 1) + "(" +
+							cast.ToString(aggrInfo.Field) + ")" + " as \"" + aggrInfo.Alias + "\""
+					}
 				}
 				incAtt++
 			}
@@ -317,7 +342,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			QueryString += " ORDER BY " + orderExpression
 		}
 
-		if driverName == "mysql" {
+		if driverName == "mysql" || driverName == "hive" {
 			if hasSkip && hasTake {
 				QueryString += " LIMIT " + cast.ToString(take) +
 					" OFFSET " + cast.ToString(skip)
@@ -359,7 +384,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
 		}
-		fmt.Println(QueryString)
+		// fmt.Println(QueryString)
 		cursor.(*Cursor).QueryString = QueryString
 
 	} else if hasProcedure {
@@ -533,7 +558,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 	var attributes string
 	var values string
-	var setUpdate string
+	var setUpdate, statement string
 
 	if data != nil {
 
@@ -627,7 +652,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 			multi = true
 		}
 	}
+
 	session := q.Session()
+	sessionHive := q.SessionHive()
 	multiExec := q.Config("multiexec", false).(bool)
 
 	if dbname != "" && tablename != "" && multi == true {
@@ -635,9 +662,14 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 	if commandType == dbox.QueryPartInsert {
 		if attributes != "" && values != "" {
-			statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
-			fmt.Println("Insert Statement : ", statement)
-			_, e = session.Exec(statement)
+			if driverName == "hive" {
+				statement = "INSERT INTO " + tablename + " VALUES " + values
+				e = sessionHive.Exec(statement, nil)
+			} else {
+				statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+				_, e = session.Exec(statement)
+			}
+
 			if e != nil {
 				fmt.Println(e.Error())
 			}
@@ -649,6 +681,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	} else if commandType == dbox.QueryPartUpdate {
 		if setUpdate != "" {
 			var querystmt string
+
 			if where != nil {
 				querystmt = "select count(*) from " + tablename +
 					" where " + cast.ToString(where)
@@ -656,10 +689,16 @@ func (q *Query) Exec(parm toolkit.M) error {
 				querystmt = "select count(*) from " + tablename
 			}
 
-			rows, _ := session.Query(querystmt)
 			var rowCount int
-			for rows.Next() {
-				rows.Scan(&rowCount)
+			if driverName == "hive" {
+				rowCount = 1
+				// row := sessionHive.Exec(querystmt)
+				// rowCount = toolkit.ToInt(row[0], "auto")
+			} else {
+				rows, _ := session.Query(querystmt)
+				for rows.Next() {
+					rows.Scan(&rowCount)
+				}
 			}
 
 			if rowCount == 0 {
@@ -674,7 +713,11 @@ func (q *Query) Exec(parm toolkit.M) error {
 					statement = "UPDATE " + tablename + " SET " + setUpdate
 				}
 				fmt.Println("Update Statement : ", statement)
-				_, e = session.Exec(statement)
+				if driverName == "hive" {
+					e = sessionHive.Exec(statement, nil)
+				} else {
+					_, e = session.Exec(statement)
+				}
 				if e != nil {
 					return errorlib.Error(packageName, modQuery+".Exec", commandType,
 						cast.ToString(e.Error()))
@@ -697,10 +740,16 @@ func (q *Query) Exec(parm toolkit.M) error {
 			querystmt = "select count(*) from " + tablename
 		}
 
-		rows, _ := session.Query(querystmt)
 		var rowCount int
-		for rows.Next() {
-			rows.Scan(&rowCount)
+		if driverName == "hive" {
+			rowCount = 1
+			// row := sessionHive.Exec(querystmt)
+			// rowCount = toolkit.ToInt(row[0], "auto")
+		} else {
+			rows, _ := session.Query(querystmt)
+			for rows.Next() {
+				rows.Scan(&rowCount)
+			}
 		}
 
 		if rowCount == 0 {
@@ -714,7 +763,11 @@ func (q *Query) Exec(parm toolkit.M) error {
 				statement = "DELETE FROM " + tablename
 			}
 			fmt.Println("Delete Statement : ", statement)
-			_, e = session.Exec(statement)
+			if driverName == "hive" {
+				e = sessionHive.Exec(statement, nil)
+			} else {
+				_, e = session.Exec(statement)
+			}
 			if e != nil {
 				fmt.Println(e.Error())
 			}
@@ -729,16 +782,26 @@ func (q *Query) Exec(parm toolkit.M) error {
 				querystmt = "select count(*) from " + tablename +
 					" where " + cast.ToString(where)
 			}
-			rows, _ := session.Query(querystmt)
 			var rowCount int
-			for rows.Next() {
-				rows.Scan(&rowCount)
+			if driverName == "hive" {
+				rowCount = 1
+				// row := sessionHive.Exec(querystmt)
+				// rowCount = toolkit.ToInt(row[0], "auto")
+			} else {
+				rows, _ := session.Query(querystmt)
+				for rows.Next() {
+					rows.Scan(&rowCount)
+				}
 			}
 
 			var statement string
 			if rowCount == 0 || where == nil {
-				statement = "INSERT INTO " + tablename + " " +
-					attributes + " VALUES " + values
+				if driverName == "hive" {
+					statement = "INSERT INTO " + tablename + " VALUES " + values
+				} else {
+					statement = "INSERT INTO " + tablename + " " +
+						attributes + " VALUES " + values
+				}
 			} else if rowCount == 1 || (rowCount > 1 && multiExec) {
 				statement = "UPDATE " + tablename + " SET " + setUpdate +
 					" WHERE " + cast.ToString(where)
@@ -748,7 +811,14 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 
 			fmt.Println("Save Statement : ", statement)
-			_, e = session.Exec(statement)
+			if driverName == "hive" {
+				e = sessionHive.Exec(statement, nil)
+			} else {
+				_, e = session.Exec(statement)
+			}
+			if e != nil {
+				fmt.Println(e.Error())
+			}
 			if e != nil {
 				fmt.Println(e.Error())
 			}
