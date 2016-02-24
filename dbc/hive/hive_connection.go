@@ -1,10 +1,10 @@
 package hive
 
 import (
-	"fmt"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
-	// err "github.com/eaciit/errorlib"
 	"github.com/eaciit/dbox/dbc/rdbms"
+	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	// "database/sql"
 )
@@ -37,13 +37,13 @@ func (c *Connection) Connect() error {
 	db := ci.Database
 	username := ci.UserName
 	pass := ci.Password
-	// ConnectionString := username + ":" + pass + "@tcp(" + host + ")/" + db //user:password@tcp(127.0.0.1:3306)/hello"
-	ConnectionString := host + "," + db + "," + username + "," + pass + "," + ""
-	// h = HiveConfig("192.168.0.223:10000", "default", "developer", "b1gD@T@")
+	path := cast.ToString(ci.Settings["path"])
+	delimiter := cast.ToString(ci.Settings["delimiter"])
+	ConnectionString := host + "," + db + "," + username + "," + pass + "," + path + "," + delimiter
 
-	err := c.RdbmsConnect("hive", ConnectionString)
-	if err != nil {
-		fmt.Println(err)
+	e := c.RdbmsConnect("hive", ConnectionString)
+	if e != nil {
+		return err.Error(packageName, modConnection, "Connect", e.Error())
 	}
 	return nil
 }

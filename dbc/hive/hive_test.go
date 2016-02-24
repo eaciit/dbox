@@ -23,7 +23,7 @@ type Students struct {
 
 func prepareConnection() (dbox.IConnection, error) {
 	// ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "developer", "b1gD@T@", nil}
-	ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "hdfs", "", nil}
+	ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "hdfs", "", toolkit.M{}.Set("path", "").Set("delimiter", "tsv")}
 	c, e := dbox.NewConnection("hive", ci)
 	if e != nil {
 		return nil, e
@@ -44,7 +44,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestSelect(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -116,7 +116,7 @@ func TestSelect(t *testing.T) {
 }
 
 func TestFetch(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -154,7 +154,7 @@ func TestFetch(t *testing.T) {
 }
 
 func TestSelectAggregate(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -200,7 +200,7 @@ func TestSelectAggregate(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
