@@ -33,6 +33,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	)
 	q.ReadFile(&dataMaps, q.Connection().(*Connection).filePath)
 	cursor := dbox.NewCursor(new(Cursor))
+	cursor = cursor.SetConnection(q.Connection())
 
 	filters, e := q.Filters(in)
 	if e != nil {
@@ -46,21 +47,35 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	aggregate := false
 	hasWhere := filters.Has("where")
+	hasAggregate := filters.Get("aggregate").(bool)
+	if hasAggregate {
+		aggregate = true
+	}
 
 	if !aggregate {
-		var whereFields []*dbox.Filter
-		var dataInterface interface{}
-		json.Unmarshal(toolkit.Jsonify(dataMaps), &dataInterface)
-
 		if hasWhere {
-			whereFields = filters.Get("where").([]*dbox.Filter)
-			// jsonSelect = fields
+			cursor.(*Cursor).whereFields = filters.Get("where").([]*dbox.Filter)
 			cursor.(*Cursor).isWhere = true
 		}
-		cursor = cursor.SetConnection(q.Connection())
-		cursor.(*Cursor).whereFields = whereFields
+
+		if skip := filters.Get("skip").(int); skip > 0 {
+			cursor.(*Cursor).skip = skip
+		}
+
+		if take := filters.Get("take").(int); take > 0 {
+			cursor.(*Cursor).take = take
+		}
+
+		if sort := filters.Get("sort").([]string); toolkit.SliceLen(sort) > 0 {
+			fb := new(FilterBuilder)
+			// toolkit.Printf("sorter:%v\n", sort)
+			sorter := fb.SortFetch(sort, dataMaps)
+
+			cursor.(*Cursor).datas = sorter
+		} else {
+			cursor.(*Cursor).datas = dataMaps
+		}
 		cursor.(*Cursor).jsonSelect = filters.Get("select").([]string)
-		cursor.(*Cursor).readFile = toolkit.Jsonify(dataMaps)
 	} else {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", "No Aggregate function")
 	}
@@ -364,6 +379,30 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 		skip = skipPart.([]interface{})[0].(*dbox.QueryPart).Value.(int)
 	}
 	filters.Set("skip", skip)
+
+	take := 0
+	if takeParts, hasTake := parts[dbox.QueryPartTake]; hasTake {
+		take = takeParts.([]interface{})[0].(*dbox.QueryPart).Value.(int)
+	}
+	filters.Set("take", take)
+
+	var aggregate bool
+	if _, hasAggr := parts[dbox.QueryPartAggr]; hasAggr {
+		aggregate = true
+	}
+	filters.Set("aggregate", aggregate)
+
+	var sort []string
+	if sortParts, hasSort := parts[dbox.QueryPartOrder]; hasSort {
+		sort = []string{}
+		for _, sl := range sortParts.([]interface{}) {
+			qp := sl.(*dbox.QueryPart)
+			for _, fid := range qp.Value.([]string) {
+				sort = append(sort, fid)
+			}
+		}
+	}
+	filters.Set("sort", sort)
 
 	var fields []string
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
