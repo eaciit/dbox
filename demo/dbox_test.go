@@ -151,7 +151,7 @@ func TestSelect(t *testing.T) {
 		// Where(dbox.In("nama", "tas", "dompet")).
 		// Where(dbox.Nin("nama", "tas", "dompet")).
 		// Where(dbox.And(dbox.Gt("amount", 100000), dbox.Eq("nama", "buku"))).
-		// Where(dbox.Contains("nama", "tem", "pe")).
+		Where(dbox.Contains("nama", "tem", "pe")).
 		// Where(dbox.Or(dbox.Contains("nama", "bu"), dbox.Contains("nama", "do"))).
 		// Where(dbox.Startwith("nama", "bu")).
 		// Where(dbox.Endwith("nama", "as")).
