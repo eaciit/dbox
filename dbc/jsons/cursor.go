@@ -9,11 +9,11 @@ import (
 
 type Cursor struct {
 	dbox.Cursor
-	indexes []int
-	where   []*dbox.Filter
-
-	q            *Query
-	currentIndex int
+	indexes                  []int
+	where                    []*dbox.Filter
+	jsonSelect               []string
+	q                        *Query
+	currentIndex, skip, take int
 }
 
 func (c *Cursor) Close() {
@@ -40,34 +40,53 @@ func (c *Cursor) ResetFetch() error {
 
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	var source []toolkit.M
-	var lower, upper int
+	var lower, upper, lenData, lenIndex int
+	if c.where == nil {
+		lenData = len(c.q.data)
+	} else {
+		lenIndex = len(c.indexes)
+	}
 
 	lower = c.currentIndex
 	upper = lower + n
+	if c.skip > 0 {
+		lower = c.skip
+	}
 
 	if n == 0 {
 		if c.where == nil {
-			upper = len(c.q.data)
+			upper = lenData
 		} else {
-			upper = len(c.indexes)
+			upper = lenIndex
 		}
+
+		if c.take > 0 {
+			upper = lower + c.take
+		}
+
 	} else if n == 1 {
 		upper = lower + 1
+
 	} else {
 		upper = lower + n
-		if c.where == nil {
-			if upper > len(c.q.data) {
-				upper = len(c.q.data)
-			}
-		} else {
-			if upper > len(c.indexes) {
-				upper = len(c.indexes)
-			}
+		if c.take > 0 && n > c.take {
+			upper = lower + c.take
+		}
+	}
+
+	if c.where == nil {
+		if upper > lenData {
+			upper = lenData
+		}
+	} else {
+		if upper > lenIndex {
+			upper = lenIndex
 		}
 	}
 
 	if c.where == nil {
 		source = c.q.data[lower:upper]
+
 	} else {
 		for _, v := range c.indexes[lower:upper] {
 			/*
@@ -85,6 +104,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 	}
 
+	if toolkit.SliceLen(c.jsonSelect) > 0 {
+		source = getSelected(source, c.jsonSelect)
+	}
+
 	var e error
 	if n == 1 {
 		e = toolkit.Serde(&source[0], m, "json")
@@ -96,6 +119,35 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	}
 	//toolkit.Printf("Data: %s\nLower, Upper = %d, %d\nSource: %s\nResult:%s\n\n", toolkit.JsonString(c.q.data), lower, upper, toolkit.JsonString(source), toolkit.JsonString(m))
 	return nil
+}
+
+func getSelected(js []toolkit.M, field []string) []toolkit.M {
+	var getRemField = toolkit.M{}
+	for _, v := range js {
+		for i, _ := range v {
+			getRemField.Set(i, i)
+		}
+
+		if field[0] != "*" {
+			fields := removeDuplicatesUnordered(getRemField, field)
+			for _, field := range fields {
+				v.Unset(field)
+			}
+		}
+	}
+	return js
+}
+
+func removeDuplicatesUnordered(elements toolkit.M, key []string) []string {
+	for _, k := range key {
+		elements.Unset(k)
+	}
+
+	result := []string{}
+	for key, _ := range elements {
+		result = append(result, key)
+	}
+	return result
 }
 
 func newCursor(q *Query) *Cursor {
