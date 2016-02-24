@@ -3,8 +3,9 @@ package jsons
 import (
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
-	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/dbox/dbc/json"
+	"github.com/eaciit/dbox/dbc/rdbms"
+	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io/ioutil"
 	"os"
@@ -458,6 +459,9 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
+				if in != nil {
+					f = rdbms.ReadVariable(f, in)
+				}
 				filters = append(filters, f)
 			}
 		}
