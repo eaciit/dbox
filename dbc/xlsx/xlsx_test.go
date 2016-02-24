@@ -21,8 +21,8 @@ func prepareConnection() (dbox.IConnection, error) {
 	// var config = map[string]interface{}{}
 	// var config = map[string]interface{}{"mapheader": mapHeader}
 
-	config := toolkit.M{}.Set("rowstart", 6).Set("colsstart", 2).Set("useheader", true)
-	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\IO Price Indices.xlsm", "", "", "", config}
+	config := toolkit.M{}.Set("rowstart", 5).Set("colsstart", 2).Set("useheader", true)
+	ci := &dbox.ConnectionInfo{"D:\\goproject\\sample\\IO Price Indices.xlsm", "", "", "", config}
 	c, e := dbox.NewConnection("xlsx", ci)
 	if e != nil {
 		return nil, e
@@ -36,26 +36,26 @@ func prepareConnection() (dbox.IConnection, error) {
 	return c, nil
 }
 
-func TestConnect(t *testing.T) {
-	c, e := prepareConnection()
-	if e != nil {
-		t.Errorf("Unable to connect: %s \n", e.Error())
-	}
-	defer c.Close()
-}
+// func TestConnect(t *testing.T) {
+// 	c, e := prepareConnection()
+// 	if e != nil {
+// 		t.Errorf("Unable to connect: %s \n", e.Error())
+// 	}
+// 	defer c.Close()
+// }
 
-func TestFilter(t *testing.T) {
-	fb := dbox.NewFilterBuilder(new(FilterBuilder))
-	fb.AddFilter(dbox.Or(
-		dbox.Eq("_id", 1),
-		dbox.Eq("group", "administrators")))
-	b, e := fb.Build()
-	if e != nil {
-		t.Errorf("Error %s", e.Error())
-	} else {
-		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
-	}
-}
+// func TestFilter(t *testing.T) {
+// 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
+// 	fb.AddFilter(dbox.Or(
+// 		dbox.Eq("_id", 1),
+// 		dbox.Eq("group", "administrators")))
+// 	b, e := fb.Build()
+// 	if e != nil {
+// 		t.Errorf("Error %s", e.Error())
+// 	} else {
+// 		fmt.Printf("Result:\n%v\n", toolkit.JsonString(b))
+// 	}
+// }
 
 func TestSelect(t *testing.T) {
 	c, e := prepareConnection()
@@ -65,7 +65,8 @@ func TestSelect(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().Select("1", "2", "3", "4", "5").From("HIST").
-		// Where(dbox.Contains("A", "TSI")).
+		// Where(dbox.Contains("2", "183")).
+	Where(dbox.Lt("2", "183")).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -78,19 +79,19 @@ func TestSelect(t *testing.T) {
 	defer csr.Close()
 
 	results := make([]map[string]interface{}, 0)
-	e = csr.Fetch(&results, 5, false)
+	e = csr.Fetch(&results, 2, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N1: %s \n", e.Error())
 	} else {
 		fmt.Printf("Fetch N1 OK. Result: %v \n", results)
 	}
 
-	e = csr.Fetch(&results, 3, false)
-	if e != nil {
-		t.Errorf("Unable to fetch N2: %s \n", e.Error())
-	} else {
-		fmt.Printf("Fetch N2 OK. Result: %v \n", results)
-	}
+	// e = csr.Fetch(&results, 6, false)
+	// if e != nil {
+	// 	t.Errorf("Unable to fetch N2: %s \n", e.Error())
+	// } else {
+	// 	fmt.Printf("Fetch N2 OK. Result: %v \n", results)
+	// }
 
 	// e = csr.ResetFetch()
 	// if e != nil {
