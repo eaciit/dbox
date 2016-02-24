@@ -2,7 +2,6 @@ package rdbms
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/eaciit/dbox"
 	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/hdc/hive"
@@ -25,9 +24,12 @@ type Connection struct {
 func (c *Connection) RdbmsConnect(drivername string, stringConnection string) error {
 	if drivername == "hive" {
 		connInfo := strings.Split(stringConnection, ",")
-		c.Hive = hive.HiveConfig(connInfo[0], connInfo[1], connInfo[2], connInfo[3], "")
+		c.Hive = hive.HiveConfig(connInfo[0], connInfo[1], connInfo[2], connInfo[3], connInfo[4], connInfo[5])
 		c.Drivername = drivername
-		c.Hive.Conn.Open()
+		e := c.Hive.Conn.Open()
+		if e != nil {
+			return err.Error(packageName, modConnection, "Connect", e.Error())
+		}
 	} else {
 		sqlcon, e := sql.Open(drivername, stringConnection)
 		if e != nil {
@@ -35,6 +37,11 @@ func (c *Connection) RdbmsConnect(drivername string, stringConnection string) er
 		}
 		c.Sql = *sqlcon
 		c.Drivername = drivername
+		e = sqlcon.Ping()
+		if e != nil {
+			return err.Error(packageName, modConnection, "Connect", e.Error())
+		}
+
 	}
 	return nil
 }
@@ -65,13 +72,15 @@ func (c *Connection) OnQuery(query string, name string) []string {
 
 	rows, e := c.Sql.Query(query)
 	if e != nil {
-		fmt.Println(e.Error())
+		toolkit.Println(e.Error())
+		return nil
 	}
 
 	defer rows.Close()
 	columns, e := rows.Columns()
 	if e != nil {
-		fmt.Println(e.Error())
+		toolkit.Println(e.Error())
+		return nil
 	}
 
 	count := len(columns)
