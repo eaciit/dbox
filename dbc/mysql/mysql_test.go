@@ -120,6 +120,7 @@ func TestConnect(t *testing.T) {
 // }
 
 func TestProcedure(t *testing.T) {
+	t.Skip()
 	c, _ := prepareConnection()
 	defer c.Close()
 
@@ -268,7 +269,7 @@ func TestSelectFilter(t *testing.T) {
 		// Where(dbox.Nin("umur", 25, 30)).
 		// Where(dbox.In("tanggal", tanggal1, tanggal2)).
 		// Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
-		// Where(dbox.Contains("name", "ar", "ov")).
+		Where(dbox.Contains("nama", "tem", "pe")).
 		// Where(dbox.Or(dbox.Contains("name", "oy"), dbox.Contains("name", "os"))).
 		// Where(dbox.Startwith("name", "Co")).
 		// Where(dbox.Endwith("name", "ey")).
