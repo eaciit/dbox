@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/eaciit/dbox"
+	// _ "github.com/eaciit/dbox/dbc/xlsx"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"github.com/tealeg/xlsx"
 	// "io"
 	// "os"
 	"reflect"
+	// "strconv"
 )
 
 const (
@@ -36,6 +38,8 @@ type Cursor struct {
 	ConditionVal QueryCondition
 
 	headerColumn []headerstruct
+	rowstart int
+	colstart int
 }
 
 func (c *Cursor) Close() {
@@ -107,7 +111,9 @@ func (c *Cursor) ResetFetch() error {
 // 	return nil
 // }
 
+
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
+	 // ci := c.aa
 
 	if closeWhenDone {
 		defer c.Close()
@@ -135,7 +141,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	linecount := 0
 
-	for _, row := range c.reader.Sheet[c.sheetname].Rows {
+	for i, row := range c.reader.Sheet[c.sheetname].Rows {
 		isAppend := true
 		recData := toolkit.M{}
 		appendData := toolkit.M{}
@@ -154,11 +160,24 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			}
 		}
 
+
+
+		// fmt.Println(appendData)
+
 		isAppend = c.ConditionVal.getCondition(recData)
 
 		if c.fetchRow < c.ConditionVal.skip || (c.fetchRow > (c.ConditionVal.skip+c.ConditionVal.limit) && c.ConditionVal.limit > 0) {
 			isAppend = false
 		}
+
+		aa := c.rowstart
+
+		if i <= aa {
+			isAppend = false
+			linecount += 1
+		}
+
+		
 
 		if isAppend && len(appendData) > 0 {
 			linecount += 1
@@ -167,6 +186,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				c.fetchRow += 1
 			}
 		}
+
+		// fmt.Println("max :",maxGetData)
+		// fmt.Println("fetch :",c.fetchRow)
+
 
 		if c.fetchRow >= maxGetData {
 			break
