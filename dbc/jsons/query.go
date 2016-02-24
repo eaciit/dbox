@@ -4,6 +4,7 @@ import (
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	err "github.com/eaciit/errorlib"
+	"github.com/eaciit/dbox/dbc/json"
 	"github.com/eaciit/toolkit"
 	"io/ioutil"
 	"os"
@@ -50,10 +51,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		cursor.take = take
 	}
 	if sort := setting.Get("sort").([]string); toolkit.SliceLen(sort) > 0 {
-		fb := new(FilterBuilder)
-		// toolkit.Printf("sorter:%v\n", sort)
+		fb := new(json.FilterBuilder)
 		sorter := fb.SortFetch(sort, q.data)
-
 		q.data = sorter
 	}
 
