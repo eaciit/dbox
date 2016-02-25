@@ -57,10 +57,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	var e error
 	h := c.sessionHive
 	if h != nil {
-		e := h.Populate(c.QueryString, &tableData)
-		if e != nil {
-			return e
-		}
+		e = h.Exec(c.QueryString, func(x hive.HiveResult) error {
+			tableData = append(tableData, x.ResultObj.(map[string]interface{}))
+			return nil
+		})
 	} else {
 
 		rows, e := c.session.Query(c.QueryString)
