@@ -220,13 +220,14 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor = cursor.SetConnection(q.Connection())
-
+	
 	// cursor.(*Cursor).file = q.File()
 	cursor.(*Cursor).reader = q.Reader()
 	cursor.(*Cursor).headerColumn = q.Connection().(*Connection).headerColumn
 	cursor.(*Cursor).sheetname = tablename
 	cursor.(*Cursor).count = cursor.(*Cursor).Count()
 	cursor.(*Cursor).fetchRow = 0
+	cursor.(*Cursor).rowstart = q.Connection().(*Connection).rowstart
 
 	if e != nil {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", e.Error())

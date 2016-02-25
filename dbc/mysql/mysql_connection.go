@@ -1,10 +1,9 @@
 package mysql
 
 import (
-	"fmt"
 	"github.com/eaciit/dbox"
-	// err "github.com/eaciit/errorlib"
 	"github.com/eaciit/dbox/dbc/rdbms"
+	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	_ "github.com/go-sql-driver/mysql"
 	// "database/sql"
@@ -44,9 +43,9 @@ func (c *Connection) Connect() error {
 	// 	return err.Error(packageName, modConnection, "Connect", e.Error())
 	// }
 	// c.Sql = *sqlcon
-	err := c.RdbmsConnect("mysql", ConnectionString)
-	if err != nil {
-		fmt.Println(err)
+	e := c.RdbmsConnect("mysql", ConnectionString)
+	if e != nil {
+		return err.Error(packageName, modConnection, "Connect", e.Error())
 	}
 	return nil
 }

@@ -55,11 +55,10 @@ func TestConnect(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect: %s \n", e.Error())
-		fmt.Println(e)
+		return
 	} else {
-		// fmt.Println(c)
+		defer c.Close()
 	}
-	defer c.Close()
 }
 
 // func TestFilter(t *testing.T) {

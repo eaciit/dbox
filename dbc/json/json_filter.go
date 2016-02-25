@@ -81,46 +81,38 @@ func (fb *FilterBuilder) CheckFilter(f *dbox.Filter, p M) *dbox.Filter {
 		}
 		return f
 	} else if f.Op == "$contains" {
+
 		for i, v := range f.Value.([]string) {
-			splitString := strings.Split(v, "@")
-			valueToString := ToString(splitString[1])
-			f.Value.([]string)[i] = p.Get(valueToString).(string)
+			f.Value.([]string)[i] = p.Get(v).(string)
 		}
 		return f
 	} else {
 		if !IsSlice(f.Value) {
-			fTostring := ToString(f.Value)
-			foundSubstring := strings.Index(fTostring, "@")
+			foundSubstring := strings.Index(f.Value.(string), "@")
 			if foundSubstring != 0 {
 				return f
 			}
 
-			if strings.Contains(fTostring, "@") {
-				splitParm := strings.Split(fTostring, "@")
-				f.Value = p.Get(splitParm[1])
+			if strings.Contains(f.Value.(string), "@") {
+				f.Value = p.Get(f.Value.(string))
 				return f
 			}
 		} else {
-			var splitValue []string
-
 			for i, v := range f.Value.([]interface{}) {
-				vToString := ToString(v)
-				foundSubstring := strings.Index(vToString, "@")
+				foundSubstring := strings.Index(v.(string), "@")
 				if foundSubstring != 0 {
 					return f
 				}
-				if strings.Contains(vToString, "@") {
-					splitValue = strings.Split(vToString, "@")
-				}
+
 				switch Kind(v) {
 				case reflect.String:
-					stringValue := ToString(p.Get(splitValue[1]))
+					stringValue := p.Get(v.(string))
 					f.Value.([]interface{})[i] = stringValue
 				case reflect.Int:
-					stringValue := ToInt(p.Get(splitValue[1]), ".")
+					stringValue := ToInt(p.Get(v.(string)), ".")
 					f.Value.([]interface{})[i] = stringValue
 				case reflect.Bool:
-					f.Value.([]interface{})[i] = p.Get(splitValue[1]).(bool)
+					f.Value.([]interface{})[i] = p.Get(v.(string)).(bool)
 				}
 			}
 			return f

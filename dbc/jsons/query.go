@@ -3,8 +3,9 @@ package jsons
 import (
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
-	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/dbox/dbc/json"
+	"github.com/eaciit/dbox/dbc/rdbms"
+	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io/ioutil"
 	"os"
@@ -40,7 +41,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	if e != nil {
 		return nil, err.Error(packageName, modQuery, "Cursor", e.Error())
 	}
-	//toolkit.Printf("Data count: %d \n", len(q.data))
 	cursor = newCursor(q)
 
 	if skip := setting.Get("skip").(int); skip > 0 {
@@ -68,6 +68,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 func (q *Query) Exec(in toolkit.M) error {
 	setting, e := q.prepare(in)
 	commandType := setting["commandtype"].(string)
+	multiExec := q.Config("multiexec", false).(bool)
 	//toolkit.Printf("Command type: %s\n", commandType)
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
@@ -205,6 +206,9 @@ func (q *Query) Exec(in toolkit.M) error {
 		//toolkit.Printf("Indexes: %s\n", toolkit.JsonString(indexes))
 		for i, v := range q.data {
 			// update only data that match given index
+			if len(indexes) > 1 && !multiExec {
+				indexes = indexes[:1]
+			}
 			if toolkit.HasMember(indexes, i) || !hasWhere {
 				if idField == "" {
 					idField = toolkit.IdField(v)
@@ -458,6 +462,9 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
+				if in != nil {
+					f = rdbms.ReadVariable(f, in)
+				}
 				filters = append(filters, f)
 			}
 		}
