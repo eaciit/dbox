@@ -26,7 +26,8 @@ func (c *Connection) RdbmsConnect(drivername string, stringConnection string) er
 		connInfo := strings.Split(stringConnection, ",")
 		c.Hive = hive.HiveConfig(connInfo[0], connInfo[1], connInfo[2], connInfo[3], connInfo[4], connInfo[5])
 		c.Drivername = drivername
-		e := c.Hive.Conn.Open()
+		c.Hive.Conn.Open()
+		e := c.Hive.Conn.TestConnection()
 		if e != nil {
 			return err.Error(packageName, modConnection, "Connect", e.Error())
 		}
