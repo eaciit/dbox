@@ -399,6 +399,7 @@ func TestSelectTake(t *testing.T) {
 }
 */
 func TestDeleteAll(t *testing.T) {
+	// t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -420,6 +421,7 @@ type user struct {
 }
 
 func TestSave(t *testing.T) {
+	// t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -451,6 +453,7 @@ func TestSave(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -482,6 +485,7 @@ func TestInsert(t *testing.T) {
 }
 
 func TestUpdateFilter(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -520,6 +524,7 @@ func TestUpdateFilter(t *testing.T) {
 }
 
 func TestUpdateNoFilter(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -538,6 +543,7 @@ func TestUpdateNoFilter(t *testing.T) {
 }
 
 func TestDeleteFilter(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -553,6 +559,7 @@ func TestDeleteFilter(t *testing.T) {
 }
 
 func TestSaveSameId(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -614,6 +621,7 @@ func TestSaveSameId(t *testing.T) {
 }
 
 func TestSaveNotEmpty(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -644,6 +652,43 @@ func TestSaveNotEmpty(t *testing.T) {
 		t.Errorf("Unable to save: %s \n", e.Error())
 	}
 	q.Close()
+}
+
+func TestUpdateMultiExec(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	e = c.NewQuery().Update().
+		SetConfig("multiexec", false).
+		Where(dbox.Eq("email", "User-1@myco.com")).
+		Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("email", "Master")))
+	if e != nil {
+		t.Errorf("Unable to update filter: %s \n", e.Error())
+	}
+}
+
+func TestDeleteMultiExec(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	e = c.NewQuery().
+		Where(dbox.Eq("email", "User-1@myco.com")).
+		SetConfig("multiexec", false).
+		Delete().Exec(nil)
+	if e != nil {
+		t.Errorf("Unablet to delete filter %s\n", e.Error())
+		return
+	}
 }
 
 /*type testUser struct {
