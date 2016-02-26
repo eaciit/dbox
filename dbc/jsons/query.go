@@ -68,7 +68,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 func (q *Query) Exec(in toolkit.M) error {
 	setting, e := q.prepare(in)
 	commandType := setting["commandtype"].(string)
-	multiExec := q.Config("multiexec", false).(bool)
 	//toolkit.Printf("Command type: %s\n", commandType)
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
@@ -204,11 +203,9 @@ func (q *Query) Exec(in toolkit.M) error {
 
 		var idField string
 		//toolkit.Printf("Indexes: %s\n", toolkit.JsonString(indexes))
+
 		for i, v := range q.data {
-			// update only data that match given index
-			if len(indexes) > 1 && !multiExec {
-				indexes = indexes[:1]
-			}
+			// update only data that match given inde
 			if toolkit.HasMember(indexes, i) || !hasWhere {
 				if idField == "" {
 					idField = toolkit.IdField(v)
@@ -236,6 +233,9 @@ func (q *Query) Exec(in toolkit.M) error {
 			indexes := dbox.Find(q.data, where)
 			if len(indexes) > 0 {
 				newdata := []toolkit.M{}
+				if len(indexes) > 1 && !multiExec {
+					indexes = indexes[:1]
+				}
 				for index, v := range q.data {
 					partOfIndex := toolkit.HasMember(indexes, index)
 					if partOfIndex == false {
