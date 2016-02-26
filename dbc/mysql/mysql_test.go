@@ -5,7 +5,7 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
 	//"reflect"
-	//"strconv"
+	// "strconv"
 	"testing"
 	"time"
 )
@@ -256,25 +256,22 @@ func TestSelectFilter(t *testing.T) {
 	csr, e := c.NewQuery().
 		// Select("id", "name", "tanggal", "umur").
 		From("orders").
-		// Where(dbox.Eq("name", "Bourne")).
-		// Where(dbox.Ne("name", "Bourne")).
-		// Where(dbox.Gt("umur", 25)).
-		// Where(dbox.Gte("umur", 25)).
-		// Where(dbox.Lt("umur", 25)).
-		// Where(dbox.Lte("tanggal", tanggal1)).
-		// Where(dbox.Lte("umur", 25)).
-		// Where(dbox.In("name", "vidal", "bourne")).
-		// Where(dbox.In("umur", 25, 30)).
-		// Where(dbox.Nin("umur", 25, 30)).
-		// Where(dbox.In("tanggal", tanggal1, tanggal2)).
-		// Where(dbox.And(dbox.Gt("umur", 25), dbox.Eq("name", "Roy"))).
-		Where(dbox.Contains("nama", "tem", "pe")).
-		// Where(dbox.Or(dbox.Contains("name", "oy"), dbox.Contains("name", "os"))).
-		// Where(dbox.Startwith("name", "Co")).
-		// Where(dbox.Endwith("name", "ey")).
-		// Order("name").
+		// Where(dbox.Eq("nama", "buku")).
+		// Where(dbox.Ne("nama", "buku")).
+		// Where(dbox.Gt("price", 100000)).
+		// Where(dbox.Gte("price", 100000)).
+		// Where(dbox.Lt("price", 100000)).
+		// Where(dbox.Lte("price", 100000)).
+		// Where(dbox.In("nama", "tas", "dompet")).
+		// Where(dbox.Nin("nama", "tas", "dompet")).
+		// Where(dbox.And(dbox.Gt("amount", 100000), dbox.Eq("nama", "buku"))).
+		// Where(dbox.Contains("nama", "tem", "pe")).
+		// Where(dbox.Or(dbox.Contains("nama", "bu"), dbox.Contains("nama", "do"))).
+		// Where(dbox.Startwith("nama", "bu")).
+		// Where(dbox.Endwith("nama", "as")).
+		// Order("nama").
 		// Skip(2).
-		// Take(1).
+		// Take(5).
 		Cursor(nil)
 	// Where(dbox.In("nama", "@name1", "@name2")).
 	// Cursor(toolkit.M{}.Set("@name1", "stempel").Set("@name2", "buku"))
@@ -371,7 +368,7 @@ func TestSelectAggregate(t *testing.T) {
 }
 
 func TestCRUD(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -380,15 +377,14 @@ func TestCRUD(t *testing.T) {
 	defer c.Close()
 
 	// ===============================INSERT==============================
-	// q := c.NewQuery().SetConfig("multiexec", true).From("tes").Insert()
+	// q := c.NewQuery().From("tes").Insert()
 	// dataInsert := User{}
-	// dataInsert.Id = fmt.Sprintf("30")
-	// dataInsert.Name = fmt.Sprintf("Constanta")
-	// //dataInsert.Tanggal = JSONTime(time.Now())
+	// dataInsert.Id = fmt.Sprintf("40")
+	// dataInsert.Name = fmt.Sprintf("New Player")
 	// dataInsert.Tanggal = time.Now()
-	// dataInsert.Umur = 45
+	// dataInsert.Umur = 40
 
-	// e = q.Exec(nil)
+	// e = q.Exec(toolkit.M{"data": dataInsert})
 	// if e != nil {
 	// 	t.Errorf("Unable to insert data : %s \n", e.Error())
 	// }
@@ -415,13 +411,13 @@ func TestCRUD(t *testing.T) {
 	/* ===============================SAVE DATA============================== */
 	// q := c.NewQuery().SetConfig("multiexec", false).From("coba").Save()
 	// dataInsert := Coba{}
-	// dataInsert.Id = fmt.Sprintf("1")
-	// dataInsert.Name = fmt.Sprintf("multi, with data contains ID, update")
+	// dataInsert.Id = fmt.Sprintf("3")
+	// dataInsert.Name = fmt.Sprintf("update data")
 
 	// q := c.NewQuery().SetConfig("multiexec", false).From("NoID").Save()
 	// dataInsert := NoID{}
-	// dataInsert.Aidi = fmt.Sprintf("30")
-	// dataInsert.Name = fmt.Sprintf("no multi, with data contains no ID")
+	// dataInsert.Aidi = fmt.Sprintf("40")
+	// dataInsert.Name = fmt.Sprintf("no update")
 
 	// e = q.Exec(toolkit.M{"data": dataInsert})
 	// if e != nil {
@@ -431,11 +427,11 @@ func TestCRUD(t *testing.T) {
 	/* ===============================UPDATE============================== */
 
 	// data := User{}
-	// data.Id = "7"
-	// data.Name = "Oscar"
+	// data.Id = "40"
+	// data.Name = "player40"
 	// data.Tanggal = time.Now()
 	// data.Umur = 24
-	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "7")).Update().Exec(toolkit.M{"data": data})
+	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "30")).Update().Exec(toolkit.M{"data": data})
 	// if e != nil {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
@@ -445,15 +441,6 @@ func TestCRUD(t *testing.T) {
 	// data.Id = "1"
 	// data.Name = "Jamme"
 	// e = c.NewQuery().From("coba").Where(dbox.Eq("id", "1")).Update().Exec(toolkit.M{"data": data})
-	// if e != nil {
-	// 	t.Errorf("Unable to update: %s \n", e.Error())
-	// }
-
-	/* with config */
-	// data := Coba{}
-	// data.Id = "2"
-	// data.Name = "false, no where, with data 2"
-	// e = c.NewQuery().SetConfig("multiexec", false).From("coba").Update().Exec(toolkit.M{"data": data})
 	// if e != nil {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
@@ -477,7 +464,16 @@ func TestCRUD(t *testing.T) {
 	// }
 
 	// // ===============================DELETE==============================
-	// e = c.NewQuery().From("coba").Where(dbox.And(dbox.Eq("id", "2"), dbox.Eq("name", "Thuram"))).Delete().Exec(nil)
+	// e = c.NewQuery().From("tes").Where(dbox.And(dbox.Eq("id", "2"), dbox.Eq("name", "Thuram"))).Delete().Exec(nil)
+	// if e != nil {
+	// 	t.Errorf("Unable to delete table %s\n", e.Error())
+	// 	return
+	// }
+
+	// data := User{}
+	// data.Id = "40"
+
+	// e = c.NewQuery().From("tes").Delete().Exec(toolkit.M{"data": data})
 	// if e != nil {
 	// 	t.Errorf("Unable to delete table %s\n", e.Error())
 	// 	return

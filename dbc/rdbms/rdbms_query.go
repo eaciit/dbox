@@ -655,7 +655,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 	session := q.Session()
 	sessionHive := q.SessionHive()
-	multiExec := q.Config("multiexec", false).(bool)
 
 	if dbname != "" && tablename != "" && multi == true {
 
@@ -680,117 +679,62 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 	} else if commandType == dbox.QueryPartUpdate {
 		if setUpdate != "" {
-			var querystmt string
-
-			if where != nil {
-				querystmt = "select count(*) from " + tablename +
-					" where " + cast.ToString(where)
-			} else {
-				querystmt = "select count(*) from " + tablename
-			}
-
-			var rowCount int
-			if driverName == "hive" {
-				rowCount = 1
-				// row := sessionHive.Exec(querystmt)
-				// rowCount = toolkit.ToInt(row[0], "auto")
-			} else {
-				rows, _ := session.Query(querystmt)
-				for rows.Next() {
-					rows.Scan(&rowCount)
-				}
-			}
-
-			if rowCount == 0 {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
-					"can't find any related record")
-			} else if rowCount == 1 || (rowCount > 1 && multiExec) {
-				var statement string
-				if where != nil {
-					statement = "UPDATE " + tablename + " SET " + setUpdate +
-						" WHERE " + cast.ToString(where)
-				} else {
-					statement = "UPDATE " + tablename + " SET " + setUpdate
-				}
-				fmt.Println("Update Statement : ", statement)
-				if driverName == "hive" {
-					e = sessionHive.Exec(statement, nil)
-				} else {
-					_, e = session.Exec(statement)
-				}
-				if e != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType,
-						cast.ToString(e.Error()))
-				}
-			} else {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
-					"please use multiexec to update more than one row")
-			}
-		} else if setUpdate == "" {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please provide the data")
-		}
-
-	} else if commandType == dbox.QueryPartDelete {
-		var querystmt string
-		if where != nil {
-			querystmt = "select count(*) from " + tablename +
-				" where " + cast.ToString(where)
-		} else {
-			querystmt = "select count(*) from " + tablename
-		}
-
-		var rowCount int
-		if driverName == "hive" {
-			rowCount = 1
-			// row := sessionHive.Exec(querystmt)
-			// rowCount = toolkit.ToInt(row[0], "auto")
-		} else {
-			rows, _ := session.Query(querystmt)
-			for rows.Next() {
-				rows.Scan(&rowCount)
-			}
-		}
-
-		if rowCount == 0 {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"can't find any related record")
-		} else if rowCount == 1 || (rowCount > 1 && multiExec) {
 			var statement string
 			if where != nil {
-				statement = "DELETE FROM " + tablename + " where " + cast.ToString(where)
+				statement = "UPDATE " + tablename + " SET " + setUpdate +
+					" WHERE " + cast.ToString(where)
 			} else {
-				statement = "DELETE FROM " + tablename
+				statement = "UPDATE " + tablename + " SET " + setUpdate
 			}
-			fmt.Println("Delete Statement : ", statement)
+			fmt.Println("Update Statement : ", statement)
 			if driverName == "hive" {
 				e = sessionHive.Exec(statement, nil)
 			} else {
 				_, e = session.Exec(statement)
 			}
 			if e != nil {
-				fmt.Println(e.Error())
+				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					cast.ToString(e.Error()))
 			}
-		} else if rowCount > 1 && !multiExec {
+		} else {
 			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please use multiexec to delete more than one row")
+				"please provide the data")
+		}
+
+	} else if commandType == dbox.QueryPartDelete {
+		var statement string
+		if where != nil {
+			statement = "DELETE FROM " + tablename + " where " + cast.ToString(where)
+		} else {
+			statement = "DELETE FROM " + tablename
+		}
+		fmt.Println("Delete Statement : ", statement)
+		if driverName == "hive" {
+			e = sessionHive.Exec(statement, nil)
+		} else {
+			_, e = session.Exec(statement)
+		}
+		if e != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				cast.ToString(e.Error()))
 		}
 	} else if commandType == dbox.QueryPartSave {
 		if attributes != "" && values != "" {
 			var querystmt string
 			if where != nil {
-				querystmt = "select count(*) from " + tablename +
-					" where " + cast.ToString(where)
+				querystmt = "select 1 as data from " + tablename + " where " + cast.ToString(where)
 			}
 			var rowCount int
 			if driverName == "hive" {
-				rowCount = 1
-				// row := sessionHive.Exec(querystmt)
+				rowCount = 0
+				// row := sessionHive.Exec(querystmt, nil)
 				// rowCount = toolkit.ToInt(row[0], "auto")
 			} else {
-				rows, _ := session.Query(querystmt)
-				for rows.Next() {
-					rows.Scan(&rowCount)
+				if querystmt != "" {
+					rows, _ := session.Query(querystmt)
+					for rows.Next() {
+						rows.Scan(&rowCount)
+					}
 				}
 			}
 
@@ -802,25 +746,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 					statement = "INSERT INTO " + tablename + " " +
 						attributes + " VALUES " + values
 				}
-			} else if rowCount == 1 || (rowCount > 1 && multiExec) {
+			} else {
 				statement = "UPDATE " + tablename + " SET " + setUpdate +
 					" WHERE " + cast.ToString(where)
-			} else {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
-					"please use multiexec to save more than one row")
 			}
 
-			fmt.Println("Save Statement : ", statement)
+			toolkit.Println("Save Statement : ", statement)
 			if driverName == "hive" {
 				e = sessionHive.Exec(statement, nil)
 			} else {
 				_, e = session.Exec(statement)
 			}
 			if e != nil {
-				fmt.Println(e.Error())
-			}
-			if e != nil {
-				fmt.Println(e.Error())
+				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					cast.ToString(e.Error()))
 			}
 
 		} else if values == "" {
