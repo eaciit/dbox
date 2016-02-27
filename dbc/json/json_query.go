@@ -106,6 +106,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 	hasData := parm.Has("data")
 	getWhere := filters.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
 	dataIsSlice := toolkit.IsSlice(data)
+	multiExec := q.Config("multiexec", false).(bool)
+
 	if dataIsSlice {
 		e = toolkit.Unjson(toolkit.Jsonify(data), &dataMs)
 		if e != nil {
@@ -186,6 +188,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 				}
 			}
 
+			if len(indexes) > 1 && !multiExec {
+				indexes = indexes[:1]
+			}
 			for i, v := range dataMaps {
 				if toolkit.HasMember(indexes, i) || !hasWhere {
 					if isDataSlice {
@@ -211,7 +216,10 @@ func (q *Query) Exec(parm toolkit.M) error {
 		// if multi {
 		if hasWhere {
 			result := dbox.Find(dataMaps, getWhere)
-			if len(result) > 0 {
+			if len(result) > 0 || len(result) > 1 {
+				if !multiExec {
+					result = result[:1]
+				}
 				for i, v := range dataMaps {
 					if toolkit.HasMember(result, i) == false {
 						updatedValue = append(updatedValue, v)
