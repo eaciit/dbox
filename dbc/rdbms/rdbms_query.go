@@ -384,12 +384,11 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
 		}
-		// fmt.Println(QueryString)
+		// toolkit.Println(QueryString)
 		cursor.(*Cursor).QueryString = QueryString
 
 	} else if hasProcedure {
 		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
-		fmt.Println("Isi Proc command : ", procCommand)
 
 		spName := procCommand.(toolkit.M)["name"].(string) + " "
 		params, hasParam := procCommand.(toolkit.M)["parms"]
@@ -559,18 +558,17 @@ func (q *Query) Exec(parm toolkit.M) error {
 	var attributes string
 	var values string
 	var setUpdate, statement string
+	var i int
+
+	dataM, e := toolkit.ToM(data)
+	if e != nil {
+		return errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
+	}
 
 	if data != nil {
-
-		var reflectValue = reflect.ValueOf(data)
-		if reflectValue.Kind() == reflect.Ptr {
-			reflectValue = reflectValue.Elem()
-		}
-		var reflectType = reflectValue.Type()
-
-		for i := 0; i < reflectValue.NumField(); i++ {
-			namaField := reflectType.Field(i).Name
-			dataValues := reflectValue.Field(i).Interface()
+		for field, val := range dataM {
+			namaField := field
+			dataValues := val
 			stringValues := StringValue(dataValues, driverName)
 			if i == 0 {
 				attributes = "(" + namaField
@@ -581,6 +579,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 				values += ", " + stringValues
 				setUpdate += ", " + namaField + " = " + stringValues
 			}
+			i += 1
 		}
 		attributes += ")"
 		values += ")"
@@ -686,7 +685,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 			} else {
 				statement = "UPDATE " + tablename + " SET " + setUpdate
 			}
-			fmt.Println("Update Statement : ", statement)
 			if driverName == "hive" {
 				e = sessionHive.Exec(statement, nil)
 			} else {
@@ -708,7 +706,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 		} else {
 			statement = "DELETE FROM " + tablename
 		}
-		fmt.Println("Delete Statement : ", statement)
 		if driverName == "hive" {
 			e = sessionHive.Exec(statement, nil)
 		} else {
@@ -751,7 +748,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 					" WHERE " + cast.ToString(where)
 			}
 
-			toolkit.Println("Save Statement : ", statement)
 			if driverName == "hive" {
 				e = sessionHive.Exec(statement, nil)
 			} else {
