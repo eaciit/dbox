@@ -44,7 +44,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestSelect(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -54,7 +54,7 @@ func TestSelect(t *testing.T) {
 
 	csr, e := c.NewQuery().
 		Select("_id", "nama", "quantity", "price", "amount").
-		From(tableName).
+		From("orders").
 		// Where(dbox.Eq("nama", "buku")).
 		// Where(dbox.Ne("nama", "buku")).
 		// Where(dbox.Gt("price", 100000)).
@@ -71,25 +71,25 @@ func TestSelect(t *testing.T) {
 		// Order("nama").
 		// Skip(2).
 		// Take(5).
-		// Cursor(nil)
-		// Where(dbox.In("nama", "@name1", "@name2")).
-		// Cursor(toolkit.M{}.Set("@name1", "stempel").Set("@name2", "buku"))
-		// Where(dbox.Lte("price", "@price")).
-		// Cursor(toolkit.M{}.Set("@price", 100000))
-		// Where(dbox.Eq("nama", "@nama")).
-		// Cursor(toolkit.M{}.Set("@nama", "tas"))
-		// Where(dbox.Eq("price", "@price")).
-		// Cursor(toolkit.M{}.Set("@price", 200000))
-		// Where(dbox.And(dbox.Gt("price", "@price"), dbox.Eq("status", "@status"))).
-		// Cursor(toolkit.M{}.Set("@price", 100000).Set("@status", "available"))
-		// Where(dbox.And(dbox.Or(dbox.Eq("nama", "@name1"), dbox.Eq("nama", "@name2"),
-		// dbox.Eq("nama", "@name3")), dbox.Lt("quantity", "@quantity"))).
-		// Cursor(toolkit.M{}.Set("@name1", "buku").Set("@name2", "tas").
-		// Set("@name3", "dompet").Set("@quantity", 4))
-		Where(dbox.Or(dbox.Or(dbox.Eq("nama", "@name1"), dbox.Eq("nama", "@name2"),
-		dbox.Eq("nama", "@name3")), dbox.Gt("quantity", "@quantity"))).
-		Cursor(toolkit.M{}.Set("@name1", "buku").Set("@name2", "tas").
-		Set("@name3", "dompet").Set("@quantity", 3))
+		Cursor(nil)
+	// Where(dbox.In("nama", "@name1", "@name2")).
+	// Cursor(toolkit.M{}.Set("@name1", "stempel").Set("@name2", "buku"))
+	// Where(dbox.Lte("price", "@price")).
+	// Cursor(toolkit.M{}.Set("@price", 100000))
+	// Where(dbox.Eq("nama", "@nama")).
+	// Cursor(toolkit.M{}.Set("@nama", "tas"))
+	// Where(dbox.Eq("price", "@price")).
+	// Cursor(toolkit.M{}.Set("@price", 200000))
+	// Where(dbox.And(dbox.Gt("price", "@price"), dbox.Eq("status", "@status"))).
+	// Cursor(toolkit.M{}.Set("@price", 100000).Set("@status", "available"))
+	// Where(dbox.And(dbox.Or(dbox.Eq("nama", "@name1"), dbox.Eq("nama", "@name2"),
+	// dbox.Eq("nama", "@name3")), dbox.Lt("quantity", "@quantity"))).
+	// Cursor(toolkit.M{}.Set("@name1", "buku").Set("@name2", "tas").
+	// Set("@name3", "dompet").Set("@quantity", 4))
+	// Where(dbox.Or(dbox.Or(dbox.Eq("nama", "@name1"), dbox.Eq("nama", "@name2"),
+	// dbox.Eq("nama", "@name3")), dbox.Gt("quantity", "@quantity"))).
+	// Cursor(toolkit.M{}.Set("@name1", "buku").Set("@name2", "tas").
+	// Set("@name3", "dompet").Set("@quantity", 3))
 
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
