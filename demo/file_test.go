@@ -9,6 +9,12 @@ import (
 )
 
 var ctx dbox.IConnection
+var sintaks string = `
+		ctx.NewQuery().
+		Select("_id", "nama", "amount").
+		From(tableName).
+		Cursor(nil)`
+var operation string = "TestSelect"
 
 func connect() error {
 	var e error
@@ -56,25 +62,59 @@ func TestConnect(t *testing.T) {
 	}
 }
 
-func TestSelect(t *testing.T) {
+// func TestSelect(t *testing.T) {
+// 	t.Skip()
+// 	skipIfConnectionIsNil(t)
+
+// 	cursor, e := ctx.NewQuery().
+// 		Select("_id", "nama", "amount").
+// 		From(tableName).
+// 		Cursor(nil)
+
+// 	if e != nil {
+// 		t.Fatalf("Cursor error: " + e.Error())
+// 	}
+// 	defer cursor.Close()
+
+// 	if cursor.Count() == 0 {
+// 		t.Fatalf("No record found")
+// 	}
+
+// 	var results []toolkit.M
+// 	e = cursor.Fetch(&results, 0, false)
+
+// 	if e != nil {
+// 		t.Errorf("Unable to fetch: %s \n", e.Error())
+// 	} else {
+// 		toolkit.Println("======================")
+// 		toolkit.Println(operation)
+// 		toolkit.Println("======================")
+// 		toolkit.Println(sintaks)
+// 		toolkit.Println("Fetch OK. Result:")
+// 		for _, val := range results {
+// 			toolkit.Printf("%v \n",
+// 				toolkit.JsonString(val))
+// 		}
+// 	}
+// }
+func TestSelectFilter(t *testing.T) {
 	// t.Skip()
 	skipIfConnectionIsNil(t)
 
 	cursor, e := ctx.NewQuery().
-		Select("_id", "nama", "quantity", "price", "amount").
+		Select("_id", "nama", "amount").
 		From(tableName).
-		// Where(dbox.And(dbox.Gt("amount", 100000), dbox.Eq("nama", "buku"))).
-		// Where(dbox.Contains("nama", "tem", "pe")).
-		// Order("nama").
-		// Skip(2).
-		// Take(5).
+		Where(dbox.And(dbox.Gt("amount", 150000), dbox.Eq("nama", "buku"))).
 		Cursor(nil)
-	// Where(dbox.And(dbox.Gt("price", "@price"), dbox.Eq("status", "@status"))).
-	// Cursor(toolkit.M{}.Set("@price", 100000).Set("@status", "available"))
-	// Where(dbox.And(dbox.Or(dbox.Eq("nama", "@name1"), dbox.Eq("nama", "@name2"),
-	// dbox.Eq("nama", "@name3")), dbox.Lt("quantity", "@quantity"))).
-	// Cursor(toolkit.M{}.Set("@name1", "buku").Set("@name2", "tas").
-	// Set("@name3", "dompet").Set("@quantity", 4))
+
+	operation = "TestSelectFilter"
+	sintaks = `
+		ctx.NewQuery().
+		Select("_id", "nama", "amount").
+		From(tableName).
+		Where(dbox.And(dbox.Gt("amount", 150000), 
+			dbox.Eq("nama", "buku"))).
+		Cursor(nil)`
 
 	if e != nil {
 		t.Fatalf("Cursor error: " + e.Error())
@@ -92,8 +132,9 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Unable to fetch: %s \n", e.Error())
 	} else {
 		toolkit.Println("======================")
-		toolkit.Println("SELECT WITH FILTER")
+		toolkit.Println(operation)
 		toolkit.Println("======================")
+		toolkit.Println(sintaks)
 		toolkit.Println("Fetch OK. Result:")
 		for _, val := range results {
 			toolkit.Printf("%v \n",
@@ -102,176 +143,224 @@ func TestSelect(t *testing.T) {
 	}
 }
 
-func TestFetch(t *testing.T) {
-	// t.Skip()
-	skipIfConnectionIsNil(t)
+// func TestSelectParameter(t *testing.T) {
+// 	t.Skip()
+// 	skipIfConnectionIsNil(t)
 
-	cursor, e := ctx.NewQuery().
-		Select("_id", "nama", "quantity", "price", "amount").
-		From(tableName).
-		Cursor(nil)
+// 	cursor, e := ctx.NewQuery().
+// 		Select("_id", "nama", "amount").
+// 		From(tableName).
+// 		Where(dbox.And(dbox.Gt("price", "@price"), dbox.Eq("status", "@status"))).
+// 		Cursor(toolkit.M{}.Set("@price", 100000).Set("@status", "available"))
 
-	if e != nil {
-		t.Fatalf("Cursor error: " + e.Error())
-	}
-	defer cursor.Close()
+// 	operation = "TestSelectParameter"
+// 	sintaks = `
+// 		ctx.NewQuery().
+// 		Select("_id", "nama", "amount").
+// 		From(tableName).
+// 		Where(dbox.And(dbox.Gt("price", "@price"),
+// 			dbox.Eq("status", "@status"))).
+// 		Cursor(toolkit.M{}.Set("@price", 100000).
+// 			Set("@status", "available"))`
 
-	if cursor.Count() == 0 {
-		t.Fatalf("No record found")
-	}
+// 	if e != nil {
+// 		t.Fatalf("Cursor error: " + e.Error())
+// 	}
+// 	defer cursor.Close()
 
-	var results []toolkit.M
-	e = cursor.Fetch(&results, 2, false)
+// 	if cursor.Count() == 0 {
+// 		t.Fatalf("No record found")
+// 	}
 
-	if e != nil {
-		t.Errorf("Unable to fetch: %s \n", e.Error())
-	} else {
-		toolkit.Println("======================")
-		toolkit.Println("SELECT FETCH")
-		toolkit.Println("======================")
-		toolkit.Println("Fetch OK. Result:")
-		for _, val := range results {
-			toolkit.Printf("%v \n",
-				toolkit.JsonString(val))
-		}
-	}
-}
+// 	var results []toolkit.M
+// 	e = cursor.Fetch(&results, 0, false)
 
-func TestInsert(t *testing.T) {
-	// t.Skip()
-	var e error
-	skipIfConnectionIsNil(t)
+// 	if e != nil {
+// 		t.Errorf("Unable to fetch: %s \n", e.Error())
+// 	} else {
+// 		toolkit.Println("======================")
+// 		toolkit.Println(operation)
+// 		toolkit.Println("======================")
+// 		toolkit.Println(sintaks)
+// 		toolkit.Println("Fetch OK. Result:")
+// 		for _, val := range results {
+// 			toolkit.Printf("%v \n",
+// 				toolkit.JsonString(val))
+// 		}
+// 	}
+// }
 
-	es := []string{}
-	qinsert := ctx.NewQuery().From(tableName).Insert()
-	for i := 1; i <= 5; i++ {
-		qty := toolkit.RandInt(10)
-		price := toolkit.RandInt(10) * 50000
-		amount := qty * price
-		u := &Orders{
-			toolkit.Sprintf("ord0%d", i+10),
-			toolkit.Sprintf("item%d", i),
-			qty,
-			price,
-			amount,
-			toolkit.Sprintf("available"),
-		}
-		e = qinsert.Exec(toolkit.M{}.Set("data", u))
-		if e != nil {
-			es = append(es, toolkit.Sprintf("Insert fail %d: %s \n", i, e.Error()))
-		}
-	}
+// func TestFetch(t *testing.T) {
+// 	t.Skip()
+// 	skipIfConnectionIsNil(t)
 
-	if len(es) > 0 {
-		t.Fatal(es)
-	}
-	TestSelect(t)
-}
+// 	cursor, e := ctx.NewQuery().
+// 		Select("_id", "nama", "quantity", "price", "amount").
+// 		From(tableName).
+// 		Cursor(nil)
 
-func TestUpdate(t *testing.T) {
-	// t.Skip()
-	skipIfConnectionIsNil(t)
-	e := ctx.NewQuery().
-		Update().
-		From(tableName).
-		Where(dbox.Contains("nama", "item")).
-		Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("nama", "items")))
+// 	if e != nil {
+// 		t.Fatalf("Cursor error: " + e.Error())
+// 	}
+// 	defer cursor.Close()
 
-	if e != nil {
-		t.Fatalf("Update fail: %s", e.Error())
-	}
-	TestSelect(t)
-}
+// 	if cursor.Count() == 0 {
+// 		t.Fatalf("No record found")
+// 	}
 
-func TestDelete(t *testing.T) {
-	// t.Skip()
-	skipIfConnectionIsNil(t)
-	e := ctx.NewQuery().
-		Delete().
-		From(tableName).
-		Where(dbox.Contains("nama", "item")).
-		Exec(nil)
-	if e != nil {
-		t.Fatalf("Delete fail: %s", e.Error())
-	}
-	TestSelect(t)
-}
+// 	var results []toolkit.M
+// 	e = cursor.Fetch(&results, 2, false)
 
-func TestSave(t *testing.T) {
-	// t.Skip()
-	skipIfConnectionIsNil(t)
+// 	if e != nil {
+// 		t.Errorf("Unable to fetch: %s \n", e.Error())
+// 	} else {
+// 		toolkit.Println("======================")
+// 		toolkit.Println("SELECT FETCH")
+// 		toolkit.Println("======================")
+// 		toolkit.Println("Fetch OK. Result:")
+// 		for _, val := range results {
+// 			toolkit.Printf("%v \n",
+// 				toolkit.JsonString(val))
+// 		}
+// 	}
+// }
 
-	e := ctx.NewQuery().From(tableName).
-		Save().
-		Exec(toolkit.M{}.Set("data", toolkit.M{}.
-		Set("_id", "ord010").
-		Set("nama", "item").
-		Set("quantity", 2).
-		Set("price", 45000).
-		Set("amount", 90000).
-		Set("status", "out of stock")))
-	if e != nil {
-		t.Fatalf("Specific update fail: %s", e.Error())
-	}
-	TestSelect(t)
+// func TestInsert(t *testing.T) {
+// 	t.Skip()
+// 	var e error
+// 	skipIfConnectionIsNil(t)
 
-	e = ctx.NewQuery().From(tableName).
-		Save().
-		Exec(toolkit.M{}.Set("data", toolkit.M{}.
-		Set("_id", "ord010").
-		Set("nama", "item10").
-		Set("quantity", 3).
-		Set("price", 50000).
-		Set("amount", 150000).
-		Set("status", "available")))
-	if e != nil {
-		t.Fatalf("Specific update fail: %s", e.Error())
-	}
-	TestSelect(t)
-}
+// 	es := []string{}
+// 	qinsert := ctx.NewQuery().From(tableName).Insert()
+// 	for i := 1; i <= 5; i++ {
+// 		qty := toolkit.RandInt(10)
+// 		price := toolkit.RandInt(10) * 50000
+// 		amount := qty * price
+// 		u := &Orders{
+// 			toolkit.Sprintf("ord0%d", i+10),
+// 			toolkit.Sprintf("item%d", i),
+// 			qty,
+// 			price,
+// 			amount,
+// 			toolkit.Sprintf("available"),
+// 		}
+// 		e = qinsert.Exec(toolkit.M{}.Set("data", u))
+// 		if e != nil {
+// 			es = append(es, toolkit.Sprintf("Insert fail %d: %s \n", i, e.Error()))
+// 		}
+// 	}
 
-func TestUpdateNoFilter(t *testing.T) {
-	// t.Skip()
-	skipIfConnectionIsNil(t)
-	data := Orders{}
-	data.ID = "ord010"
-	data.Nama = "item10"
-	data.Quantity = 3
-	data.Price = 75000
-	data.Amount = 225000
+// 	if len(es) > 0 {
+// 		t.Fatal(es)
+// 	}
+// 	TestSelect(t)
+// }
 
-	e := ctx.NewQuery().
-		Update().
-		From(tableName).
-		Exec(toolkit.M{}.Set("data", data))
+// func TestUpdate(t *testing.T) {
+// 	t.Skip()
+// 	skipIfConnectionIsNil(t)
+// 	e := ctx.NewQuery().
+// 		Update().
+// 		From(tableName).
+// 		Where(dbox.Contains("nama", "item")).
+// 		Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("nama", "items")))
 
-	if e != nil {
-		t.Fatalf("Update fail: %s", e.Error())
-	}
-	TestSelect(t)
-}
+// 	if e != nil {
+// 		t.Fatalf("Update fail: %s", e.Error())
+// 	}
+// 	TestSelect(t)
+// }
 
-func TestDeleteNoFilter(t *testing.T) {
-	// t.Skip()
-	skipIfConnectionIsNil(t)
-	data := Orders{}
-	data.ID = "ord010"
+// func TestDelete(t *testing.T) {
+// 	t.Skip()
+// 	skipIfConnectionIsNil(t)
+// 	e := ctx.NewQuery().
+// 		Delete().
+// 		From(tableName).
+// 		Where(dbox.Contains("nama", "item")).
+// 		Exec(nil)
+// 	if e != nil {
+// 		t.Fatalf("Delete fail: %s", e.Error())
+// 	}
+// 	TestSelect(t)
+// }
 
-	e := ctx.NewQuery().
-		Delete().
-		From(tableName).
-		Exec(toolkit.M{}.Set("data", data))
-	if e != nil {
-		t.Fatalf("Delete fail: %s", e.Error())
-	}
-	TestSelect(t)
-}
+// func TestSave(t *testing.T) {
+// 	t.Skip()
+// 	skipIfConnectionIsNil(t)
 
-func TestGetObj(t *testing.T) {
-	toolkit.Printf("List Table : %v\n", ctx.ObjectNames(dbox.ObjTypeTable))
+// 	e := ctx.NewQuery().From(tableName).
+// 		Save().
+// 		Exec(toolkit.M{}.Set("data", toolkit.M{}.
+// 		Set("_id", "ord010").
+// 		Set("nama", "item").
+// 		Set("quantity", 2).
+// 		Set("price", 45000).
+// 		Set("amount", 90000).
+// 		Set("status", "out of stock")))
+// 	if e != nil {
+// 		t.Fatalf("Specific update fail: %s", e.Error())
+// 	}
+// 	TestSelect(t)
 
-	toolkit.Printf("All Object : %v\n", ctx.ObjectNames(""))
-}
+// 	e = ctx.NewQuery().From(tableName).
+// 		Save().
+// 		Exec(toolkit.M{}.Set("data", toolkit.M{}.
+// 		Set("_id", "ord010").
+// 		Set("nama", "item10").
+// 		Set("quantity", 3).
+// 		Set("price", 50000).
+// 		Set("amount", 150000).
+// 		Set("status", "available")))
+// 	if e != nil {
+// 		t.Fatalf("Specific update fail: %s", e.Error())
+// 	}
+// 	TestSelect(t)
+// }
+
+// func TestUpdateNoFilter(t *testing.T) {
+// 	t.Skip()
+// 	skipIfConnectionIsNil(t)
+// 	data := Orders{}
+// 	data.ID = "ord010"
+// 	data.Nama = "item10"
+// 	data.Quantity = 3
+// 	data.Price = 75000
+// 	data.Amount = 225000
+
+// 	e := ctx.NewQuery().
+// 		Update().
+// 		From(tableName).
+// 		Exec(toolkit.M{}.Set("data", data))
+
+// 	if e != nil {
+// 		t.Fatalf("Update fail: %s", e.Error())
+// 	}
+// 	TestSelect(t)
+// }
+
+// func TestDeleteNoFilter(t *testing.T) {
+// 	t.Skip()
+// 	skipIfConnectionIsNil(t)
+// 	data := Orders{}
+// 	data.ID = "ord010"
+
+// 	e := ctx.NewQuery().
+// 		Delete().
+// 		From(tableName).
+// 		Exec(toolkit.M{}.Set("data", data))
+// 	if e != nil {
+// 		t.Fatalf("Delete fail: %s", e.Error())
+// 	}
+// 	TestSelect(t)
+// }
+
+// func TestGetObj(t *testing.T) {
+// 	t.Skip()
+// 	toolkit.Printf("List Table : %v\n", ctx.ObjectNames(dbox.ObjTypeTable))
+
+// 	toolkit.Printf("All Object : %v\n", ctx.ObjectNames(""))
+// }
 
 func TestClose(t *testing.T) {
 	skipIfConnectionIsNil(t)
