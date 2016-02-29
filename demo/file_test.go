@@ -37,7 +37,6 @@ func skipIfConnectionIsNil(t *testing.T) {
 }
 
 const (
-	config    bool   = true
 	tableName string = "Orders"
 )
 
@@ -139,7 +138,7 @@ func TestFetch(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	var e error
 	skipIfConnectionIsNil(t)
 
@@ -170,12 +169,11 @@ func TestInsert(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	skipIfConnectionIsNil(t)
 	e := ctx.NewQuery().
 		Update().
 		From(tableName).
-		SetConfig("multiexec", config).
 		Where(dbox.Contains("nama", "item")).
 		Exec(toolkit.M{}.Set("data", toolkit.M{}.Set("nama", "items")))
 
@@ -186,13 +184,12 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	skipIfConnectionIsNil(t)
 	e := ctx.NewQuery().
 		Delete().
 		From(tableName).
 		Where(dbox.Contains("nama", "item")).
-		SetConfig("multiexec", config).
 		Exec(nil)
 	if e != nil {
 		t.Fatalf("Delete fail: %s", e.Error())
@@ -246,7 +243,6 @@ func TestUpdateNoFilter(t *testing.T) {
 	e := ctx.NewQuery().
 		Update().
 		From(tableName).
-		SetConfig("multiexec", config).
 		Exec(toolkit.M{}.Set("data", data))
 
 	if e != nil {
@@ -264,7 +260,6 @@ func TestDeleteNoFilter(t *testing.T) {
 	e := ctx.NewQuery().
 		Delete().
 		From(tableName).
-		SetConfig("multiexec", config).
 		Exec(toolkit.M{}.Set("data", data))
 	if e != nil {
 		t.Fatalf("Delete fail: %s", e.Error())

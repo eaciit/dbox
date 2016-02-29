@@ -233,9 +233,6 @@ func (q *Query) Exec(in toolkit.M) error {
 			indexes := dbox.Find(q.data, where)
 			if len(indexes) > 0 {
 				newdata := []toolkit.M{}
-				if len(indexes) > 1 && !multiExec {
-					indexes = indexes[:1]
-				}
 				for index, v := range q.data {
 					partOfIndex := toolkit.HasMember(indexes, index)
 					if partOfIndex == false {
