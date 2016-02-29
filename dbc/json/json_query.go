@@ -106,7 +106,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 	hasData := parm.Has("data")
 	getWhere := filters.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
 	dataIsSlice := toolkit.IsSlice(data)
-	multiExec := q.Config("multiexec", false).(bool)
 
 	if dataIsSlice {
 		e = toolkit.Unjson(toolkit.Jsonify(data), &dataMs)
@@ -188,9 +187,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 				}
 			}
 
-			if len(indexes) > 1 && !multiExec {
-				indexes = indexes[:1]
-			}
 			for i, v := range dataMaps {
 				if toolkit.HasMember(indexes, i) || !hasWhere {
 					if isDataSlice {
@@ -213,13 +209,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	} else if commandType == dbox.QueryPartDelete {
 		hasCmdType.Set("hasDelete", true)
-		// if multi {
 		if hasWhere {
 			result := dbox.Find(dataMaps, getWhere)
 			if len(result) > 0 || len(result) > 1 {
-				if !multiExec {
-					result = result[:1]
-				}
 				for i, v := range dataMaps {
 					if toolkit.HasMember(result, i) == false {
 						updatedValue = append(updatedValue, v)
@@ -266,7 +258,7 @@ func finUpdateObj(jsonData []toolkit.M, replaceData toolkit.M, isType string) []
 			//reflectIs := reflect.ValueOf(iSubV).Kind()
 			subvIdString := toolkit.ToString(iSubV)
 			if strings.ToLower(subvIdString) == strings.ToLower(dataUptId) {
-				for key, _ := range v {
+				for key := range v {
 					delete(v, key)
 				}
 
@@ -329,10 +321,10 @@ func (q *Query) HasPartExec() error {
 			getWhere = []*dbox.Filter{v}
 			i := dbox.Find(q.sliceData, getWhere)
 
-			for idSlice, _ := range q.sliceData {
+			for idSlice := range q.sliceData {
 				if toolkit.HasMember(i, idSlice) {
 					idata := dbox.Find(lastJson, getWhere)
-					for idx, _ := range lastJson {
+					for idx := range lastJson {
 						if toolkit.HasMember(idata, idx) {
 							lastJson[idx] = q.sliceData[idSlice]
 						}
