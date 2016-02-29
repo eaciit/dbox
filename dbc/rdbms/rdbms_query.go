@@ -175,6 +175,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	procedureParts, hasProcedure := parts["procedure"]
+	freeQueryParts, hasFreeQuery := parts["freequery"]
 
 	if hasFrom {
 		tablename := ""
@@ -419,8 +420,6 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 						}
 					}
-
-					fmt.Println("Print value order", paramstring)
 				}
 
 			} else if hasParam && !hasOrder {
@@ -531,7 +530,11 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 		cursor.(*Cursor).QueryString = ProcStatement
 
-		fmt.Println("Proc Statement : ", ProcStatement)
+		// fmt.Println("Proc Statement : ", ProcStatement)
+	} else if hasFreeQuery {
+		querySyntax := freeQueryParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
+		syntax := querySyntax.(toolkit.M)["syntax"].(string)
+		cursor.(*Cursor).QueryString = syntax
 	}
 	return cursor, nil
 }

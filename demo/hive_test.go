@@ -1,8 +1,8 @@
-package rdbms_demo
+package hive_demo
 
 import (
 	"github.com/eaciit/dbox"
-	_ "github.com/eaciit/dbox/dbc/mysql"
+	_ "github.com/eaciit/dbox/dbc/hive"
 	"github.com/eaciit/toolkit"
 	"testing"
 )
@@ -22,8 +22,8 @@ const (
 func connect() error {
 	var e error
 	if ctx == nil {
-		ctx, e = dbox.NewConnection("mysql",
-			&dbox.ConnectionInfo{"localhost:3306", "test", "root", "", nil})
+		ctx, e = dbox.NewConnection("hive",
+			&dbox.ConnectionInfo{"192.168.0.223:10000", "default", "hdfs", "", nil})
 		if e != nil {
 			return e
 		}
@@ -56,45 +56,13 @@ func TestConnect(t *testing.T) {
 	}
 }
 
-func TestSelect(t *testing.T) {
-	// t.Skip()
-	skipIfConnectionIsNil(t)
-
-	cursor, e := ctx.NewQuery().
-		Select("id", "nama", "amount").
-		From(tableName).
-		Cursor(nil)
-	if e != nil {
-		t.Fatalf("Cursor error: " + e.Error())
-	}
-	defer cursor.Close()
-
-	var results []toolkit.M
-	e = cursor.Fetch(&results, 0, false)
-
-	if e != nil {
-		t.Errorf("Unable to fetch: %s \n", e.Error())
-	} else {
-		toolkit.Println("======================")
-		toolkit.Println(operation)
-		toolkit.Println("======================")
-		toolkit.Println(sintaks)
-		toolkit.Println("Fetch OK. Result:")
-		for _, val := range results {
-			toolkit.Printf("%v \n",
-				toolkit.JsonString(val))
-		}
-	}
-}
-
-// func TestSelectFilter(t *testing.T) {
-// 	// t.Skip()
+// func TestSelect(t *testing.T) {
+// 	t.Skip()
 // 	skipIfConnectionIsNil(t)
 
 // 	cursor, e := ctx.NewQuery().
 // 		Select("id", "nama", "amount").
 // 		From(tableName).
-// 		Where(dbox.And(dbox.Gt("amount", 150000), dbox.Eq("nama", "buku"))).
 // 		Cursor(nil)
 // 	if e != nil {
 // 		t.Fatalf("Cursor error: " + e.Error())
@@ -103,14 +71,6 @@ func TestSelect(t *testing.T) {
 
 // 	var results []toolkit.M
 // 	e = cursor.Fetch(&results, 0, false)
-// 	operation = "Test Select Filter"
-// 	sintaks = `
-// 		ctx.NewQuery().
-// 		Select("id", "nama", "amount").
-// 		From(tableName).
-// 		Where(dbox.And(dbox.Gt("amount", 150000),
-// 			dbox.Eq("nama", "buku"))).
-// 		Cursor(nil)`
 
 // 	if e != nil {
 // 		t.Errorf("Unable to fetch: %s \n", e.Error())
@@ -126,6 +86,46 @@ func TestSelect(t *testing.T) {
 // 		}
 // 	}
 // }
+
+func TestSelectFilter(t *testing.T) {
+	// t.Skip()
+	skipIfConnectionIsNil(t)
+
+	cursor, e := ctx.NewQuery().
+		Select("id", "nama", "amount").
+		From(tableName).
+		Where(dbox.And(dbox.Gt("amount", 150000), dbox.Eq("nama", "buku"))).
+		Cursor(nil)
+	if e != nil {
+		t.Fatalf("Cursor error: " + e.Error())
+	}
+	defer cursor.Close()
+
+	var results []toolkit.M
+	e = cursor.Fetch(&results, 0, false)
+	operation = "Test Select Filter"
+	sintaks = `
+		ctx.NewQuery().
+		Select("id", "nama", "amount").
+		From(tableName).
+		Where(dbox.And(dbox.Gt("amount", 150000), 
+			dbox.Eq("nama", "buku"))).
+		Cursor(nil)`
+
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		toolkit.Println("======================")
+		toolkit.Println(operation)
+		toolkit.Println("======================")
+		toolkit.Println(sintaks)
+		toolkit.Println("Fetch OK. Result:")
+		for _, val := range results {
+			toolkit.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
+}
 
 // func TestLimitDataSelections(t *testing.T) {
 // 	// t.Skip()
@@ -479,56 +479,6 @@ func TestSelect(t *testing.T) {
 // 	}
 // }
 
-// func TestProcedure(t *testing.T) {
-// 	// t.Skip()
-// 	skipIfConnectionIsNil(t)
-
-// 	csr, e := ctx.NewQuery().
-// 		Command("procedure", toolkit.M{}.
-// 		Set("name", "updatedatademo").
-// 		Set("orderparam", []string{"@idCondIn", "@amountIn", "@namaIn"}).
-// 		Set("parms", toolkit.M{}.
-// 		Set("@idCondIn", "ord001").
-// 		Set("@amountIn", 300000).
-// 		Set("@namaIn", "buku nikah"))).
-// 		Cursor(nil)
-
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized", e.Error())
-// 		return
-// 	}
-// 	defer csr.Close()
-
-// 	results := make([]map[string]interface{}, 0)
-
-// 	err := csr.Fetch(&results, 0, false)
-// 	operation = "Test Stored Procedure"
-// 	sintaks = `
-// 		ctx.NewQuery().
-// 		Command("procedure", toolkit.M{}.
-// 		Set("name", "updatedatademo").
-// 		Set("orderparam", []string{"@idCondIn", "@amountIn", "@namaIn"}).
-// 		Set("parms", toolkit.M{}.
-// 		Set("@idCondIn", "ord001").
-// 		Set("@amountIn", 300000).
-// 		Set("@namaIn", "buku nikah"))).
-// 		Cursor(nil)`
-// 	if err != nil {
-// 		t.Errorf("Unable to fetch: %s \n", err.Error())
-// 	} else {
-// 		// toolkit.Println("======================")
-// 		// toolkit.Println("STORED PROCEDURE")
-// 		// toolkit.Println("======================")
-// 		// toolkit.Println(sintaks)
-// 		// toolkit.Println("Fetch N OK. Result: ")
-// 		// for _, val := range results {
-// 		// 	toolkit.Printf("%v \n",
-// 		// 		toolkit.JsonString(val))
-// 		// }
-// 		TestSelect(t)
-// 	}
-// }
-
 // func TestFreeQuery(t *testing.T) {
 // 	// t.Skip()
 // 	skipIfConnectionIsNil(t)
@@ -578,18 +528,6 @@ func TestSelect(t *testing.T) {
 // 	toolkit.Println("list of table : ")
 // 	for i := 0; i < len(csr); i++ {
 // 		toolkit.Printf("%v \n", toolkit.JsonString(csr[i]))
-// 	}
-// }
-
-// func TestViewProcedureName(t *testing.T) {
-// 	// t.Skip()
-// 	skipIfConnectionIsNil(t)
-
-// 	proc := ctx.ObjectNames(dbox.ObjTypeProcedure)
-
-// 	toolkit.Println("list of procedure : ")
-// 	for i := 0; i < len(proc); i++ {
-// 		toolkit.Printf("%v \n", toolkit.JsonString(proc[i]))
 // 	}
 
 // }
