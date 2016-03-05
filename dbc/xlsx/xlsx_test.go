@@ -22,7 +22,7 @@ func prepareConnection() (dbox.IConnection, error) {
 	// var config = map[string]interface{}{"mapheader": mapHeader}
 
 	config := toolkit.M{}.Set("rowstart", 5).Set("colsstart", 2).Set("useheader", true)
-	ci := &dbox.ConnectionInfo{"D:\\goproject\\sample\\IO Price Indices.xlsm", "", "", "", config}
+	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\IO Price Indices.xlsm", "", "", "", config}
 	c, e := dbox.NewConnection("xlsx", ci)
 	if e != nil {
 		return nil, e
@@ -66,7 +66,7 @@ func TestSelect(t *testing.T) {
 
 	csr, e := c.NewQuery().Select("1", "2", "3", "4", "5").From("HIST").
 		// Where(dbox.Contains("2", "183")).
-	Where(dbox.Lt("2", "183")).
+		Where(dbox.Lt("2", "183")).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -77,6 +77,8 @@ func TestSelect(t *testing.T) {
 		return
 	}
 	defer csr.Close()
+
+	fmt.Println("Jumlah selected : ", csr.Count())
 
 	results := make([]map[string]interface{}, 0)
 	e = csr.Fetch(&results, 2, false)

@@ -67,34 +67,35 @@ func foundCondition(dataCheck toolkit.M, cond toolkit.M) bool {
 				}
 			}
 		} else {
+			cvalue := toolkit.ToString(dataCheck.Get(key, ""))
 			if reflect.ValueOf(val).Kind() == reflect.Map {
 				mVal := val.(map[string]interface{})
 				tomVal, _ := toolkit.ToM(mVal)
 				switch {
 				case tomVal.Has("$ne"):
-					if tomVal["$ne"].(string) == dataCheck.Get(key, "").(string) {
+					if tomVal["$ne"].(string) == cvalue {
 						resBool = false
 					}
 				case tomVal.Has("$regex"):
-					resBool, _ = regexp.MatchString(tomVal["$regex"].(string), dataCheck.Get(key, "").(string))
+					resBool, _ = regexp.MatchString(tomVal["$regex"].(string), cvalue)
 				case tomVal.Has("$gt"):
-					if tomVal["$gt"].(string) >= dataCheck.Get(key, "").(string) {
+					if tomVal["$gt"].(string) >= cvalue {
 						resBool = false
 					}
 				case tomVal.Has("$gte"):
-					if tomVal["$gte"].(string) > dataCheck.Get(key, "").(string) {
+					if tomVal["$gte"].(string) > cvalue {
 						resBool = false
 					}
 				case tomVal.Has("$lt"):
-					if tomVal["$lt"].(string) <= dataCheck.Get(key, "").(string) {
+					if tomVal["$lt"].(string) <= cvalue {
 						resBool = false
 					}
 				case tomVal.Has("$lte"):
-					if tomVal["$lte"].(string) < dataCheck.Get(key, "").(string) {
+					if tomVal["$lte"].(string) < cvalue {
 						resBool = false
 					}
 				}
-			} else if reflect.ValueOf(val).Kind() == reflect.String && val != dataCheck.Get(key, "").(string) {
+			} else if reflect.ValueOf(val).Kind() == reflect.String && val != cvalue {
 				resBool = false
 			}
 		}
@@ -220,7 +221,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor = cursor.SetConnection(q.Connection())
-	
+
 	// cursor.(*Cursor).file = q.File()
 	cursor.(*Cursor).reader = q.Reader()
 	cursor.(*Cursor).headerColumn = q.Connection().(*Connection).headerColumn
