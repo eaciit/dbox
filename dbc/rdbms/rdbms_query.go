@@ -386,8 +386,30 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			}
 		}
 		// toolkit.Println(QueryString)
-		cursor.(*Cursor).QueryString = QueryString
+		var querystmt string
+		if where != nil {
+			querystmt = "select count(*) from " + tablename +
+				" where " + cast.ToString(where)
+		} else {
+			querystmt = "select count(*) from " + tablename
+		}
 
+		/*populate fetch.count*/
+		var rowCount int
+		if driverName == "hive" {
+			// rowCount = 999999999
+			// row := sessionHive.Exec(querystmt)
+			// rowCount = toolkit.ToInt(row[0], "auto")
+		} else {
+			rows, _ := cursor.(*Cursor).session.Query(querystmt)
+			for rows.Next() {
+				rows.Scan(&rowCount)
+			}
+		}
+		cursor.(*Cursor).count = rowCount
+
+		/*assign cursor.QueryString*/
+		cursor.(*Cursor).QueryString = QueryString
 	} else if hasProcedure {
 		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
 
@@ -513,7 +535,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 						}
 					}
 
-					fmt.Println("Print value order", paramstring)
+					// fmt.Println("Print value order", paramstring)
 				}
 
 			} else if hasParam && !hasOrder {

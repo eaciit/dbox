@@ -104,7 +104,7 @@ func TestSelectFilter(t *testing.T) {
 	cursor, e := ctx.NewQuery().
 		Select("_id", "nama", "amount").
 		From(tableName).
-		Where(dbox.And(dbox.Gt("amount", 150000), dbox.Eq("nama", "buku"))).
+		Where(dbox.And(dbox.Gt("amount", 150), dbox.Eq("nama", "buku"))).
 		Cursor(nil)
 
 	operation = "TestSelectFilter"
