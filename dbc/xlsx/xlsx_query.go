@@ -2,6 +2,7 @@ package xlsx
 
 import (
 	// "fmt"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -10,7 +11,8 @@ import (
 	// "io"
 	// "os"
 	"reflect"
-	"regexp"
+	// "regexp"
+	"strings"
 )
 
 const (
@@ -27,7 +29,7 @@ type Query struct {
 
 type QueryCondition struct {
 	Select toolkit.M
-	Find   toolkit.M
+	Find   []*dbox.Filter
 	Sort   []string
 	skip   int
 	limit  int
@@ -37,72 +39,73 @@ func (w *QueryCondition) getCondition(dataCheck toolkit.M) bool {
 	resBool := true
 
 	if len(w.Find) > 0 {
-		resBool = foundCondition(dataCheck, w.Find)
+		resBool = dbox.MatchM(dataCheck, w.Find)
 	}
 
 	return resBool
 }
 
-func foundCondition(dataCheck toolkit.M, cond toolkit.M) bool {
-	resBool := true
+// func foundCondition(dataCheck toolkit.M, cond toolkit.M) bool {
+// 	resBool := true
 
-	for key, val := range cond {
-		if key == "$and" || key == "$or" {
-			for i, sVal := range val.([]interface{}) {
-				rVal := sVal.(map[string]interface{})
-				mVal := toolkit.M{}
-				for rKey, mapVal := range rVal {
-					mVal.Set(rKey, mapVal)
-				}
+// 	for key, val := range cond {
+// 		if key == "$and" || key == "$or" {
+// 			for i, sVal := range val.([]interface{}) {
+// 				rVal := sVal.(map[string]interface{})
+// 				mVal := toolkit.M{}
+// 				for rKey, mapVal := range rVal {
+// 					mVal.Set(rKey, mapVal)
+// 				}
 
-				xResBool := foundCondition(dataCheck, mVal)
-				if key == "$and" {
-					resBool = resBool && xResBool
-				} else {
-					if i == 0 {
-						resBool = xResBool
-					} else {
-						resBool = resBool || xResBool
-					}
-				}
-			}
-		} else {
-			cvalue := toolkit.ToString(dataCheck.Get(key, ""))
-			if reflect.ValueOf(val).Kind() == reflect.Map {
-				mVal := val.(map[string]interface{})
-				tomVal, _ := toolkit.ToM(mVal)
-				switch {
-				case tomVal.Has("$ne"):
-					if tomVal["$ne"].(string) == cvalue {
-						resBool = false
-					}
-				case tomVal.Has("$regex"):
-					resBool, _ = regexp.MatchString(tomVal["$regex"].(string), cvalue)
-				case tomVal.Has("$gt"):
-					if tomVal["$gt"].(string) >= cvalue {
-						resBool = false
-					}
-				case tomVal.Has("$gte"):
-					if tomVal["$gte"].(string) > cvalue {
-						resBool = false
-					}
-				case tomVal.Has("$lt"):
-					if tomVal["$lt"].(string) <= cvalue {
-						resBool = false
-					}
-				case tomVal.Has("$lte"):
-					if tomVal["$lte"].(string) < cvalue {
-						resBool = false
-					}
-				}
-			} else if reflect.ValueOf(val).Kind() == reflect.String && val != cvalue {
-				resBool = false
-			}
-		}
-	}
+// 				xResBool := foundCondition(dataCheck, mVal)
+// 				if key == "$and" {
+// 					resBool = resBool && xResBool
+// 				} else {
+// 					if i == 0 {
+// 						resBool = xResBool
+// 					} else {
+// 						resBool = resBool || xResBool
+// 					}
+// 				}
+// 			}
+// 		} else {
+// 			resBool = false
+// 			cvalue := toolkit.ToString(dataCheck.Get(key, ""))
+// 			if reflect.ValueOf(val).Kind() == reflect.Map {
+// 				mVal := val.(map[string]interface{})
+// 				tomVal, _ := toolkit.ToM(mVal)
+// 				switch {
+// 				case tomVal.Has("$ne"):
+// 					if tomVal["$ne"].(string) != cvalue {
+// 						resBool = true
+// 					}
+// 				case tomVal.Has("$regex"):
+// 					resBool, _ = regexp.MatchString(tomVal["$regex"].(string), cvalue)
+// 				case tomVal.Has("$gt"):
+// 					if tomVal["$gt"].(string) > cvalue {
+// 						resBool = true
+// 					}
+// 				case tomVal.Has("$gte"):
+// 					if tomVal["$gte"].(string) >= cvalue {
+// 						resBool = true
+// 					}
+// 				case tomVal.Has("$lt"):
+// 					if tomVal["$lt"].(string) < cvalue {
+// 						resBool = true
+// 					}
+// 				case tomVal.Has("$lte"):
+// 					if tomVal["$lte"].(string) <= cvalue {
+// 						resBool = true
+// 					}
+// 				}
+// 			} else if reflect.ValueOf(val).Kind() == reflect.String && val == cvalue {
+// 				resBool = true
+// 			}
+// 		}
+// 	}
 
-	return resBool
-}
+// 	return resBool
+// }
 
 // func (q *Query) File() *os.File {
 // 	if q.file == nil {
@@ -199,24 +202,18 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 	}
 
-	var where interface{}
+	var where []*dbox.Filter
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
-		fb := q.Connection().Fb()
 		for _, p := range whereParts.([]interface{}) {
 			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
 			for _, f := range fs {
-				fb.AddFilter(f)
+				// if len(in) > 0 {
+				f = ReadVariable(f, in)
+				// }
+				where = append(where, f)
 			}
 		}
-		where, e = fb.Build()
-		if e != nil {
-			return nil, errorlib.Error(packageName, modQuery, "Cursor",
-				e.Error())
-		} else {
-			//fmt.Printf("Where: %s", toolkit.JsonString(where))
-		}
-		//where = iwhere.(toolkit.M)
 	}
 
 	cursor := dbox.NewCursor(new(Cursor))
@@ -235,7 +232,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 
 	if !aggregate {
-		cursor.(*Cursor).ConditionVal.Find, _ = toolkit.ToM(where)
+		cursor.(*Cursor).ConditionVal.Find = where
 
 		if fields != nil {
 			cursor.(*Cursor).ConditionVal.Select = fields
@@ -445,3 +442,30 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 // 	return nil
 // }
+
+func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
+	f.Field = strings.ToLower(f.Field)
+	if (f.Op == "$and" || f.Op == "$or") && strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
+		fs := f.Value.([]*dbox.Filter)
+		for i, ff := range fs {
+			bf := ReadVariable(ff, in)
+			fs[i] = bf
+		}
+		f.Value = fs
+	} else {
+		if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
+			fSlice := f.Value.([]interface{})
+			// nilai fSlice : [@name1 @name2]
+			for i := 0; i < len(fSlice); i++ {
+				// nilai fSlice [i] : @name1
+				if len(cast.ToString(f.Value)) > 0 && string(cast.ToString(fSlice[i])[0]) == "@" {
+					fSlice[i] = in.Get(cast.ToString(fSlice[i]), "")
+				}
+			}
+			f.Value = fSlice
+		} else if len(cast.ToString(f.Value)) > 0 && string(cast.ToString(f.Value)[0]) == "@" {
+			f.Value = in.Get(cast.ToString(f.Value), "")
+		}
+	}
+	return f
+}

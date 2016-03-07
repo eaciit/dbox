@@ -42,7 +42,7 @@ type Connection struct {
 	writer *xlsx.File
 
 	headerColumn []headerstruct
-	rowstart int
+	rowstart     int
 }
 
 func init() {
@@ -54,7 +54,7 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 		ci.Settings = toolkit.M{}
 	}
 	c := new(Connection)
-	 
+
 	c.SetInfo(ci)
 	c.SetFb(dbox.NewFilterBuilder(new(FilterBuilder)))
 	return c, nil
@@ -67,7 +67,7 @@ func (c *Connection) Connect() error {
 	}
 
 	useHeader := ci.Settings.Get("useheader", false).(bool)
-	rowstart := ci.Settings.Get("rowstart", false).(int)
+	rowstart := ci.Settings.Get("rowstart", 0).(int)
 	isNewFile := ci.Settings.Get("newfile", false).(bool)
 	c.setNewHeader = false
 
