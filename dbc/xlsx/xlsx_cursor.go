@@ -38,8 +38,8 @@ type Cursor struct {
 	ConditionVal QueryCondition
 
 	headerColumn []headerstruct
-	rowstart int
-	colstart int
+	rowstart     int
+	colstart     int
 }
 
 func (c *Cursor) Close() {
@@ -63,7 +63,7 @@ func (c *Cursor) prepIter() error {
 
 func (c *Cursor) Count() int {
 	// fmt.Println("LINE-60", c.sheetname)
-	if c.ConditionVal.Find == nil {
+	if len(c.ConditionVal.Find) == 0 {
 		return c.reader.Sheet[c.sheetname].MaxRow
 	} else {
 		x := 0
@@ -71,15 +71,16 @@ func (c *Cursor) Count() int {
 			isAppend := true
 			recData := toolkit.M{}
 			for i, cell := range row.Cells {
-				recData.Set(c.headerColumn[i].name, cell)
+				recData.Set(c.headerColumn[i].name, cell.Value)
 			}
 
 			isAppend = c.ConditionVal.getCondition(recData)
-
+			// fmt.Printf("%v - %v - %#v \n", isAppend, recData["1"], c.ConditionVal.Find)
 			if isAppend {
 				x += 1
 			}
 		}
+		// fmt.Println("Masuk Condition, Jumlah data : ", x)
 		return x
 	}
 	return 0
@@ -111,9 +112,8 @@ func (c *Cursor) ResetFetch() error {
 // 	return nil
 // }
 
-
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
-	 // ci := c.aa
+	// ci := c.aa
 
 	if closeWhenDone {
 		defer c.Close()
@@ -160,9 +160,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			}
 		}
 
-
-
-		// fmt.Println(appendData)
+		//
 
 		isAppend = c.ConditionVal.getCondition(recData)
 
@@ -177,8 +175,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			linecount += 1
 		}
 
-		
-
 		if isAppend && len(appendData) > 0 {
 			linecount += 1
 			if linecount > c.fetchRow {
@@ -189,7 +185,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 		// fmt.Println("max :",maxGetData)
 		// fmt.Println("fetch :",c.fetchRow)
-
 
 		if c.fetchRow >= maxGetData {
 			break

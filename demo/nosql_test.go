@@ -65,7 +65,7 @@ func TestSelect(t *testing.T) {
 	cursor, e := ctx.NewQuery().
 		Select("id", "nama", "amount").
 		From(tableName).
-		Where(dbox.And(dbox.Gt("amount", 150000), dbox.Eq("nama", "buku"))).
+		Where(dbox.And(dbox.Gt("amount", 150), dbox.Eq("nama", "buku"))).
 		// Where(dbox.Contains("nama", "tem", "pe")).
 		// Order("nama").
 		// Skip(2).

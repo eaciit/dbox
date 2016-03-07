@@ -66,7 +66,7 @@ func TestSelect(t *testing.T) {
 
 	csr, e := c.NewQuery().Select("1", "2", "3", "4", "5").From("HIST").
 		// Where(dbox.Contains("2", "183")).
-		Where(dbox.Lt("2", "183")).
+		Where(dbox.Ne("1", "")).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
