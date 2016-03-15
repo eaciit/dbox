@@ -99,7 +99,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			return errorlib.Error(packageName, modCursor, "Fetch", "Wrong fetched data!")
 		}
 	}
-	toolkit.Printf("first = skip>%v last = take>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
+	// toolkit.Printf("first = skip>%v last = take>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
 	if c.isWhere {
 		i := dbox.Find(c.datas, c.whereFields)
 		last = len(i)
