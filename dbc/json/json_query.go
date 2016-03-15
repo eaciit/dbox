@@ -54,14 +54,15 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	if !aggregate {
 		if hasWhere {
+			// toolkit.Println("where:", toolkit.JsonString(filters.Get("where")))
 			cursor.(*Cursor).whereFields = filters.Get("where").([]*dbox.Filter)
 			cursor.(*Cursor).isWhere = true
 		}
-
+		// toolkit.Println("skip:", toolkit.JsonString(filters.Get("skip")))
 		if skip := filters.Get("skip").(int); skip > 0 {
 			cursor.(*Cursor).skip = skip
 		}
-
+		// toolkit.Println("take:", toolkit.JsonString(filters.Get("take")))
 		if take := filters.Get("take").(int); take > 0 {
 			cursor.(*Cursor).take = take
 		}

@@ -15,11 +15,11 @@ const (
 
 type Cursor struct {
 	dbox.Cursor
-	count, lastFeteched, skip, take, allcount int
-	whereFields                               []*dbox.Filter
-	datas                                     []toolkit.M
-	isWhere                                   bool
-	jsonSelect                                []string
+	count, lastFeteched, skip, take int
+	whereFields                     []*dbox.Filter
+	datas                           []toolkit.M
+	isWhere                         bool
+	jsonSelect                      []string
 }
 
 func (c *Cursor) Close() {
@@ -47,20 +47,34 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	dataJson := []toolkit.M{}
 
 	c.count = len(c.datas)
+	c.lastFeteched = c.count
 	if c.skip > 0 {
-		first = c.skip
+		if c.take > 0 {
+			c.count = c.skip + c.take
+		} else {
+			first = c.skip
+		}
+	} else {
+		c.count = c.take
 	}
 
 	if c.take > 0 {
-		c.count = c.take
-		// last = c.take
+		if c.take == c.skip {
+			first = c.skip
+		} else {
+			first = c.count - c.take
+		}
 	}
 
 	if n == 0 {
 		if c.lastFeteched == c.count {
 			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!, please do reset fetch")
 		}
+
 		last = c.count
+		if c.lastFeteched < c.count {
+			last = c.lastFeteched
+		}
 	} else if n > 0 {
 		switch {
 		case c.lastFeteched == 0:
@@ -78,14 +92,14 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				last = c.count
 				c.lastFeteched = last
 			}
-			// toolkit.Printf("first>%v last>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
+
 		}
 
 		if first > last {
 			return errorlib.Error(packageName, modCursor, "Fetch", "Wrong fetched data!")
 		}
 	}
-
+	// toolkit.Printf("first = skip>%v last = take>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
 	if c.isWhere {
 		i := dbox.Find(c.datas, c.whereFields)
 		last = len(i)
