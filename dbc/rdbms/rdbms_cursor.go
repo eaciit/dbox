@@ -98,10 +98,17 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				var v interface{}
 				val := values[i]
 				b, ok := val.([]byte)
+
+				var out interface{}
+				e = toolkit.Unjson(b, &out)
+
+				if e != nil {
+					ok = false
+				}
 				if ok {
-					v = string(b)
+					v = out
 				} else {
-					v = val
+					v = string(b)
 				}
 				entry.Set(strings.ToLower(col), v)
 			}
