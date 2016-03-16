@@ -65,16 +65,14 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			first = c.count - c.take
 		}
 	}
-	// toolkit.Println(c.count, c.skip, c.take)
-	if n == 0 {
-		if c.lastFeteched == c.count {
-			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!, please do reset fetch")
-		}
 
+	// toolkit.Printf("first = skip>%v last = take>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
+	if n == 0 {
 		last = c.count
-		if c.lastFeteched < c.count || c.count == 0 {
+		if c.lastFeteched <= c.count || c.count == 0 {
 			last = c.lastFeteched
 		}
+
 	} else if n > 0 {
 		switch {
 		case c.lastFeteched == 0:
@@ -99,16 +97,16 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			return errorlib.Error(packageName, modCursor, "Fetch", "Wrong fetched data!")
 		}
 	}
-	// toolkit.Printf("first = skip>%v last = take>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
+
 	if c.isWhere {
 		i := dbox.Find(c.datas, c.whereFields)
 		last = len(i)
 		for _, index := range i[first:last] {
 			dataJson = append(dataJson, c.datas[index])
 		}
-
 	} else {
 		dataJson = c.datas[first:last]
+
 	}
 
 	if toolkit.SliceLen(c.jsonSelect) > 0 {
