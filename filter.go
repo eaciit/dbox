@@ -37,6 +37,8 @@ const (
 	FilterOpNin = "$nin"
 )
 
+var DataFloats = []string{"float", "float16", "float32", "float64"}
+
 type Filter struct {
 	Field string
 	Op    string
@@ -245,6 +247,7 @@ func ParseFilter(fieldid string, filterText string, dataType string, dateFormat 
 					fs = append(fs, Gte(fieldid, lowerBound))
 				} else {
 					lowerBound := toInterface(bounds[0], dataType, dateFormat)
+					// toolkit.Println(lowerBound.(float64))
 					upperBound := toInterface(bounds[1], dataType, dateFormat)
 					fs = append(fs, And(Gte(fieldid, lowerBound), Lte(fieldid, upperBound)))
 				}
@@ -276,7 +279,15 @@ func toInterface(data string, dataType string, dateFormat string) interface{} {
 			if int(vfloat) == vint && vint != 0 {
 				dataType = DataInt
 			} else if vfloat != 0 {
-				dataType = DataFloat
+				// dataType = DataFloat
+				b, i := toolkit.MemberIndex(DataFloats, dataType)
+				if b {
+					for idx, dataFloat := range DataFloats {
+						if idx == i {
+							dataType = dataFloat
+						}
+					}
+				}
 			} else {
 				dataType = DataString
 			}
@@ -287,7 +298,7 @@ func toInterface(data string, dataType string, dateFormat string) interface{} {
 		return toolkit.String2Date(data, dateFormat)
 	} else if dataType == DataInt {
 		return toolkit.ToInt(data, toolkit.RoundingAuto)
-	} else if dataType == DataFloat {
+	} else if toolkit.HasMember(DataFloats, dataType) {
 		return toolkit.ToFloat64(data, 2, toolkit.RoundingAuto)
 	} else {
 		return data
