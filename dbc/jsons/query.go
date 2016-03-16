@@ -37,7 +37,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		return nil, err.Error(packageName, modQuery, "Cursor", "Cursor is only working with select command, for "+commandtype+" please use .Exec instead")
 	}
 
-	e = q.openFile()
+	e = q.openFile(commandtype)
 	if e != nil {
 		return nil, err.Error(packageName, modQuery, "Cursor", e.Error())
 	}
@@ -150,7 +150,7 @@ func (q *Query) Exec(in toolkit.M) error {
 		toolkit.Printf("CommandType: %s HasData: %v HasWhere: %v Where: %s\n",
 			commandType, hasData, hasWhere, toolkit.JsonString(where))
 	*/
-	e = q.openFile()
+	e = q.openFile(commandType)
 	//toolkit.Printf(commandType+" Open File, found record: %d\nData:%s\n", len(q.data), toolkit.JsonString(q.data))
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec: "+commandType, e.Error())
@@ -290,13 +290,26 @@ func (q *Query) Exec(in toolkit.M) error {
 func (q *Query) Close() {
 }
 
-func (q *Query) openFile() error {
+func (q *Query) openFile(commandtype string) error {
 	if q.fileHasBeenOpened {
 		return nil
 	}
 
 	_, e := os.Stat(q.jsonPath)
-	if e != nil && (strings.Contains(e.Error(), "does not exist") || strings.Contains(e.Error(), "no such file or directory")) {
+	setting := q.Connection().Info().Settings
+
+	if e != nil && toolkit.HasMember([]interface{}{dbox.QueryPartSave, dbox.QueryPartInsert}, commandtype) &&
+		strings.Contains(e.Error(), "cannot find the file specified") && setting != nil {
+		newfile := setting.Get("newfile", false).(bool)
+		if newfile {
+			e = q.writeFile()
+			if e != nil {
+				return err.Error(packageName, modQuery, "openFile: "+commandtype+" Write fail", e.Error())
+			}
+		} else {
+			return err.Error(packageName, modQuery, "openFile: "+commandtype+" Create new file is false", e.Error())
+		}
+	} else if e != nil && (strings.Contains(e.Error(), "does not exist") || strings.Contains(e.Error(), "no such file or directory")) {
 		q.data = []toolkit.M{}
 		return nil
 	} else if e != nil {
