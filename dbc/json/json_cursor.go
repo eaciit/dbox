@@ -65,7 +65,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			first = c.count - c.take
 		}
 	}
-	toolkit.Println(c.count, c.skip, c.take)
+	// toolkit.Println(c.count, c.skip, c.take)
 	if n == 0 {
 		if c.lastFeteched == c.count {
 			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!, please do reset fetch")
