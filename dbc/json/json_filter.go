@@ -87,32 +87,38 @@ func (fb *FilterBuilder) CheckFilter(f *dbox.Filter, p M) *dbox.Filter {
 		}
 		return f
 	} else {
+		indirectValue := reflect.Indirect(reflect.ValueOf(f.Value))
+		t := strings.ToLower(indirectValue.Kind().String())
 		if !IsSlice(f.Value) {
-			foundSubstring := strings.Index(f.Value.(string), "@")
-			if foundSubstring != 0 {
-				return f
-			}
-
-			if strings.Contains(f.Value.(string), "@") {
-				f.Value = p.Get(f.Value.(string))
-				return f
-			}
-		} else {
-			for i, v := range f.Value.([]interface{}) {
-				foundSubstring := strings.Index(v.(string), "@")
+			if t == "string" {
+				foundSubstring := strings.Index(f.Value.(string), "@")
 				if foundSubstring != 0 {
 					return f
 				}
 
-				switch Kind(v) {
-				case reflect.String:
-					stringValue := p.Get(v.(string))
-					f.Value.([]interface{})[i] = stringValue
-				case reflect.Int:
-					stringValue := ToInt(p.Get(v.(string)), ".")
-					f.Value.([]interface{})[i] = stringValue
-				case reflect.Bool:
-					f.Value.([]interface{})[i] = p.Get(v.(string)).(bool)
+				if strings.Contains(f.Value.(string), "@") {
+					f.Value = p.Get(f.Value.(string))
+					return f
+				}
+			}
+		} else {
+			for i, v := range f.Value.([]interface{}) {
+				if t == "string" {
+					foundSubstring := strings.Index(v.(string), "@")
+					if foundSubstring != 0 {
+						return f
+					}
+
+					switch Kind(v) {
+					case reflect.String:
+						stringValue := p.Get(v.(string))
+						f.Value.([]interface{})[i] = stringValue
+					case reflect.Int:
+						stringValue := ToInt(p.Get(v.(string)), ".")
+						f.Value.([]interface{})[i] = stringValue
+					case reflect.Bool:
+						f.Value.([]interface{})[i] = p.Get(v.(string)).(bool)
+					}
 				}
 			}
 			return f
@@ -163,7 +169,7 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 	var sorter []M
 
 	var order []SortCompare
-	var Func SortCompare
+	// var Func SortCompare
 	pl := make(changes, len(js))
 	x := 0
 	for k, v := range js {
@@ -172,7 +178,7 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 	}
 
 	for _, field := range s {
-		time.Sleep(1 * time.Second)
+		time.Sleep(400 * time.Millisecond)
 		n := 1
 		if field != "" {
 			switch field[0] {
@@ -181,9 +187,11 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 				field = field[1:]
 			}
 		}
-
+		// Println("field", field)
 		if n == 1 {
-			Func = func(a, b *crowd.SortItem) bool {
+			FuncAsc := func(a, b *crowd.SortItem) bool {
+				time.Sleep(400 * time.Millisecond)
+				// Println("asc")
 				rf := reflect.ValueOf(a.Value.(M)[field]).Kind()
 				if rf == reflect.Float64 {
 					ia := ToInt(a.Value.(M)[field], RoundingAuto)
@@ -195,8 +203,11 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 				bs := ToString(b.Value.(M)[field])
 				return as < bs
 			}
+			order = append(order, FuncAsc)
 		} else {
-			Func = func(a, b *crowd.SortItem) bool {
+			FuncDesc := func(a, b *crowd.SortItem) bool {
+				time.Sleep(400 * time.Millisecond)
+				// Println("desc")
 				rf := reflect.ValueOf(a.Value.(M)[field]).Kind()
 				if rf == reflect.Float64 {
 					ia := ToInt(a.Value.(M)[field], RoundingAuto)
@@ -208,8 +219,10 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 				bs := ToString(b.Value.(M)[field])
 				return as > bs
 			}
+			order = append(order, FuncDesc)
 		}
-		order = append(order, Func)
+		// Println("here")
+		// order = append(order, Func)
 	}
 
 	OrderedBy(order...).Sort(pl)
