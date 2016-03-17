@@ -121,9 +121,6 @@ func (fb *FilterBuilder) CheckFilter(f *dbox.Filter, p M) *dbox.Filter {
 				case reflect.Bool:
 					f.Value.([]interface{})[i] = p.Get(v.(string)).(bool)
 				}
-				// if strings.ToLower(Kind(f.Value).String()) == "string" {
-
-				// }
 			}
 			return f
 		}
@@ -215,39 +212,6 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 			}
 		}
 		order = append(order, Func)
-		// if n == 1 {
-		// 	FuncAsc = func(a, b *crowd.SortItem) bool {
-		// 		rf := reflect.ValueOf(a.Value.(M)[field]).Kind()
-		// 		if rf == reflect.Float64 {
-		// 			// ia := ToInt(a.Value.(M)[field], RoundingAuto)
-		// 			// ib := ToInt(b.Value.(M)[field], RoundingAuto)
-		// 			ia := ToFloat64(a.Value.(M)[field], 2, RoundingAuto)
-		// 			ib := ToFloat64(b.Value.(M)[field], 2, RoundingAuto)
-		// 			return ia < ib
-		// 		}
-
-		// 		as := ToString(a.Value.(M)[field])
-		// 		bs := ToString(b.Value.(M)[field])
-		// 		return as < bs
-		// 	}
-		// } else {
-		// 	FuncDesc = func(a, b *crowd.SortItem) bool {
-		// 		rf := reflect.ValueOf(a.Value.(M)[field]).Kind()
-		// 		if rf == reflect.Float64 {
-		// 			// ia := ToInt(a.Value.(M)[field], RoundingAuto)
-		// 			// ib := ToInt(b.Value.(M)[field], RoundingAuto)
-		// 			ia := ToFloat64(a.Value.(M)[field], 2, RoundingAuto)
-		// 			ib := ToFloat64(b.Value.(M)[field], 2, RoundingAuto)
-		// 			return ia > ib
-		// 		}
-
-		// 		as := ToString(a.Value.(M)[field])
-		// 		bs := ToString(b.Value.(M)[field])
-		// 		return as > bs
-		// 	}
-		// }
-
-		// order = append(order, FuncAsc, FuncDesc)
 	}
 
 	OrderedBy(order...).Sort(pl)
