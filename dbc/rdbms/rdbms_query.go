@@ -406,6 +406,14 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				rows.Scan(&rowCount)
 			}
 		}
+		if rowCount <= skip {
+			rowCount = 0
+		} else {
+			rowCount -= skip
+		}
+		if rowCount >= take && take > 0 {
+			rowCount = take
+		}
 		cursor.(*Cursor).count = rowCount
 
 		/*assign cursor.QueryString*/

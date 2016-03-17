@@ -60,11 +60,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			cursor.(*Cursor).indexes = dbox.Find(dataMaps, filters.Get("where", []*dbox.Filter{}).([]*dbox.Filter))
 		}
 		// toolkit.Println("skip:", toolkit.JsonString(filters.Get("skip")))
-		if skip := filters.Get("skip").(int); skip > 0 {
+		skip := 0
+		if skip = filters.Get("skip").(int); skip > 0 {
 			cursor.(*Cursor).skip = skip
 		}
 		// toolkit.Println("take:", toolkit.JsonString(filters.Get("take")))
-		if take := filters.Get("take").(int); take > 0 {
+		take := 0
+		if take = filters.Get("take").(int); take > 0 {
 			cursor.(*Cursor).take = take
 		}
 
@@ -77,6 +79,22 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		} else {
 			cursor.(*Cursor).datas = dataMaps
 		}
+		var count int
+		if hasWhere {
+			count = toolkit.SliceLen(cursor.(*Cursor).indexes)
+		} else {
+			count = toolkit.SliceLen(cursor.(*Cursor).datas)
+		}
+		if count <= skip {
+			count = 0
+		} else {
+			count -= skip
+		}
+		if count >= take && take > 0 {
+			count = take
+		}
+		cursor.(*Cursor).count = count
+
 		cursor.(*Cursor).jsonSelect = filters.Get("select").([]string)
 	} else {
 		return nil, errorlib.Error(packageName, modQuery, "Cursor", "No Aggregate function")

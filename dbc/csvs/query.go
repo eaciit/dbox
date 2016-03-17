@@ -813,26 +813,57 @@ func (q *Query) execQueryPartUpdate(dt toolkit.M) error {
 
 func ReadVariable(f *dbox.Filter, in toolkit.M) *dbox.Filter {
 	f.Field = strings.ToLower(f.Field)
-	if (f.Op == "$and" || f.Op == "$or") && strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
+	if (f.Op == "$and" || f.Op == "$or") &&
+		strings.Contains(reflect.TypeOf(f.Value).String(), "dbox.Filter") {
 		fs := f.Value.([]*dbox.Filter)
+		/* nilai fs :  [0xc082059590 0xc0820595c0]*/
 		for i, ff := range fs {
+			/* nilai ff[0] : &{umur $gt @age} && ff[1] : &{name $eq @nama}*/
 			bf := ReadVariable(ff, in)
+			/* nilai bf[0] :  &{umur $gt 25} && bf[1] : &{name $eq Kane}*/
 			fs[i] = bf
 		}
 		f.Value = fs
+		return f
 	} else {
 		if reflect.TypeOf(f.Value).Kind() == reflect.Slice {
-			fSlice := f.Value.([]interface{})
-			// nilai fSlice : [@name1 @name2]
-			for i := 0; i < len(fSlice); i++ {
-				// nilai fSlice [i] : @name1
-				if string(cast.ToString(fSlice[i])[0]) == "@" {
-					fSlice[i] = in.Get(cast.ToString(fSlice[i]), "")
+			if strings.Contains(reflect.TypeOf(f.Value).String(), "interface") {
+				fSlice := f.Value.([]interface{})
+				/*nilai fSlice : [@name1 @name2]*/
+				for i := 0; i < len(fSlice); i++ {
+					/* nilai fSlice [i] : @name1*/
+					if string(cast.ToString(fSlice[i])[0]) == "@" {
+						for key, val := range in {
+							if cast.ToString(fSlice[i]) == key {
+								fSlice[i] = val
+							}
+						}
+					}
+				}
+				f.Value = fSlice
+			} else if strings.Contains(reflect.TypeOf(f.Value).String(), "string") {
+				fSlice := f.Value.([]string)
+				for i := 0; i < len(fSlice); i++ {
+					if string(fSlice[i][0]) == "@" {
+						for key, val := range in {
+							if fSlice[i] == key {
+								fSlice[i] = val.(string)
+							}
+						}
+					}
+				}
+				f.Value = fSlice
+			}
+			return f
+		} else {
+			if string(cast.ToString(f.Value)[0]) == "@" {
+				for key, val := range in {
+					if cast.ToString(f.Value) == key {
+						f.Value = val
+					}
 				}
 			}
-			f.Value = fSlice
-		} else if string(cast.ToString(f.Value)[0]) == "@" {
-			f.Value = in.Get(cast.ToString(f.Value), "")
+			return f
 		}
 	}
 	return f

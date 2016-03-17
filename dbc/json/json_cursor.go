@@ -28,10 +28,7 @@ func (c *Cursor) Close() {
 }
 
 func (c *Cursor) Count() int {
-	if c.isWhere {
-		return len(c.indexes)
-	}
-	return toolkit.SliceLen(c.datas)
+	return c.count
 }
 
 func (c *Cursor) ResetFetch() error {
