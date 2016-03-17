@@ -168,7 +168,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	var v reflect.Type
 
-	if n == 1 {
+	if n == 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
 		v = reflect.TypeOf(m).Elem()
 	} else {
 		v = reflect.TypeOf(m).Elem().Elem()
@@ -258,7 +258,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
-	if n == 1 {
+	if n == 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
 		if ivs.Len() > 0 {
 			reflect.ValueOf(m).Elem().Set(ivs.Index(0))
 		}

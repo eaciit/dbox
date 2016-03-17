@@ -132,7 +132,8 @@ func TestSelect(t *testing.T) {
 	defer csr.Close()
 
 	results := make([]map[string]interface{}, 0)
-	e = csr.Fetch(&results, 2, false)
+	// results := toolkit.M{}
+	e = csr.Fetch(&results, 3, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N1: %s \n", e.Error())
 	} else {
