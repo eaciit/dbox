@@ -171,7 +171,7 @@ func TestSelect(t *testing.T) {
 }
 
 func TestSelectLimit(t *testing.T) {
-	// t.Skip("Just Skip Test")
+	t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -226,6 +226,40 @@ func TestSelectLimit(t *testing.T) {
 	}
 
 	csr.Close()
+}
+
+func TestSelectCondition(t *testing.T) {
+	// t.Skip("Just Skip Test")
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().Select("Id", "FirstName", "Age").
+		Where(dbox.Or(dbox.Contains("FirstName", "Al", "Na"), dbox.Gte("Age", 20))).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+
+	resultsstruct := make([]employee, 0)
+	e = csr.Fetch(&resultsstruct, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N(0-3): %s \n", e.Error())
+	} else {
+		fmt.Printf("Record count(0-3) : %v \n", csr.Count())
+		fmt.Printf("Fetch N(0-3) OK. Result: %v \n", resultsstruct)
+	}
+
+	csr.Close()
+
 }
 
 func TestSelectFreeQuery(t *testing.T) {
