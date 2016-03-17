@@ -16,6 +16,7 @@ const (
 type Cursor struct {
 	dbox.Cursor
 	count, lastFeteched, skip, take int
+	indexes                         []int
 	whereFields                     []*dbox.Filter
 	datas                           []toolkit.M
 	isWhere                         bool
@@ -27,6 +28,9 @@ func (c *Cursor) Close() {
 }
 
 func (c *Cursor) Count() int {
+	if c.isWhere {
+		return len(c.indexes)
+	}
 	return toolkit.SliceLen(c.datas)
 }
 
@@ -100,7 +104,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	if c.isWhere {
 		i := dbox.Find(c.datas, c.whereFields)
-		last = len(i)
+		c.lastFeteched = len(i)
+		if c.lastFeteched < c.count || c.count == 0 {
+			last = c.lastFeteched
+		}
 		for _, index := range i[first:last] {
 			dataJson = append(dataJson, c.datas[index])
 		}

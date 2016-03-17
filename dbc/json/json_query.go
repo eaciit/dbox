@@ -57,6 +57,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			// toolkit.Println("where:", toolkit.JsonString(filters.Get("where")))
 			cursor.(*Cursor).whereFields = filters.Get("where").([]*dbox.Filter)
 			cursor.(*Cursor).isWhere = true
+			cursor.(*Cursor).indexes = dbox.Find(dataMaps, filters.Get("where", []*dbox.Filter{}).([]*dbox.Filter))
 		}
 		// toolkit.Println("skip:", toolkit.JsonString(filters.Get("skip")))
 		if skip := filters.Get("skip").(int); skip > 0 {
