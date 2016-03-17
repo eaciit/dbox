@@ -61,9 +61,12 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	cursor = newCursor(q)
 	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
-	// toolkit.Println("LINE 56 : ", where)
+
 	cursor.skip = setting.Get("skip", 0).(int)
 	cursor.limit = setting.Get("take", 0).(int)
+	if cursor.skip > 0 && cursor.limit > 0 {
+		cursor.limit += cursor.skip
+	}
 	cursor.fields = setting.Get("fields", toolkit.M{}).(toolkit.M)
 
 	// if len(where) > 0 {

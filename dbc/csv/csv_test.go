@@ -112,6 +112,7 @@ type employee struct {
 // }
 
 func TestSelect(t *testing.T) {
+	t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -169,7 +170,66 @@ func TestSelect(t *testing.T) {
 	}
 }
 
+func TestSelectLimit(t *testing.T) {
+	// t.Skip("Just Skip Test")
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().Select("Id", "FirstName").
+		Take(3).Skip(0).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+
+	resultsstruct := make([]employee, 0)
+	e = csr.Fetch(&resultsstruct, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N(0-3): %s \n", e.Error())
+	} else {
+		fmt.Printf("Record count(0-3) : %v \n", csr.Count())
+		fmt.Printf("Fetch N(0-3) OK. Result: %v \n", resultsstruct)
+	}
+
+	csr.Close()
+
+	csr, e = c.NewQuery().Select("Id", "FirstName").
+		Skip(3).
+		Cursor(nil)
+
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+
+	resultsstruct = make([]employee, 0)
+	e = csr.Fetch(&resultsstruct, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N(3-N): %s \n", e.Error())
+	} else {
+		fmt.Printf("Record count(3-N) : %v \n", csr.Count())
+		fmt.Printf("Fetch N(3-N) OK. Result: %v \n", resultsstruct)
+	}
+
+	csr.Close()
+}
+
 func TestSelectFreeQuery(t *testing.T) {
+	t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -283,6 +343,7 @@ func TestSelectAggregate(t *testing.T) {
 */
 
 func TestCRUD(t *testing.T) {
+	t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())

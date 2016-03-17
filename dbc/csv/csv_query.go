@@ -232,7 +232,12 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 		cursor.(*Cursor).ConditionVal.skip = skip
 		cursor.(*Cursor).ConditionVal.limit = take
+		if skip > 0 && take > 0 {
+			cursor.(*Cursor).ConditionVal.limit += skip
+		}
+
 		e = cursor.(*Cursor).generateIndexes()
+
 	} else {
 		/*		pipes := toolkit.M{}
 				mgoPipe := session.DB(dbname).C(tablename).

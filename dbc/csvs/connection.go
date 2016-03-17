@@ -55,9 +55,9 @@ func (c *Connection) NewQuery() dbox.IQuery {
 		q := new(Query)
 		q.SetConnection(c)
 		q.SetThis(q)
-		if pooling {
-			c.defautQuery = q
-		}
+		// if pooling {
+		// 	c.defautQuery = q
+		// }
 		return q
 	}
 	return nil

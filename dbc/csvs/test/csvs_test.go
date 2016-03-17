@@ -151,6 +151,54 @@ func TestSelect(t *testing.T) {
 	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
 }
 
+func TestSelectLimit(t *testing.T) {
+	// t.Skip("Skip : Comment this line to do test")
+	skipIfConnectionIsNil(t)
+
+	cursor, e := ctx.NewQuery().
+		Select("EmployeeId", "FirstName").
+		Skip(0).Take(3).
+		From(tableName).
+		Cursor(nil)
+
+	if e != nil {
+		t.Fatalf("Cursor error: " + e.Error())
+	}
+
+	datas := make([]toolkit.M, 0, 0)
+	e = cursor.Fetch(&datas, 0, false)
+	if e != nil {
+		t.Fatalf("Fetch error: %s", e.Error())
+	}
+
+	toolkit.Printf("Total Record : %d\n", cursor.Count())
+	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
+
+	cursor.Close()
+
+	//==================
+	cursor, e = ctx.NewQuery().
+		Select("EmployeeId").
+		Skip(3).Take(5).
+		From(tableName).
+		Cursor(nil)
+
+	if e != nil {
+		t.Fatalf("Cursor error: " + e.Error())
+	}
+
+	datas = make([]toolkit.M, 0, 0)
+	e = cursor.Fetch(&datas, 0, false)
+	if e != nil {
+		t.Fatalf("Fetch error: %s", e.Error())
+	}
+
+	toolkit.Printf("Total Record : %d\n", cursor.Count())
+	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
+
+	cursor.Close()
+}
+
 // func TestQueryAggregate(t *testing.T) {
 // 	t.Skip()
 // 	skipIfConnectionIsNil(t)

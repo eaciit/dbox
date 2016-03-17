@@ -40,6 +40,10 @@ type Cursor struct {
 }
 
 func (c *Cursor) Close() {
+	_ = c.resetConnection()
+	// if e != nil {
+	// 	return errorlib.Error(packageName, modCursor, "Reset Fetch", e.Error())
+	// }
 }
 
 func (c *Cursor) validate() error {
@@ -59,7 +63,11 @@ func (c *Cursor) prepIter() error {
 }
 
 func (c *Cursor) Count() int {
-	return len(c.ConditionVal.indexes)
+	if c.ConditionVal.limit == 0 {
+		c.ConditionVal.limit = len(c.ConditionVal.indexes) - 1
+	}
+
+	return len(c.ConditionVal.indexes[c.ConditionVal.skip:c.ConditionVal.limit])
 }
 
 func (c *Cursor) generateIndexes() error {
@@ -214,7 +222,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 		isAppend = c.ConditionVal.getCondition(recData)
 
-		if c.count < c.ConditionVal.skip || (c.count > (c.ConditionVal.skip+c.ConditionVal.limit) && c.ConditionVal.limit > 0) {
+		if c.count <= c.ConditionVal.skip || (c.count > (c.ConditionVal.skip+c.ConditionVal.limit) && c.ConditionVal.limit > 0) {
 			isAppend = false
 		}
 
