@@ -43,11 +43,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 	cursor = newCursor(q)
 
-	if skip := setting.Get("skip").(int); skip > 0 {
+	skip := 0
+	if skip = setting.Get("skip").(int); skip > 0 {
 		cursor.skip = skip
 	}
 
-	if take := setting.Get("take").(int); take > 0 {
+	take := 0
+	if take = setting.Get("take").(int); take > 0 {
 		cursor.take = take
 	}
 	if sort := setting.Get("sort").([]string); toolkit.SliceLen(sort) > 0 {
@@ -57,11 +59,23 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	}
 
 	cursor.jsonSelect = setting.Get("fields").([]string)
+	var count int
+	count = toolkit.SliceLen(q.data)
 	where := setting.Get("where", []*dbox.Filter{}).([]*dbox.Filter)
 	if len(where) > 0 {
 		cursor.where = where
 		cursor.indexes = dbox.Find(q.data, where)
+		count = toolkit.SliceLen(cursor.indexes)
 	}
+	if count <= skip {
+		count = 0
+	} else {
+		count -= skip
+	}
+	if count >= take && take > 0 {
+		count = take
+	}
+	cursor.count = count
 	return cursor, nil
 }
 

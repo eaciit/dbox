@@ -9,25 +9,18 @@ import (
 
 type Cursor struct {
 	dbox.Cursor
-	indexes                  []int
-	where                    []*dbox.Filter
-	jsonSelect               []string
-	q                        *Query
-	currentIndex, skip, take int
+	indexes                         []int
+	where                           []*dbox.Filter
+	jsonSelect                      []string
+	q                               *Query
+	currentIndex, skip, take, count int
 }
 
 func (c *Cursor) Close() {
 }
 
 func (c *Cursor) Count() int {
-	var count int
-	if c.where == nil {
-		count = len(c.q.data)
-
-	} else {
-		count = len(c.indexes)
-	}
-	return count
+	return c.count
 }
 
 func (c *Cursor) ResetFetch() error {
