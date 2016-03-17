@@ -63,8 +63,8 @@ func (c *Cursor) prepIter() error {
 }
 
 func (c *Cursor) Count() int {
-	if c.ConditionVal.limit == 0 {
-		c.ConditionVal.limit = len(c.ConditionVal.indexes) - 1
+	if c.ConditionVal.limit == 0 || c.ConditionVal.limit > len(c.ConditionVal.indexes) {
+		c.ConditionVal.limit = len(c.ConditionVal.indexes)
 	}
 
 	return len(c.ConditionVal.indexes[c.ConditionVal.skip:c.ConditionVal.limit])
@@ -92,7 +92,7 @@ func (c *Cursor) generateIndexes() error {
 			}
 		}
 
-		if c.ConditionVal.getCondition(tm) { //len(c.ConditionVal.where) == 0 || dbox.MatchM(tm, c.ConditionVal.where) {
+		if c.ConditionVal.getCondition(tm) && len(tm) > 0 { //len(c.ConditionVal.where) == 0 || dbox.MatchM(tm, c.ConditionVal.where) {
 			output = append(output, n)
 		}
 

@@ -372,7 +372,7 @@ func (q *Query) generateIndex(filters []*dbox.Filter) (output []int, e error) {
 		}
 
 		match := dbox.MatchM(tm, filters)
-		if len(filters) == 0 || match {
+		if (len(filters) == 0 || match) && len(tm) > 0 {
 			output = append(output, n)
 		}
 

@@ -237,7 +237,7 @@ func TestSelectCondition(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().Select("Id", "FirstName", "Age").
-		Where(dbox.Or(dbox.Contains("FirstName", "Al", "Na"), dbox.Gte("Age", 20))).
+		Where(dbox.Or(dbox.Contains("FirstName", "Al", "Na"), dbox.Gte("Age", 28))).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())

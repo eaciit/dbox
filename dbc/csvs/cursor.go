@@ -38,8 +38,8 @@ func (c *Cursor) Close() {
 }
 
 func (c *Cursor) Count() int {
-	if c.limit == 0 {
-		c.limit = len(c.indexes) - 1
+	if c.limit == 0 || c.limit > len(c.indexes) {
+		c.limit = len(c.indexes)
 	}
 
 	return len(c.indexes[c.skip:c.limit])
