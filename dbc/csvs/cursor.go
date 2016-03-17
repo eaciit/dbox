@@ -38,7 +38,11 @@ func (c *Cursor) Close() {
 }
 
 func (c *Cursor) Count() int {
-	return len(c.indexes)
+	if c.limit == 0 {
+		c.limit = len(c.indexes) - 1
+	}
+
+	return len(c.indexes[c.skip:c.limit])
 }
 
 func (c *Cursor) ResetFetch() error {
@@ -55,6 +59,10 @@ func (c *Cursor) ResetFetch() error {
 }
 
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
+	if n == 0 {
+		n = c.Count()
+	}
+
 	if closeWhenDone {
 		defer c.Close()
 	}
@@ -85,7 +93,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	var v reflect.Type
 
-	if n == 1 {
+	if n == 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
 		v = reflect.TypeOf(m).Elem()
 	} else {
 		v = reflect.TypeOf(m).Elem().Elem()
@@ -139,7 +147,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	// 	return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	// }
 
-	if n == 1 {
+	if n == 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
 		reflect.ValueOf(m).Elem().Set(ivs.Index(0))
 	} else {
 		reflect.ValueOf(m).Elem().Set(ivs)
