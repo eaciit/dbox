@@ -8,8 +8,16 @@ import (
 
 	// "strings"
 	//"path/filepath"
+	"fmt"
 	"testing"
 )
+
+type employee struct {
+	Id        string
+	FirstName string
+	LastName  string
+	Age       int
+}
 
 var ctx dbox.IConnection
 
@@ -17,7 +25,7 @@ func connect() error {
 	var e error
 	if ctx == nil {
 		wd, _ := os.Getwd()
-		var config = map[string]interface{}{"useheader": true, "delimiter": ","}
+		var config = map[string]interface{}{"useheader": true, "delimiter": ",", "newfile": true}
 		ctx, e = dbox.NewConnection("csvs",
 			&dbox.ConnectionInfo{wd, "", "", "", config})
 		if e != nil {
@@ -68,11 +76,11 @@ func TestGetObj(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-	t.Skip("Skip : Comment this line to do test")
+	// t.Skip("Skip : Comment this line to do test")
 	skipIfConnectionIsNil(t)
 
 	es := []string{}
-	qinsert := ctx.NewQuery().From("Data_CUD").SetConfig("multiexec", true).Insert()
+	qinsert := ctx.NewQuery().From("Data_CUD").SetConfig("multiexec", true).Save()
 
 	for i := 1; i <= 5; i++ {
 		u := toolkit.M{}.Set("Id", toolkit.Sprintf("ID-1%d", i)).
@@ -152,7 +160,7 @@ func TestSelect(t *testing.T) {
 }
 
 func TestSelectLimit(t *testing.T) {
-	// t.Skip("Skip : Comment this line to do test")
+	t.Skip("Skip : Comment this line to do test")
 	skipIfConnectionIsNil(t)
 
 	cursor, e := ctx.NewQuery().
@@ -197,6 +205,71 @@ func TestSelectLimit(t *testing.T) {
 	toolkit.Printf("Record found: %d\nData:\n%s\n", len(datas), toolkit.JsonString(datas))
 
 	cursor.Close()
+}
+
+func TestSelectCondition(t *testing.T) {
+	t.Skip("Just Skip Test")
+	skipIfConnectionIsNil(t)
+
+	// cursor, e := ctx.NewQuery().
+	// c, e := prepareConnection()
+	// if e != nil {
+	// 	t.Errorf("Unable to connect %s \n", e.Error())
+	// }
+	// defer c.Close()
+
+	csr, e := ctx.NewQuery().Select("Id", "LastName", "Age").
+		Where(dbox.Contains("LastName", "m")).
+		From("BackData01").
+		Take(10).Skip(0).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+
+	resultsstruct := make([]employee, 0)
+	e = csr.Fetch(&resultsstruct, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N(0-10): %s \n", e.Error())
+	} else {
+		fmt.Printf("Record count(0-10) : %v \n", csr.Count())
+		fmt.Printf("Fetch N(0-10) OK. Result: %v \n", resultsstruct)
+	}
+
+	csr.Close()
+
+	csr, e = ctx.NewQuery().Select("Id", "LastName", "Age").
+		Where(dbox.Contains("LastName", "m")).
+		From("BackData01").
+		Take(10).Skip(10).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+
+	resultsstruct = make([]employee, 0)
+	e = csr.Fetch(&resultsstruct, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N(10-20): %s \n", e.Error())
+	} else {
+		fmt.Printf("Record count(10-20) : %v \n", csr.Count())
+		fmt.Printf("Fetch N(10-20) OK. Result: %v \n", resultsstruct)
+	}
+
+	csr.Close()
+
 }
 
 // func TestQueryAggregate(t *testing.T) {

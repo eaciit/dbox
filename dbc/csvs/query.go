@@ -36,6 +36,9 @@ type Query struct {
 	isUseHeader  bool
 	headerColumn []headerstruct
 
+	newfile   bool
+	newheader bool
+
 	fileHasBeenOpened bool
 	indexes           []int
 	newFileWrite      bool
@@ -107,7 +110,7 @@ func (q *Query) Exec(in toolkit.M) error {
 	if commandType != dbox.QueryPartDelete && len(datam) == 0 {
 		return err.Error(packageName, modQuery, "Exec: "+commandType, "Exec is not working, need data to param input")
 	}
-
+	// fmt.Println("DEBUG-113")
 	e = q.openFile()
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec ", e.Error())
@@ -127,6 +130,10 @@ func (q *Query) Exec(in toolkit.M) error {
 		if e != nil {
 			return err.Error(packageName, modQuery, "Exec: ", e.Error())
 		}
+	}
+
+	if q.newheader && commandType != dbox.QueryPartSave && commandType != dbox.QueryPartInsert {
+		return err.Error(packageName, modQuery, "Exec: ", "Only save and insert permited")
 	}
 
 	q.newFileWrite = false
@@ -168,11 +175,26 @@ func (q *Query) Close() {
 }
 
 func (q *Query) openFile() error {
+	q.newheader = false
 	if q.fileHasBeenOpened {
 		return nil
 	}
 
+	ci := q.Connection().(*Connection).Info()
+
+	q.newfile = ci.Settings.Get("newfile", false).(bool)
+	q.isUseHeader = ci.Settings.Get("useheader", false).(bool)
+
 	_, e := os.Stat(q.filePath)
+	// fmt.Printf("e : %v && q.newfile : %v && q.isUseHeader : %v \n\n", os.IsNotExist(e), q.newfile, q.isUseHeader)
+	if os.IsNotExist(e) && q.newfile && q.isUseHeader {
+		_, ex := os.Stat(q.Connection().(*Connection).folder)
+		if ex == nil {
+			q.newheader = true
+			_, e = os.Create(q.filePath)
+		}
+	}
+	// fmt.Println("DEBUG-197 : ", q.newheader)
 	if e != nil && (strings.Contains(e.Error(), "does not exist") || strings.Contains(e.Error(), "no such file or directory")) {
 		return err.Error(packageName, modQuery, "file doesn't exist", e.Error())
 	} else if e != nil {
@@ -223,6 +245,7 @@ func (q *Query) setReaderParam() {
 func (q *Query) setConfigParam() {
 	ci := q.Connection().(*Connection).Info()
 
+	q.newfile = ci.Settings.Get("newfile", false).(bool)
 	q.isUseHeader = ci.Settings.Get("useheader", false).(bool)
 
 	// set header from reader =============== }
@@ -341,7 +364,8 @@ func (q *Query) resetReader() error {
 	}
 	q.reader = csv.NewReader(q.file)
 	q.setReaderParam()
-	if q.isUseHeader {
+	// fmt.Printf("q.isUseHeader : %v && !q.newheader : %v\n\n", q.isUseHeader, q.newheader)
+	if q.isUseHeader && !q.newheader {
 		_, e = q.reader.Read()
 		if e != nil {
 			return err.Error(packageName, modQuery, "read csv for reset fail", e.Error())
@@ -678,12 +702,36 @@ func (q *Query) endWriteMode() error {
 // 	return nil
 // }
 
+func (q *Query) setNewHeader(dt toolkit.M) {
+	q.headerColumn = make([]headerstruct, 0, 0)
+	sliceheader := make([]string, 0, 0)
+
+	// tdread, e := q.reader.Read()
+	for key, _ := range dt {
+		ts := headerstruct{}
+		ts.name = key
+		ts.dataType = ""
+		q.headerColumn = append(q.headerColumn, ts)
+		sliceheader = append(sliceheader, key)
+	}
+
+	q.writer.Write(sliceheader)
+	q.writer.Flush()
+	q.newheader = false
+
+	return
+}
+
 func (q *Query) execQueryPartInsert(dt toolkit.M) error {
 	var e error
 	e = q.startWriteMode()
 
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec-Insert: ", e.Error())
+	}
+
+	if q.newheader {
+		q.setNewHeader(dt)
 	}
 
 	writer := q.writer
