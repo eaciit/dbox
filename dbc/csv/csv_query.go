@@ -315,7 +315,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 
 	//Check setNewHeader First
-	if q.Connection().(*Connection).setNewHeader && commandType != dbox.QueryPartInsert {
+	if q.Connection().(*Connection).setNewHeader && (commandType != dbox.QueryPartInsert && commandType != dbox.QueryPartSave) {
 		q.Connection().(*Connection).Close()
 		filename := q.Connection().(*Connection).Info().Host
 		os.Remove(filename)
@@ -330,6 +330,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	q.Connection().(*Connection).ExecOpr = false
 	if !q.Connection().(*Connection).setNewHeader && (commandType != dbox.QueryPartSave || (commandType == dbox.QueryPartSave && q.Connection().(*Connection).writer == nil)) {
 		e = q.Connection().(*Connection).StartSessionWrite()
+		// toolkit.Printf("Debug 333 : %v \n\n", "masuk")
 	}
 
 	if e != nil {
@@ -373,7 +374,7 @@ func (q *Query) execQueryPartSave(dt toolkit.M) error {
 		return errorlib.Error(packageName, modQuery, "save", "data to insert is not found")
 	}
 
-	writer := q.Connection().(*Connection).writer
+	// writer := q.Connection().(*Connection).writer
 	reader := q.Connection().(*Connection).reader
 	tempHeader := []string{}
 
@@ -429,19 +430,23 @@ func (q *Query) execQueryPartSave(dt toolkit.M) error {
 		// time.Sleep(1000 * time.Millisecond)
 	} else {
 		//Change to Do Insert
-		dataTemp := []string{}
+		// dataTemp := []string{}
 
-		for _, v := range q.Connection().(*Connection).headerColumn {
-			if dt.Has(v.name) {
-				dataTemp = append(dataTemp, cast.ToString(dt[v.name]))
-			} else {
-				dataTemp = append(dataTemp, "")
-			}
-		}
+		// for _, v := range q.Connection().(*Connection).headerColumn {
+		// 	if dt.Has(v.name) {
+		// 		dataTemp = append(dataTemp, cast.ToString(dt[v.name]))
+		// 	} else {
+		// 		dataTemp = append(dataTemp, "")
+		// 	}
+		// }
 
-		if len(dataTemp) > 0 {
-			writer.Write(dataTemp)
-			writer.Flush()
+		// if len(dataTemp) > 0 {
+		// 	writer.Write(dataTemp)
+		// 	writer.Flush()
+		// }
+		e := q.execQueryPartInsert(dt)
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Save", e.Error())
 		}
 	}
 
@@ -457,7 +462,7 @@ func (q *Query) execQueryPartInsert(dt toolkit.M) error {
 	writer := q.Connection().(*Connection).writer
 	reader := q.Connection().(*Connection).reader
 	dataTemp := []string{}
-
+	// toolkit.Printf("Debug 465 : %v \n\n", q.Connection().(*Connection).setNewHeader)
 	if q.Connection().(*Connection).setNewHeader {
 		q.Connection().(*Connection).SetHeaderToolkitM(dt)
 		q.Connection().(*Connection).setNewHeader = false

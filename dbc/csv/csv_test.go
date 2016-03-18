@@ -11,7 +11,7 @@ import (
 
 func prepareConnection() (dbox.IConnection, error) {
 	var config = map[string]interface{}{"useheader": true, "delimiter": ",", "dateformat": "MM-dd-YYYY", "newfile": true}
-	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\Data_Comma01.csv", "", "", "", config}
+	ci := &dbox.ConnectionInfo{"E:\\data\\sample\\TEST1234.csv", "", "", "", config}
 	c, e := dbox.NewConnection("csv", ci)
 	if e != nil {
 		return nil, e
@@ -26,6 +26,7 @@ func prepareConnection() (dbox.IConnection, error) {
 }
 
 func TestConnect(t *testing.T) {
+	t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect: %s \n", e.Error())
@@ -61,6 +62,7 @@ func TestFilter(t *testing.T) {
 type employee struct {
 	Id        string
 	FirstName string
+	LastName  string
 	Age       int
 }
 
@@ -229,15 +231,16 @@ func TestSelectLimit(t *testing.T) {
 }
 
 func TestSelectCondition(t *testing.T) {
-	// t.Skip("Just Skip Test")
+	t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
 	}
 	defer c.Close()
 
-	csr, e := c.NewQuery().Select("Id", "FirstName", "Age").
-		Where(dbox.Or(dbox.Contains("FirstName", "Al", "Na"), dbox.Gte("Age", 28))).
+	csr, e := c.NewQuery().Select("Id", "LastName", "Age").
+		Where(dbox.Contains("LastName", "m")).
+		Take(10).Skip(0).
 		Cursor(nil)
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -252,14 +255,38 @@ func TestSelectCondition(t *testing.T) {
 	resultsstruct := make([]employee, 0)
 	e = csr.Fetch(&resultsstruct, 0, false)
 	if e != nil {
-		t.Errorf("Unable to fetch N(0-3): %s \n", e.Error())
+		t.Errorf("Unable to fetch N(0-10): %s \n", e.Error())
 	} else {
-		fmt.Printf("Record count(0-3) : %v \n", csr.Count())
-		fmt.Printf("Fetch N(0-3) OK. Result: %v \n", resultsstruct)
+		fmt.Printf("Record count(0-10) : %v \n", csr.Count())
+		fmt.Printf("Fetch N(0-10) OK. Result: %v \n", resultsstruct)
 	}
 
 	csr.Close()
 
+	csr, e = c.NewQuery().Select("Id", "LastName", "Age").
+		Where(dbox.Contains("LastName", "m")).
+		Take(10).Skip(10).
+		Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+
+	resultsstruct = make([]employee, 0)
+	e = csr.Fetch(&resultsstruct, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch N(10-20): %s \n", e.Error())
+	} else {
+		fmt.Printf("Record count(10-20) : %v \n", csr.Count())
+		fmt.Printf("Fetch N(10-20) OK. Result: %v \n", resultsstruct)
+	}
+
+	csr.Close()
 }
 
 func TestSelectFreeQuery(t *testing.T) {
@@ -305,6 +332,7 @@ func TestSelectFreeQuery(t *testing.T) {
 }
 
 // func TestSelectFilter(t *testing.T) {
+// 	t.Skip("Just Skip Test")
 // 	c, e := prepareConnection()
 // 	if e != nil {
 // 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -377,7 +405,7 @@ func TestSelectAggregate(t *testing.T) {
 */
 
 func TestCRUD(t *testing.T) {
-	t.Skip("Just Skip Test")
+	// t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -385,7 +413,7 @@ func TestCRUD(t *testing.T) {
 	}
 	defer c.Close()
 	// ===================================================
-	/*type employee struct {
+	type employee struct {
 		Id        string
 		FirstName string
 		LastName  string
@@ -404,24 +432,26 @@ func TestCRUD(t *testing.T) {
 	data.Email = fmt.Sprintf("user15@yahoo.com")
 	data.Phone = fmt.Sprintf("085-XXX-XXX-XX")
 
-	e = c.NewQuery().Insert().Exec(toolkit.M{"data": data})
+	// data := toolkit.M{"name": "Save", "grade": 2}
+
+	e = c.NewQuery().Save().Exec(toolkit.M{"data": data})
 	if e != nil {
 		t.Errorf("Unable to Insert: %s \n", e.Error())
 	}
 
-	data = employee{}
-	data.Id = fmt.Sprintf("90012022")
-	data.FirstName = fmt.Sprintf("Test Name 01")
-	data.LastName = fmt.Sprintf("AA")
-	data.Age = fmt.Sprintf("2C")
-	data.JoinDate = fmt.Sprintf("2015-11-01")
-	data.Email = fmt.Sprintf("userAA@yahoo.com")
-	data.Phone = fmt.Sprintf("085-XXX-XXX-XX")
+	// data = employee{}
+	// data.Id = fmt.Sprintf("90012022")
+	// data.FirstName = fmt.Sprintf("Test Name 01")
+	// data.LastName = fmt.Sprintf("AA")
+	// data.Age = fmt.Sprintf("2C")
+	// data.JoinDate = fmt.Sprintf("2015-11-01")
+	// data.Email = fmt.Sprintf("userAA@yahoo.com")
+	// data.Phone = fmt.Sprintf("085-XXX-XXX-XX")
 
-	e = c.NewQuery().Insert().Exec(toolkit.M{"data": data})
-	if e != nil {
-		t.Errorf("Unable to Insert: %s \n", e.Error())
-	}*/
+	// e = c.NewQuery().Insert().Exec(toolkit.M{"data": data})
+	// if e != nil {
+	// 	t.Errorf("Unable to Insert: %s \n", e.Error())
+	// }
 	// ===================================================
 
 	// ===================================================

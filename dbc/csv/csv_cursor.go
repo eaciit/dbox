@@ -192,7 +192,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		iv := reflect.New(v).Interface()
 
 		isAppend := true
-		c.count += 1
+		// c.count += 1
 		recData := toolkit.M{}
 		appendData := toolkit.M{}
 
@@ -221,6 +221,10 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		}
 
 		isAppend = c.ConditionVal.getCondition(recData)
+
+		if isAppend {
+			c.count += 1
+		}
 
 		if c.count <= c.ConditionVal.skip || (c.count > (c.ConditionVal.skip+c.ConditionVal.limit) && c.ConditionVal.limit > 0) {
 			isAppend = false
