@@ -9,11 +9,11 @@ import (
 
 type Cursor struct {
 	dbox.Cursor
-	indexes                         []int
-	where                           []*dbox.Filter
-	jsonSelect                      []string
-	q                               *Query
-	currentIndex, skip, take, count int
+	indexes                                   []int
+	where                                     []*dbox.Filter
+	jsonSelect                                []string
+	q                                         *Query
+	currentIndex, skip, take, count, maxIndex int
 }
 
 func (c *Cursor) Close() {
@@ -36,14 +36,24 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	var lower, upper, lenData, lenIndex int
 	if c.where == nil {
 		lenData = len(c.q.data)
+		if c.currentIndex == 0 {
+			c.maxIndex = lenData
+		}
 	} else {
 		lenIndex = len(c.indexes)
+		if c.currentIndex == 0 {
+			c.maxIndex = lenIndex
+		}
+	}
+
+	if c.currentIndex == 0 && (c.skip > 0 || c.take > 0) { /*determine max data allowed to be fetched*/
+		c.maxIndex = c.skip + c.take
 	}
 
 	lower = c.currentIndex
 	upper = lower + n
-	if c.skip > 0 {
-		lower = c.skip
+	if c.skip > 0 && c.currentIndex < 1 {
+		lower += c.skip
 	}
 
 	if n == 0 {
@@ -68,18 +78,26 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	}
 
 	if c.where == nil {
-		if upper > lenData {
+		if lower >= lenData {
+			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+		}
+		if upper >= lenData {
 			upper = lenData
 		}
 	} else {
-		if upper > lenIndex {
+		if lower >= lenIndex {
+			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+		}
+		if upper >= lenIndex {
 			upper = lenIndex
 		}
+	}
+	if upper >= c.maxIndex {
+		upper = c.maxIndex
 	}
 
 	if c.where == nil {
 		source = c.q.data[lower:upper]
-
 	} else {
 		for _, v := range c.indexes[lower:upper] {
 			/*
@@ -107,6 +125,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	} else {
 		e = toolkit.Serde(&source, m, "json")
 	}
+	c.currentIndex = upper
 	if e != nil {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
