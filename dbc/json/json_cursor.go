@@ -15,12 +15,12 @@ const (
 
 type Cursor struct {
 	dbox.Cursor
-	count, lastFeteched, skip, take int
-	indexes                         []int
-	whereFields                     []*dbox.Filter
-	datas                           []toolkit.M
-	isWhere                         bool
-	jsonSelect                      []string
+	count, lastFetched, skip, take, maxIndex int
+	indexes                                  []int
+	whereFields                              []*dbox.Filter
+	datas                                    []toolkit.M
+	isWhere                                  bool
+	jsonSelect                               []string
 }
 
 func (c *Cursor) Close() {
@@ -32,8 +32,8 @@ func (c *Cursor) Count() int {
 }
 
 func (c *Cursor) ResetFetch() error {
-	if c.lastFeteched > 0 {
-		c.lastFeteched = 0
+	if c.lastFetched > 0 {
+		c.lastFetched = 0
 	}
 
 	return nil
@@ -44,83 +44,169 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		c.Close()
 	}
 
-	var first, last int
-	dataJson := []toolkit.M{}
-
-	c.count = len(c.datas)
-	c.lastFeteched = c.count
-	if c.skip > 0 {
-		if c.take > 0 {
-			c.count = c.skip + c.take
-		} else {
-			first = c.skip
+	var source []toolkit.M
+	var lower, upper, lenData, lenIndex int
+	if !c.isWhere {
+		lenData = len(c.datas)
+		if c.lastFetched == 0 {
+			c.maxIndex = lenData
 		}
 	} else {
-		c.count = c.take
-	}
-
-	if c.take > 0 {
-		if c.take == c.skip {
-			first = c.skip
-		} else {
-			first = c.count - c.take
+		lenIndex = len(c.indexes)
+		if c.lastFetched == 0 {
+			c.maxIndex = lenIndex
 		}
 	}
 
-	// toolkit.Printf("first = skip>%v last = take>%v lastfetched>%v count>%v\n", first, last, c.lastFeteched, c.count)
+	if c.lastFetched == 0 && (c.skip > 0 || c.take > 0) { /*determine max data allowed to be fetched*/
+		c.maxIndex = c.skip + c.take
+	}
+
+	lower = c.lastFetched
+	upper = lower + n
+	if c.skip > 0 && c.lastFetched < 1 {
+		lower += c.skip
+	}
+
 	if n == 0 {
-		last = c.count
-		if c.lastFeteched <= c.count || c.count == 0 {
-			last = c.lastFeteched
+		if !c.isWhere {
+			upper = lenData
+		} else {
+			upper = lenIndex
 		}
 
-	} else if n > 0 {
-		switch {
-		case c.lastFeteched == 0:
-			last = n
-			c.lastFeteched = n
-		case n > c.lastFeteched || n < c.lastFeteched || n == c.lastFeteched:
-			first = c.lastFeteched
-			last = c.lastFeteched + n
-			c.lastFeteched = last
-
-			if c.lastFeteched > c.count {
-				if first > c.count {
-					return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
-				}
-				last = c.count
-				c.lastFeteched = last
-			}
-
+		if c.take > 0 {
+			upper = lower + c.take
 		}
 
-		if first > last {
-			return errorlib.Error(packageName, modCursor, "Fetch", "Wrong fetched data!")
+	} else if n == 1 {
+		upper = lower + 1
+
+	} else {
+		upper = lower + n
+		if c.take > 0 && n > c.take {
+			upper = lower + c.take
 		}
 	}
 
-	if c.isWhere {
-		i := dbox.Find(c.datas, c.whereFields)
-		c.lastFeteched = len(i)
-		if c.lastFeteched < c.count || c.count == 0 {
-			last = c.lastFeteched
+	if !c.isWhere {
+		if lower >= lenData {
+			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
 		}
-		for _, index := range i[first:last] {
-			dataJson = append(dataJson, c.datas[index])
+		if upper >= lenData {
+			upper = lenData
 		}
 	} else {
-		dataJson = c.datas[first:last]
+		if lower >= lenIndex {
+			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+		}
+		if upper >= lenIndex {
+			upper = lenIndex
+		}
+	}
+	if upper >= c.maxIndex {
+		upper = c.maxIndex
+	}
 
+	if !c.isWhere {
+		source = c.datas[lower:upper]
+	} else {
+		for _, v := range c.indexes[lower:upper] {
+			if v < len(c.datas) {
+				source = append(source, c.datas[v])
+			}
+		}
 	}
 
 	if toolkit.SliceLen(c.jsonSelect) > 0 {
-		dataJson = c.GetSelected(dataJson, c.jsonSelect)
+		source = c.GetSelected(source, c.jsonSelect)
 	}
 
-	e := toolkit.Serde(dataJson, m, "json")
+	var e error
+	e = toolkit.Serde(&source, m, "json")
+
+	c.lastFetched = upper
 	if e != nil {
 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
+
+	// var first, last int
+	// dataJson := []toolkit.M{}
+
+	// c.count = len(c.datas)
+	// c.lastFetched = c.count
+	// if c.skip > 0 {
+	// 	if c.take > 0 {
+	// 		c.count = c.skip + c.take
+	// 	} else {
+	// 		first = c.skip
+	// 	}
+	// } else {
+	// 	c.count = c.take
+	// }
+
+	// if c.take > 0 {
+	// 	if c.take == c.skip {
+	// 		first = c.skip
+	// 	} else {
+	// 		first = c.count - c.take
+	// 	}
+	// }
+
+	// // toolkit.Printf("first = skip>%v last = take>%v lastfetched>%v count>%v\n", first, last, c.lastFetched, c.count)
+	// if n == 0 {
+	// 	last = c.count
+	// 	if c.lastFetched <= c.count || c.count == 0 {
+	// 		last = c.lastFetched
+	// 	}
+
+	// } else if n > 0 {
+	// 	switch {
+	// 	case c.lastFetched == 0:
+	// 		last = n
+	// 		c.lastFetched = n
+	// 	case n > c.lastFetched || n < c.lastFetched || n == c.lastFetched:
+	// 		first = c.lastFetched
+	// 		last = c.lastFetched + n
+	// 		c.lastFetched = last
+
+	// 		if c.lastFetched > c.count {
+	// 			if first > c.count {
+	// 				return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+	// 			}
+	// 			last = c.count
+	// 			c.lastFetched = last
+	// 		}
+
+	// 	}
+
+	// 	if first > last {
+	// 		return errorlib.Error(packageName, modCursor, "Fetch", "Wrong fetched data!")
+	// 	}
+	// }
+
+	// if c.isWhere {
+	// 	i := dbox.Find(c.datas, c.whereFields)
+	// 	c.lastFetched = len(i)
+	// 	if c.lastFetched < c.count || c.count == 0 {
+	// 		last = c.lastFetched
+	// 	}
+	// 	for _, index := range i[first:last] {
+	// 		dataJson = append(dataJson, c.datas[index])
+	// 	}
+	// } else {
+	// 	dataJson = c.datas[first:last]
+
+	// }
+
+	// if toolkit.SliceLen(c.jsonSelect) > 0 {
+	// 	dataJson = c.GetSelected(dataJson, c.jsonSelect)
+	// }
+
+	// e := toolkit.Serde(dataJson, m, "json")
+	// if e != nil {
+	// 	return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+	// }
 	return nil
 }
 
