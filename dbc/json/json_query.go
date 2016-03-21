@@ -250,6 +250,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 		q.dataType = "save"
 		q.whereData = append(q.whereData, getWhere...)
 		q.sliceData = append(q.sliceData, dataM)
+		q.HasPartExec()
 	}
 
 	if hasCmdType.Has("hasInsert") || hasCmdType.Has("hasUpdate") || hasCmdType.Has("hasDelete") {
