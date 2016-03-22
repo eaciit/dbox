@@ -21,12 +21,11 @@ const (
 
 type Cursor struct {
 	dbox.Cursor
-	ResultType  string
-	count       int
-	start       int
-	sessionHive *hive.Hive
-	session     sql.DB
-	QueryString string
+	ResultType   string
+	count, start int
+	sessionHive  *hive.Hive
+	session      sql.DB
+	QueryString  string
 }
 
 func (c *Cursor) Close() {
@@ -55,6 +54,7 @@ func (c *Cursor) ResetFetch() error {
 func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	tableData := []toolkit.M{}
 	var e error
+
 	h := c.sessionHive
 	if h != nil {
 		e = h.Exec(c.QueryString, func(x hive.HiveResult) error {
@@ -133,20 +133,23 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			tableData = append(tableData, entry)
 		}
 	}
+	maxIndex := toolkit.SliceLen(tableData)
 
 	if e != nil {
 		return e
 	}
-	if n == 0 {
-		e = toolkit.Serde(tableData, m, "json")
-	} else {
-		end := c.start + n
-		if end > len(tableData) {
-			e = errors.New("index out of range")
-		} else {
-			e = toolkit.Serde(tableData[c.start:n], m, "json")
-		}
+	end := c.start + n
+
+	if end > maxIndex || n == 0 {
+		end = maxIndex
 	}
+
+	if c.start >= maxIndex {
+		e = errors.New("No more data to fetched!")
+	} else {
+		e = toolkit.Serde(tableData[c.start:end], m, "json")
+	}
+	c.start = end
 
 	return e
 }
