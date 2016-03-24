@@ -343,7 +343,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			QueryString += " ORDER BY " + orderExpression
 		}
 
-		if driverName == "mysql" || driverName == "hive" {
+		if driverName == "mysql" {
 			if hasSkip && hasTake {
 				QueryString += " LIMIT " + cast.ToString(take) +
 					" OFFSET " + cast.ToString(skip)
@@ -384,8 +384,22 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			} else if hasTake && !hasSkip {
 				QueryString += " LIMIT " + cast.ToString(take)
 			}
+		} else if driverName == "hive" {
+			if hasSkip && hasTake {
+				var lower, upper int
+				upper = skip + take
+				lower = upper - take
+
+				//toolkit.Println("take: ", take, "skip: ", skip, "lower: ", lower, "upper: ", upper)
+				QueryString = "SELECT " + attribute + " FROM (SELECT *,row_number() over () as rowid FROM " + tablename + ") x WHERE rowid > " +
+					toolkit.ToString(lower) + " and rowid <= " + toolkit.ToString(upper)
+			} else if hasSkip && !hasTake {
+
+			} else if hasTake && !hasSkip {
+				QueryString += " LIMIT " + toolkit.ToString(take)
+			}
 		}
-		// toolkit.Println(QueryString)
+		toolkit.Println(QueryString)
 		var querystmt string
 		if where != nil {
 			querystmt = "select count(*) from " + tablename +

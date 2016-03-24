@@ -3,6 +3,7 @@ package hive
 import (
 	"fmt"
 	"github.com/eaciit/dbox"
+	//_ "github.com/eaciit/dbox/dbc/hive"
 	"github.com/eaciit/toolkit"
 	"testing"
 )
@@ -22,7 +23,7 @@ type Students struct {
 }
 
 func prepareConnection() (dbox.IConnection, error) {
-	// ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "developer", "b1gD@T@", nil}
+	//ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "developer", "b1gD@T@", nil}
 	ci := &dbox.ConnectionInfo{"192.168.0.223:10000", "default", "hdfs", "", toolkit.M{}.Set("path", "").Set("delimiter", "tsv")}
 	c, e := dbox.NewConnection("hive", ci)
 	if e != nil {
@@ -44,7 +45,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestSelect(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -148,6 +149,46 @@ func TestFetch(t *testing.T) {
 		fmt.Println("======================")
 		fmt.Println("Select with FETCH")
 		fmt.Println("======================")
+
+		fmt.Printf("Fetch N2 OK. Result:%v \n", toolkit.JsonString(results))
+	}
+}
+
+func TestTakeSkip(t *testing.T) {
+	//t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().
+		Select("code", "description", "total_emp", "salary").
+		From("sample_07").
+		//Take(10).
+		Skip(30).
+		// Where(dbox.Eq("name", "Bourne")).
+		Cursor(nil)
+
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := make([]map[string]interface{}, 0) //[]Sample7{}
+	err := csr.Fetch(&results, 0, false)
+	if err != nil {
+		t.Errorf("Unable to fetch: %s \n", err.Error())
+	} else {
+		fmt.Println("=========================")
+		fmt.Println("Select with Take and Skip")
+		fmt.Println("=========================")
 
 		fmt.Printf("Fetch N2 OK. Result:%v \n", toolkit.JsonString(results))
 	}
