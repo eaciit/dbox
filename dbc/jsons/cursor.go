@@ -125,7 +125,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	var e error
 	if n == 1 {
-		e = toolkit.Serde(&source[0], m, "json")
+		if len(source) > 0 {
+			e = toolkit.Serde(&source[0], m, "json")
+		}
 	} else {
 		e = toolkit.Serde(&source, m, "json")
 	}
