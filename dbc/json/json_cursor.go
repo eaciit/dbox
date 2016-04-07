@@ -90,18 +90,22 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	}
 
 	if !c.isWhere {
-		if lower >= lenData {
-			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
-		}
-		if upper >= lenData {
-			upper = lenData
+		if toolkit.SliceLen(c.datas) > 0 {
+			if lower >= lenData {
+				return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+			}
+			if upper >= lenData {
+				upper = lenData
+			}
 		}
 	} else {
-		if lower >= lenIndex {
-			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
-		}
-		if upper >= lenIndex {
-			upper = lenIndex
+		if toolkit.SliceLen(c.indexes) > 0 {
+			if lower >= lenIndex {
+				return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+			}
+			if upper >= lenIndex {
+				upper = lenIndex
+			}
 		}
 	}
 	if upper >= c.maxIndex {

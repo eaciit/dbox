@@ -61,6 +61,114 @@ func TestConnect(t *testing.T) {
 	}
 }
 
+func TestFetch(t *testing.T) {
+	c, e := prepareConnection()
+
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	//csr, e := c.NewQuery().Select().From("tes").Where(dbox.Eq("id", "3")).Cursor(nil)
+	csr, e := c.NewQuery().
+		Select("id", "name").
+		From("tes").
+		Take(10).
+		Cursor(nil)
+
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
+
+	results := make([]map[string]interface{}, 0)
+
+	err := csr.Fetch(&results, 0, false)
+	if err != nil {
+		t.Errorf("Unable to fetch all: %s \n", err.Error())
+	} else {
+		toolkit.Println("=========================")
+		toolkit.Println("Select with NO filter")
+		toolkit.Println("=========================")
+		toolkit.Println("Fetch N OK. Result:")
+
+		for _, val := range results {
+			fmt.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
+
+	e = csr.ResetFetch()
+	if e != nil {
+		t.Errorf("Unable to reset fetch: %s \n", e.Error())
+	}
+
+	err = csr.Fetch(&results, 1, false)
+	if err != nil {
+		t.Errorf("Unable to fetch all: %s \n", err.Error())
+	} else {
+		toolkit.Println("=========================")
+		toolkit.Println("Select Fetch")
+		toolkit.Println("=========================")
+		toolkit.Println("Fetch N OK. Result:")
+
+		for _, val := range results {
+			fmt.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
+
+	err = csr.Fetch(&results, 2, false)
+	if err != nil {
+		t.Errorf("Unable to fetch all: %s \n", err.Error())
+	} else {
+		toolkit.Println("=========================")
+		toolkit.Println("Select Fetch")
+		toolkit.Println("=========================")
+		toolkit.Println("Fetch N OK. Result:")
+
+		for _, val := range results {
+			fmt.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
+
+	err = csr.Fetch(&results, 0, false)
+	if err != nil {
+		t.Errorf("Unable to fetch all: %s \n", err.Error())
+	} else {
+		toolkit.Println("=========================")
+		toolkit.Println("Select Fetch")
+		toolkit.Println("=========================")
+		toolkit.Println("Fetch N OK. Result:")
+
+		for _, val := range results {
+			fmt.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
+
+	err = csr.Fetch(&results, 2, false)
+	if err != nil {
+		t.Errorf("Unable to fetch all: %s \n", err.Error())
+	} else {
+		toolkit.Println("=========================")
+		toolkit.Println("Select Fetch")
+		toolkit.Println("=========================")
+		toolkit.Println("Fetch N OK. Result:")
+
+		for _, val := range results {
+			fmt.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
+}
+
 // func TestFilter(t *testing.T) {
 // 	fb := dbox.NewFilterBuilder(new(FilterBuilder))
 // 	fb.AddFilter(dbox.And(

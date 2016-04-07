@@ -78,18 +78,22 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	}
 
 	if c.where == nil {
-		if lower >= lenData {
-			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
-		}
-		if upper >= lenData {
-			upper = lenData
+		if toolkit.SliceLen(c.q.data) > 0 {
+			if lower >= lenData {
+				return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+			}
+			if upper >= lenData {
+				upper = lenData
+			}
 		}
 	} else {
-		if lower >= lenIndex {
-			return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
-		}
-		if upper >= lenIndex {
-			upper = lenIndex
+		if toolkit.SliceLen(c.indexes) > 0 {
+			if lower >= lenIndex {
+				return errorlib.Error(packageName, modCursor, "Fetch", "No more data to fetched!")
+			}
+			if upper >= lenIndex {
+				upper = lenIndex
+			}
 		}
 	}
 	if upper >= c.maxIndex {
@@ -121,7 +125,9 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	var e error
 	if n == 1 {
-		e = toolkit.Serde(&source[0], m, "json")
+		if len(source) > 0 {
+			e = toolkit.Serde(&source[0], m, "json")
+		}
 	} else {
 		e = toolkit.Serde(&source, m, "json")
 	}
