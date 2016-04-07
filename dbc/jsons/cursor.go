@@ -4,6 +4,7 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	// "reflect"
 	//"strings"
 )
 
@@ -124,7 +125,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	}
 
 	var e error
-	if n == 1 {
+
+	if n == 1 && !toolkit.IsSlice(m) {
 		if len(source) > 0 {
 			e = toolkit.Serde(&source[0], m, "json")
 		}
