@@ -118,7 +118,24 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	} else if n == 1 {
 		//dataBuf := M{}
 		//Printf("Record count: %d\n", func() int { count, _ := c.mgoCursor.Count(); return count }())
-		bOk := c.mgoIter.Next(m)
+		var bOk bool
+		if reflect.ValueOf(m).Elem().Kind() == reflect.Slice {
+			v := reflect.TypeOf(m).Elem().Elem()
+			iv := reflect.New(v).Interface()
+			ivs := reflect.MakeSlice(reflect.SliceOf(v), 0, 0)
+
+			tiv := M{}
+			bOk = c.mgoIter.Next(&tiv)
+
+			if bOk {
+				Serde(tiv, iv, "json")
+				ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
+				reflect.ValueOf(m).Elem().Set(ivs)
+			}
+		} else {
+			bOk = c.mgoIter.Next(m)
+		}
+
 		if !bOk {
 			errtxt := ""
 			if c.mgoIter.Err() == nil {
