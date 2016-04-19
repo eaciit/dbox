@@ -390,10 +390,19 @@ func (q *Query) HasPartExec() error {
 func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 	filters := toolkit.M{}
 
-	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
-		qp := x.(*dbox.QueryPart)
-		return qp.PartType
-	}, nil).Data
+	quyerParts := q.Parts()
+	c := crowd.From(&quyerParts)
+
+	groupParts := c.Group(func(x interface{}) interface{} {
+		return x.(*dbox.QueryPart).PartType
+	}, nil).Exec()
+
+	parts := map[interface{}]interface{}{}
+	if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
+		for _, kv := range groupParts.Result.Data().([]crowd.KV) {
+			parts[kv.Key] = kv.Value
+		}
+	}
 
 	skip := 0
 	if skipPart, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
