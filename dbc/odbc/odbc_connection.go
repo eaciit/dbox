@@ -61,7 +61,7 @@ func (c *Connection) OdbcConnect(connector string, stringConnection string) erro
 	c.Sess = odbcconn
 
 	/*query := "SELECT id, name FROM dummy"
-	stmt, e := c.OdbcCon.Prepare(query)
+	stmt, e := c.Sess.Prepare(query)
 	if e != nil {
 		return err.Error(packageName, modQuery, "statement", e.Error())
 	}
