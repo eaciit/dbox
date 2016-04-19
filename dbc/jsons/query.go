@@ -365,10 +365,19 @@ func (q *Query) writeFile() error {
 
 func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	output = toolkit.M{}
-	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
-		qp := x.(*dbox.QueryPart)
-		return qp.PartType
-	}, nil).Data
+	quyerParts := q.Parts()
+	c := crowd.From(&quyerParts)
+
+	groupParts := c.Group(func(x interface{}) interface{} {
+		return x.(*dbox.QueryPart).PartType
+	}, nil).Exec()
+
+	parts := map[interface{}]interface{}{}
+	if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
+		for _, kv := range groupParts.Result.Data().([]crowd.KV) {
+			parts[kv.Key] = kv.Value
+		}
+	}
 
 	//return nil, errorlib.Error(packageName, modQuery, "prepare", "asdaa")
 	//fmt.Printf("Query parts: %s\n", toolkit.JsonString(q.Parts()))
