@@ -5,6 +5,7 @@ import (
 	//"encoding/json"
 	"fmt"
 	"github.com/eaciit/cast"
+	// "github.com/eaciit/crowd.old"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -169,10 +170,17 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		parts will return E - map{interface{}}interface{}
 		where each interface{} returned is slice of interfaces --> []interface{}
 	*/
-	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
-		qp := x.(*dbox.QueryPart)
-		return qp.PartType
-	}, nil).Data
+	quyerParts := q.Parts()
+	c := crowd.From(&quyerParts)
+	groupParts := c.Group(func(x interface{}) interface{} {
+		return x.(*dbox.QueryPart).PartType
+	}, nil).Exec()
+	parts := map[interface{}]interface{}{}
+	if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
+		for _, kv := range groupParts.Result.Data().([]crowd.KV) {
+			parts[kv.Key] = kv.Value
+		}
+	}
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	procedureParts, hasProcedure := parts["procedure"]
@@ -180,15 +188,14 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	if hasFrom {
 		tablename := ""
-		tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+		tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
 
 		selectParts, hasSelect := parts[dbox.QueryPartSelect]
 		var attribute string
 		incAtt := 0
 		if hasSelect {
-			for _, sl := range selectParts.([]interface{}) {
-				qp := sl.(*dbox.QueryPart)
-				for _, fid := range qp.Value.([]string) {
+			for _, sl := range selectParts.([]*dbox.QueryPart) {
+				for _, fid := range sl.Value.([]string) {
 					if incAtt == 0 {
 						attribute = fid
 					} else {
@@ -214,10 +221,11 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		var aggrExpression string
 		if hasAggr {
 			incAtt := 0
-			for _, aggr := range aggrParts.([]interface{}) {
-				qp := aggr.(*dbox.QueryPart)
+			// for _, aggr := range aggrParts.([]interface{}) {
+			for _, aggr := range aggrParts.([]*dbox.QueryPart) {
+				// qp := aggr.(*dbox.QueryPart)
 				/* isi qp :  &{AGGR {$sum 1 Total Item}}*/
-				aggrInfo := qp.Value.(dbox.AggrInfo)
+				aggrInfo := aggr.Value.(dbox.AggrInfo)
 				/* isi Aggr Info :  {$sum 1 Total Item}*/
 
 				if incAtt == 0 {
@@ -246,8 +254,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		whereParts, hasWhere := parts[dbox.QueryPartWhere]
 		if hasWhere {
 			fb := q.Connection().Fb()
-			for _, p := range whereParts.([]interface{}) {
-				fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+			for _, p := range whereParts.([]*dbox.QueryPart) {
+				fs := p.Value.([]*dbox.Filter)
 				for _, f := range fs {
 					if in != nil {
 						f = ReadVariable(f, in)
@@ -265,46 +273,60 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		var orderExpression string
 		orderParts, hasOrder := parts[dbox.QueryPartOrder]
 		if hasOrder {
-			for _, oval := range orderParts.([]interface{}) {
-				qp := oval.(*dbox.QueryPart)
-				for i, fid := range qp.Value.([]string) {
-					if i == 0 {
-						if string(fid[0]) == "-" {
-							orderExpression = strings.Replace(fid, "-", "", 1) + " DESC"
-						} else {
-							orderExpression = fid + " ASC"
-						}
+			qp := orderParts.([]*dbox.QueryPart)[0]
+			for i, fid := range qp.Value.([]string) {
+				if i == 0 {
+					if string(fid[0]) == "-" {
+						orderExpression = strings.Replace(fid, "-", "", 1) + " DESC"
 					} else {
-						if string(fid[0]) == "-" {
-							orderExpression += ", " + strings.Replace(fid, "-", "", 1) + " DESC"
-						} else {
-							orderExpression += ", " + fid + " ASC"
-						}
+						orderExpression = fid + " ASC"
+					}
+				} else {
+					if string(fid[0]) == "-" {
+						orderExpression += ", " + strings.Replace(fid, "-", "", 1) + " DESC"
+					} else {
+						orderExpression += ", " + fid + " ASC"
 					}
 				}
 			}
+			// for _, oval := range orderParts.([]interface{}) {
+			// 	qp := oval.(*dbox.QueryPart)
+			// 	for i, fid := range qp.Value.([]string) {
+			// 		if i == 0 {
+			// 			if string(fid[0]) == "-" {
+			// 				orderExpression = strings.Replace(fid, "-", "", 1) + " DESC"
+			// 			} else {
+			// 				orderExpression = fid + " ASC"
+			// 			}
+			// 		} else {
+			// 			if string(fid[0]) == "-" {
+			// 				orderExpression += ", " + strings.Replace(fid, "-", "", 1) + " DESC"
+			// 			} else {
+			// 				orderExpression += ", " + fid + " ASC"
+			// 			}
+			// 		}
+			// 	}
+			// }
 		}
 
 		skip := 0
 		skipParts, hasSkip := parts[dbox.QueryPartSkip]
 		if hasSkip {
-			skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
-				Value.(int)
+			skip = skipParts.([]*dbox.QueryPart)[0].Value.(int)
 		}
 
 		take := 0
 		takeParts, hasTake := parts[dbox.QueryPartTake]
 		if hasTake {
-			take = takeParts.([]interface{})[0].(*dbox.QueryPart).
-				Value.(int)
+			take = takeParts.([]*dbox.QueryPart)[0].Value.(int)
 		}
 
 		partGroup, hasGroup := parts[dbox.QueryPartGroup]
 		var groupExpression string
 		if hasGroup {
-			for _, aggr := range partGroup.([]interface{}) {
-				qp := aggr.(*dbox.QueryPart)
-				groupValue := qp.Value.([]string)
+			for _, aggr := range partGroup.([]*dbox.QueryPart) {
+				// qp := aggr.(*dbox.QueryPart)
+				groupValue := aggr.Value.([]string)
 				for i, val := range groupValue {
 					if i == 0 {
 						groupExpression += val
@@ -434,7 +456,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		/*assign cursor.QueryString*/
 		cursor.(*Cursor).QueryString = QueryString
 	} else if hasProcedure {
-		procCommand := procedureParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
+		procCommand := procedureParts.([]*dbox.QueryPart)[0].Value.(interface{})
 
 		spName := procCommand.(toolkit.M)["name"].(string) + " "
 		params, hasParam := procCommand.(toolkit.M)["parms"]
@@ -577,7 +599,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 		// fmt.Println("Proc Statement : ", ProcStatement)
 	} else if hasFreeQuery {
-		querySyntax := freeQueryParts.([]interface{})[0].(*dbox.QueryPart).Value.(interface{})
+		querySyntax := freeQueryParts.([]*dbox.QueryPart)[0].Value.(interface{})
 		syntax := querySyntax.(toolkit.M)["syntax"].(string)
 		cursor.(*Cursor).QueryString = syntax
 	}
@@ -636,29 +658,38 @@ func (q *Query) Exec(parm toolkit.M) error {
 	/*=================================END OF EXTRACTION=======================================*/
 
 	temp := ""
-	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
+	quyerParts := q.Parts()
+	c := crowd.From(&quyerParts)
+	groupParts := c.Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
 		temp = toolkit.JsonString(qp)
 		return qp.PartType
-	}, nil).Data
+	}, nil).Exec()
+	parts := map[interface{}]interface{}{}
+	if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
+		for _, kv := range groupParts.Result.Data().([]crowd.KV) {
+			parts[kv.Key] = kv.Value
+		}
+	}
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	if !hasFrom {
 
 		return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
 	}
-	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+	tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
 
 	var where interface{}
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
 		fb := q.Connection().Fb()
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+		for _, p := range whereParts.([]*dbox.QueryPart) {
+			fs := p.Value.([]*dbox.Filter)
 			for _, f := range fs {
 				fb.AddFilter(f)
 			}
 		}
+
 		where, e = fb.Build()
 		if e != nil {
 
@@ -714,6 +745,9 @@ func (q *Query) Exec(parm toolkit.M) error {
 			} else {
 				statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
 				_, e = session.Exec(statement)
+				if e != nil {
+					toolkit.Println(" halo :: ", statement)
+				}
 			}
 
 			if e != nil {

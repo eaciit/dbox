@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"github.com/eaciit/cast"
+	// "github.com/eaciit/crowd.old"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	err "github.com/eaciit/errorlib"
@@ -429,30 +430,35 @@ func (q *Query) generateIndex(filters []*dbox.Filter) (output []int, e error) {
 
 func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	output = toolkit.M{}
-	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
-		qp := x.(*dbox.QueryPart)
-		return qp.PartType
-	}, nil).Data
+	quyerParts := q.Parts()
+	c := crowd.From(&quyerParts)
+	groupParts := c.Group(func(x interface{}) interface{} {
+		return x.(*dbox.QueryPart).PartType
+	}, nil).Exec()
+	parts := map[interface{}]interface{}{}
+	if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
+		for _, kv := range groupParts.Result.Data().([]crowd.KV) {
+			parts[kv.Key] = kv.Value
+		}
+	}
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	if hasFrom == false {
 		return nil, err.Error(packageName, "Query", "prepare", "Invalid table name")
 	}
-	tablename := fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+	tablename := fromParts.([]*dbox.QueryPart)[0].Value.(string)
 	output.Set("tablename", tablename)
 	q.filePath = filepath.Join(q.Connection().(*Connection).folder, tablename+".csv")
 
 	skip := 0
 	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-		skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
-			Value.(int)
+		skip = skipParts.([]*dbox.QueryPart)[0].Value.(int)
 	}
 	output.Set("skip", skip)
 
 	take := 0
 	if takeParts, has := parts[dbox.QueryPartTake]; has {
-		take = takeParts.([]interface{})[0].(*dbox.QueryPart).
-			Value.(int)
+		take = takeParts.([]*dbox.QueryPart)[0].Value.(int)
 	}
 	output.Set("take", take)
 
@@ -463,8 +469,8 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		aggregate = true
 		aggrElements := func() []*dbox.QueryPart {
 			var qps []*dbox.QueryPart
-			for _, v := range aggrParts.([]interface{}) {
-				qps = append(qps, v.(*dbox.QueryPart))
+			for _, v := range aggrParts.([]*dbox.QueryPart) {
+				qps = append(qps, v)
 			}
 			return qps
 		}()
@@ -479,8 +485,8 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		aggregate = true
 		groups := func() toolkit.M {
 			s := toolkit.M{}
-			for _, v := range partGroup.([]interface{}) {
-				gs := v.(*dbox.QueryPart).Value.([]string)
+			for _, v := range partGroup.([]*dbox.QueryPart) {
+				gs := v.Value.([]string)
 				for _, g := range gs {
 					if strings.TrimSpace(g) != "" {
 						s.Set(g, "$"+g)
@@ -503,9 +509,8 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
 	if hasSelect {
 		fields = toolkit.M{}
-		for _, sl := range selectParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range selectParts.([]*dbox.QueryPart) {
+			for _, fid := range sl.Value.([]string) {
 				fields.Set(fid, 1)
 			}
 		}
@@ -534,9 +539,8 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	sortParts, hasSort := parts[dbox.QueryPartOrder]
 	if hasSort {
 		sort = []string{}
-		for _, sl := range sortParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range sortParts.([]*dbox.QueryPart) {
+			for _, fid := range sl.Value.([]string) {
 				sort = append(sort, fid)
 			}
 		}
@@ -546,8 +550,8 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	var filters []*dbox.Filter
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+		for _, p := range whereParts.([]*dbox.QueryPart) {
+			fs := p.Value.([]*dbox.Filter)
 			for _, f := range fs {
 				f = ReadVariable(f, in)
 				filters = append(filters, f)
