@@ -406,13 +406,13 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 
 	skip := 0
 	if skipPart, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-		skip = skipPart.([]interface{})[0].(*dbox.QueryPart).Value.(int)
+		skip = skipPart.([]*dbox.QueryPart)[0].Value.(int)
 	}
 	filters.Set("skip", skip)
 
 	take := 0
 	if takeParts, hasTake := parts[dbox.QueryPartTake]; hasTake {
-		take = takeParts.([]interface{})[0].(*dbox.QueryPart).Value.(int)
+		take = takeParts.([]*dbox.QueryPart)[0].Value.(int)
 	}
 	filters.Set("take", take)
 
@@ -425,9 +425,9 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 	var sort []string
 	if sortParts, hasSort := parts[dbox.QueryPartOrder]; hasSort {
 		sort = []string{}
-		for _, sl := range sortParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range sortParts.([]*dbox.QueryPart) {
+			// qp := sl.(*dbox.QueryPart)
+			for _, fid := range sl.Value.([]string) {
 				sort = append(sort, fid)
 			}
 		}
@@ -438,9 +438,9 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
 	if hasSelect {
 		// fields = toolkit.M{}
-		for _, sl := range selectParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range selectParts.([]*dbox.QueryPart) {
+			// qp := sl.(*dbox.QueryPart)
+			for _, fid := range sl.Value.([]string) {
 				fields = append(fields, fid)
 				// fields.Set(fid, fid)
 			}
@@ -470,8 +470,8 @@ func (q *Query) Filters(parm toolkit.M) (toolkit.M, error) {
 	var where []*dbox.Filter
 	if hasWhere {
 		fb := new(FilterBuilder)
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+		for _, p := range whereParts.([]*dbox.QueryPart) {
+			fs := p.Value.([]*dbox.Filter)
 			for _, f := range fs {
 				f := fb.CheckFilter(f, parm)
 

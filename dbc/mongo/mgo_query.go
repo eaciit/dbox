@@ -80,17 +80,17 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	if hasFrom == false {
 		return nil, errorlib.Error(packageName, "Query", "Cursor", "Invalid table name")
 	}
-	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+	tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
 
 	skip := 0
 	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-		skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
+		skip = skipParts.([]*dbox.QueryPart)[0].
 			Value.(int)
 	}
 
 	take := 0
 	if takeParts, has := parts[dbox.QueryPartTake]; has {
-		take = takeParts.([]interface{})[0].(*dbox.QueryPart).
+		take = takeParts.([]*dbox.QueryPart)[0].
 			Value.(int)
 	}
 
@@ -100,8 +100,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		aggregate = true
 		aggrElements := func() []*dbox.QueryPart {
 			var qps []*dbox.QueryPart
-			for _, v := range aggrParts.([]interface{}) {
-				qps = append(qps, v.(*dbox.QueryPart))
+			for _, v := range aggrParts.([]*dbox.QueryPart) {
+				qps = append(qps, v)
 			}
 			return qps
 		}()
@@ -118,8 +118,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		aggregate = true
 		groups := func() toolkit.M {
 			s := toolkit.M{}
-			for _, v := range partGroup.([]interface{}) {
-				gs := v.(*dbox.QueryPart).Value.([]string)
+			for _, v := range partGroup.([]*dbox.QueryPart) {
+				gs := v.Value.([]string)
 				for _, g := range gs {
 					if strings.TrimSpace(g) != "" {
 						s.Set(g, "$"+g)
@@ -139,9 +139,9 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
 	if hasSelect {
 		fields = toolkit.M{}
-		for _, sl := range selectParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range selectParts.([]*dbox.QueryPart) {
+			// qp := sl.(*dbox.QueryPart)
+			for _, fid := range sl.Value.([]string) {
 				fields.Set(fid, 1)
 			}
 		}
@@ -162,9 +162,9 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	sortParts, hasSort := parts[dbox.QueryPartOrder]
 	if hasSort {
 		sort = []string{}
-		for _, sl := range sortParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range sortParts.([]*dbox.QueryPart) {
+			// qp := sl.(*dbox.QueryPart)
+			for _, fid := range sl.Value.([]string) {
 				sort = append(sort, fid)
 			}
 		}
@@ -175,8 +175,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
 		fb := q.Connection().Fb()
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+		for _, p := range whereParts.([]*dbox.QueryPart) {
+			fs := p.Value.([]*dbox.Filter)
 			for _, f := range fs {
 				fb.AddFilter(f)
 			}
@@ -195,7 +195,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	pipe := parts["pipe"]
 	if pipe != nil {
 		aggregate = true
-		pipes = pipe.([]interface{})[0].(*dbox.QueryPart).Value.([]toolkit.M)
+		pipes = pipe.([]*dbox.QueryPart)[0].Value.([]toolkit.M)
 	}
 
 	session := q.Session()
@@ -296,7 +296,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	if !hasFrom {
 		return errorlib.Error(packageName, modQuery, "Exec", "Invalid table name")
 	}
-	tablename = fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+	tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
 
 	var where interface{}
 	commandType := ""
@@ -320,8 +320,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
 		fb := q.Connection().Fb()
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+		for _, p := range whereParts.([]*dbox.QueryPart) {
+			fs := p.Value.([]*dbox.Filter)
 			for _, f := range fs {
 				fb.AddFilter(f)
 			}
