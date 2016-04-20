@@ -10,6 +10,7 @@ import (
 	"github.com/eaciit/toolkit"
 	"odbc"
 	"strings"
+	"time"
 )
 
 const (
@@ -99,9 +100,37 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 }
 
 func (q *Query) Exec(param toolkit.M) error {
-	_, e := q.prepare(param)
+	setting, e := q.prepare(param)
+	session := q.Session()
+	commandType := toolkit.ToString(setting.Get("cmdType", ""))
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec", e.Error())
+	}
+
+	if toolkit.ToString(setting.Get("cmdType", "")) == dbox.QueryPartInsert {
+		hasAttr := setting.Has("fields")
+		hasVal := setting.Has("values")
+		if hasAttr && hasVal {
+			attributes := toolkit.ToString(setting.Get("fields", ""))
+			values := toolkit.ToString(setting.Get("values", ""))
+			tablename := toolkit.ToString(setting.Get("tableName", ""))
+			if attributes != "" && values != "" {
+				statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+				toolkit.Println("exec statement\n", statement)
+				_, e = session.ExecDirect(statement)
+				if e != nil {
+					return e
+				}
+				e = session.Commit()
+				if e != nil {
+					return e
+				}
+			}
+		} else {
+			return err.Error(packageName, modQuery+".Exec", commandType,
+				"please provide the data")
+		}
+
 	}
 
 	return nil
@@ -111,7 +140,7 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 	toolkit.Println(query)
 	out := toolkit.M{}
 	tableData := toolkit.Ms{}
-	// fieldName := []string{}
+	fieldName := []string{}
 
 	// stmt, e := q.Connection().(*Connection).OdbcCon.Prepare(query)
 	stmt, e := q.Connection().(*Connection).Sess.Prepare(query)
@@ -130,7 +159,7 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 		return nil, err.Error(packageName, modQuery, "statement", e.Error())
 	}
 
-	/*nfields, e := stmt.NumFields()
+	nfields, e := stmt.NumFields()
 	if e != nil {
 		return nil, err.Error(packageName, modQuery, "statement", e.Error())
 	}
@@ -141,10 +170,10 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 			return nil, err.Error(packageName, modQuery, "statement", e.Error())
 		}
 		fieldName = append(fieldName, field.Name)
-	}*/
+	}
 	// toolkit.Printf("%v\n", rows[0])
 	for _, row := range rows {
-		/*for i := 0; i < len(row.Data); i++ {
+		for i := 0; i < len(row.Data); i++ {
 			rf := toolkit.TypeName(row.Data[i])
 			if rf == "[]uint8" {
 				row.Data[i] = toolkit.ToFloat64(string(row.Data[i].([]byte)), 2, toolkit.RoundingAuto)
@@ -155,14 +184,14 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 			} else if row.Data[i] == "tru" {
 				row.Data[i] = true
 			}
-		}*/
+		}
 
-		/*entry := toolkit.M{}
+		entry := toolkit.M{}
 		for i, data := range row.Data {
 			entry.Set(fieldName[i], data)
 		}
 
-		tableData = append(tableData, entry)*/
+		tableData = append(tableData, entry)
 		toolkit.Printf("%v\n", row.Data)
 	}
 
@@ -172,6 +201,28 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 	// toolkit.Println(tableData, query)
 
 	return out, nil
+}
+
+func StringValue(v interface{}, db string) string {
+	var ret string
+	switch v.(type) {
+	case string:
+		ret = toolkit.Sprintf("%s", "'"+v.(string)+"'")
+	case time.Time:
+		t := v.(time.Time).UTC()
+		if strings.Contains(db, "oracle") {
+			ret = "to_date('" + t.Format("2006-01-02 15:04:05") + "','yyyy-mm-dd hh24:mi:ss')"
+		} else {
+			ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
+		}
+	case int, int32, int64, uint, uint32, uint64:
+		ret = toolkit.Sprintf("%d", v.(int))
+	case nil:
+		ret = ""
+	default:
+		ret = toolkit.Sprintf("%v", v)
+	}
+	return ret
 }
 
 func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
@@ -190,22 +241,86 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 		}
 	}
 
+	_, hasUpdate := parts[dbox.QueryPartUpdate]
+	_, hasInsert := parts[dbox.QueryPartInsert]
+	_, hasDelete := parts[dbox.QueryPartDelete]
+	_, hasSave := parts[dbox.QueryPartSave]
+	_, hasFrom := parts[dbox.QueryPartFrom]
+
+	var tableName string
+	if hasFrom {
+		fromParts, _ := parts[dbox.QueryPartFrom]
+		tableName = fromParts.([]*dbox.QueryPart)[0].Value.(string)
+	} else {
+
+		return nil, err.Error(packageName, "Query", "prepare", "Invalid table name")
+	}
+	out.Set("tableName", tableName)
+
 	if freeQueryParts, hasFreeQuery := parts["freequery"]; hasFreeQuery {
 		var syntax string
 		qsyntax := freeQueryParts.([]*dbox.QueryPart)[0].Value.(interface{})
 		syntax = qsyntax.(toolkit.M)["syntax"].(string)
 		out.Set("freequery", syntax)
 		out.Set("cmdType", dbox.QueryPartSelect)
-	} else {
-		var tableName string
-		if fromParts, hasFrom := parts[dbox.QueryPartFrom]; hasFrom {
-			tableName = fromParts.([]*dbox.QueryPart)[0].Value.(string)
-		} else {
+	} else if hasInsert || hasUpdate || hasDelete || hasSave {
+		out.Set("cmdType", dbox.QueryPartInsert)
+		var dataM toolkit.M
+		var dataMs []toolkit.M
 
-			return nil, err.Error(packageName, "Query", "prepare", "Invalid table name")
+		hasData := in.Has("data")
+		var dataIsSlice bool
+		if hasData {
+			data := in.Get("data")
+			if toolkit.IsSlice(data) {
+				dataIsSlice = true
+				e = toolkit.Unjson(toolkit.Jsonify(data), dataMs)
+				if e != nil {
+					return nil, err.Error(packageName, modQuery, "Exec: ", "Data encoding error: "+e.Error())
+				}
+			} else {
+				dataM, e = toolkit.ToM(data)
+				dataMs = append(dataMs, dataM)
+				if e != nil {
+					return nil, err.Error(packageName, modQuery, "Exec: ", "Data encoding error: "+e.Error())
+				}
+			}
 		}
-		out.Set("tableName", tableName)
+		if !dataIsSlice {
+			var fields string
+			var values string
+			var setUpdate string
+			var inc int
+			for field, val := range dataM {
+				stringval := StringValue(val, "non")
+				if inc == 0 {
+					fields = "(" + field
+					values = "(" + stringval
+					setUpdate = field + " = " + stringval
+				} else {
+					fields += ", " + field
+					values += ", " + stringval
+					setUpdate += ", " + field + " = " + stringval
+				}
+				inc++
+			}
+			fields += ")"
+			values += ")"
+			out.Set("fields", fields)
+			out.Set("values", values)
+			out.Set("setUpdate", setUpdate)
+		}
+		if hasUpdate {
+			out.Set("cmdType", dbox.QueryPartUpdate)
 
+		} else if hasInsert {
+
+		} else if hasDelete {
+			out.Set("cmdType", dbox.QueryPartDelete)
+		} else if hasSave {
+			out.Set("cmdType", dbox.QueryPartSave)
+		}
+	} else {
 		var selectField string
 		incAtt := 0
 		if selectParts, hasSelect := parts[dbox.QueryPartSelect]; hasSelect {
@@ -220,18 +335,6 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 				}
 			}
 			out.Set("cmdType", dbox.QueryPartSelect)
-		} else {
-			if _, hasUpdate := parts[dbox.QueryPartUpdate]; hasUpdate {
-				out.Set("cmdType", dbox.QueryPartUpdate)
-			} else if _, hasInsert := parts[dbox.QueryPartInsert]; hasInsert {
-				out.Set("cmdType", dbox.QueryPartInsert)
-			} else if _, hasDelete := parts[dbox.QueryPartDelete]; hasDelete {
-				out.Set("cmdType", dbox.QueryPartDelete)
-			} else if _, hasSave := parts[dbox.QueryPartSave]; hasSave {
-				out.Set("cmdType", dbox.QueryPartSave)
-			} else {
-				out.Set("cmdType", dbox.QueryPartSelect)
-			}
 		}
 		out.Set("selectField", selectField)
 
