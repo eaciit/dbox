@@ -128,11 +128,11 @@ func (fb *FilterBuilder) CheckFilter(f *dbox.Filter, p M) *dbox.Filter {
 	return f
 }
 
-type SortCompare func(a, b *crowd.SortItem) bool
-type changes []crowd.SortItem
+type SortCompare func(a, b *crowd.KV) bool
+type changes []crowd.KV
 type multiSorter struct {
 	less    []SortCompare
-	changes []crowd.SortItem
+	changes []crowd.KV
 }
 
 func (ms *multiSorter) Len() int {
@@ -161,7 +161,7 @@ func OrderedBy(less ...SortCompare) *multiSorter {
 		less: less,
 	}
 }
-func (ms *multiSorter) Sort(changes []crowd.SortItem) {
+func (ms *multiSorter) Sort(changes []crowd.KV) {
 	ms.changes = changes
 	sort.Sort(ms)
 }
@@ -174,7 +174,7 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 	pl := make(changes, len(js))
 	x := 0
 	for k, v := range js {
-		pl[x] = crowd.SortItem{k, v}
+		pl[x] = crowd.KV{k, v}
 		x++
 	}
 
@@ -188,7 +188,7 @@ func (fb *FilterBuilder) SortFetch(s []string, js []M) []M {
 			}
 		}
 
-		Func = func(a, b *crowd.SortItem) bool {
+		Func = func(a, b *crowd.KV) bool {
 			rf := reflect.ValueOf(a.Value.(M)[field]).Kind()
 			if rf == reflect.Float64 {
 				// ia := ToInt(a.Value.(M)[field], RoundingAuto)
