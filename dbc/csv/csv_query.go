@@ -161,13 +161,13 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 	skip := 0
 	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-		skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
+		skip = skipParts.([]*dbox.QueryPart)[0].
 			Value.(int)
 	}
 
 	take := 0
 	if takeParts, has := parts[dbox.QueryPartTake]; has {
-		take = takeParts.([]interface{})[0].(*dbox.QueryPart).
+		take = takeParts.([]*dbox.QueryPart)[0].
 			Value.(int)
 	}
 
@@ -175,9 +175,9 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
 	if hasSelect {
 		fields = toolkit.M{}
-		for _, sl := range selectParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range selectParts.([]*dbox.QueryPart) {
+			// qp := sl.(*dbox.QueryPart)
+			for _, fid := range sl.Value.([]string) {
 				fields.Set(strings.ToLower(fid), 1)
 			}
 		}
@@ -197,9 +197,9 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	sortParts, hasSort := parts[dbox.QueryPartSelect]
 	if hasSort {
 		sort = []string{}
-		for _, sl := range sortParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range sortParts.([]*dbox.QueryPart) {
+			// qp := sl.(*dbox.QueryPart)
+			for _, fid := range sl.Value.([]string) {
 				sort = append(sort, fid)
 			}
 		}
@@ -208,8 +208,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	var where []*dbox.Filter
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+		for _, p := range whereParts.([]*dbox.QueryPart) {
+			fs := p.Value.([]*dbox.Filter)
 			for _, f := range fs {
 				// if len(in) > 0 {
 				f = ReadVariable(f, in)
@@ -321,8 +321,8 @@ func (q *Query) Exec(parm toolkit.M) error {
 	var where []*dbox.Filter
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+		for _, p := range whereParts.([]*dbox.QueryPart) {
+			fs := p.Value.([]*dbox.Filter)
 			for _, f := range fs {
 				// if len(parm) > 0 {
 				f = ReadVariable(f, parm)
