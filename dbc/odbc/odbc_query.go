@@ -106,31 +106,122 @@ func (q *Query) Exec(param toolkit.M) error {
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec", e.Error())
 	}
+	var tablename string
+	if setting.Has("tableName") {
+		tablename = toolkit.ToString(setting.Get("tableName", ""))
+	}
 
 	if toolkit.ToString(setting.Get("cmdType", "")) == dbox.QueryPartInsert {
-		hasAttr := setting.Has("fields")
-		hasVal := setting.Has("values")
-		if hasAttr && hasVal {
+		if setting.Has("fields") && setting.Has("values") {
 			attributes := toolkit.ToString(setting.Get("fields", ""))
 			values := toolkit.ToString(setting.Get("values", ""))
-			tablename := toolkit.ToString(setting.Get("tableName", ""))
 			if attributes != "" && values != "" {
 				statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
-				toolkit.Println("exec statement\n", statement)
 				_, e = session.ExecDirect(statement)
-				if e != nil {
-					return e
+				if e != nil && e.Error() != "" {
+					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
-				e = session.Commit()
-				if e != nil {
-					return e
+
+				if e = session.Commit(); e != nil && e.Error() != "" {
+					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			}
 		} else {
 			return err.Error(packageName, modQuery+".Exec", commandType,
 				"please provide the data")
 		}
+	} else if toolkit.ToString(setting.Get("cmdType", "")) == dbox.QueryPartUpdate {
+		if setting.Has("setUpdate") {
+			setUpdate := toolkit.ToString(setting.Get("setUpdate", ""))
+			if setUpdate != "" {
+				var statement string
+				if setting.Has("where") {
+					where := toolkit.ToString(setting.Get("where"))
+					if where != "" {
+						statement = "UPDATE " + tablename + " SET " + setUpdate +
+							" WHERE " + where
+					}
+				} else {
+					statement = "UPDATE " + tablename + " SET " + setUpdate
+				}
 
+				_, e = session.ExecDirect(statement)
+				if e != nil && e.Error() != "" {
+					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+				if e = session.Commit(); e != nil && e.Error() != "" {
+					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+			}
+		} else {
+			return err.Error(packageName, modQuery+".Exec", commandType, "please provide the data")
+		}
+	} else if toolkit.ToString(setting.Get("cmdType", "")) == dbox.QueryPartSave {
+		if setting.Has("fields") && setting.Has("values") {
+			attributes := toolkit.ToString(setting.Get("fields", ""))
+			values := toolkit.ToString(setting.Get("values", ""))
+			if attributes != "" && values != "" {
+				var querystmt string
+				var where string
+				if setting.Has("where") {
+					where = toolkit.ToString(setting.Get("where"))
+				}
+
+				if where != "" {
+					querystmt = "select 1 as data from " + tablename + " where " + where
+				}
+
+				var rowCount int
+				if querystmt != "" {
+					out, e := q.statement(querystmt)
+					if e != nil {
+						return err.Error(packageName, modQuery, "Exec", e.Error())
+					}
+					rowCount = out.Get("count").(int)
+				}
+
+				var statement string
+				if rowCount == 0 || where == "" {
+					statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+
+				} else {
+					if setting.Has("setUpdate") {
+						setUpdate := toolkit.ToString(setting.Get("setUpdate", ""))
+						if setUpdate != "" {
+							statement = "UPDATE " + tablename + " SET " + setUpdate + " WHERE " + where
+						}
+					}
+				}
+
+				_, e = session.ExecDirect(statement)
+				if e != nil && e.Error() != "" {
+					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+				if e = session.Commit(); e != nil && e.Error() != "" {
+					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
+				}
+			} else if values == "" {
+				return err.Error(packageName, modQuery+".Exec", commandType, "please provide the data")
+			}
+		}
+	} else if commandType == dbox.QueryPartDelete {
+		var statement string
+		if setting.Has("where") {
+			where := toolkit.ToString(setting.Get("where"))
+			if where != "" {
+				statement = "DELETE FROM " + tablename + " where " + where
+			}
+		} else {
+			statement = "DELETE FROM " + tablename
+		}
+
+		_, e = session.ExecDirect(statement)
+		if e != nil && e.Error() != "" {
+			return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
+		}
+		if e = session.Commit(); e != nil && e.Error() != "" {
+			return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
+		}
 	}
 
 	return nil
@@ -264,7 +355,34 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 		out.Set("freequery", syntax)
 		out.Set("cmdType", dbox.QueryPartSelect)
 	} else if hasInsert || hasUpdate || hasDelete || hasSave {
-		out.Set("cmdType", dbox.QueryPartInsert)
+		if hasUpdate {
+			out.Set("cmdType", dbox.QueryPartUpdate)
+		} else if hasInsert {
+			out.Set("cmdType", dbox.QueryPartInsert)
+		} else if hasDelete {
+			out.Set("cmdType", dbox.QueryPartDelete)
+		} else if hasSave {
+			out.Set("cmdType", dbox.QueryPartSave)
+		}
+
+		var where interface{}
+		whereParts, hasWhere := parts[dbox.QueryPartWhere]
+		if hasWhere {
+			fb := q.Connection().Fb()
+			for _, p := range whereParts.([]*dbox.QueryPart) {
+				fs := p.Value.([]*dbox.Filter)
+				for _, f := range fs {
+					fb.AddFilter(f)
+				}
+			}
+
+			where, e = fb.Build()
+			if e != nil {
+
+			}
+			out.Set("where", where)
+		}
+
 		var dataM toolkit.M
 		var dataMs []toolkit.M
 
@@ -285,40 +403,45 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 					return nil, err.Error(packageName, modQuery, "Exec: ", "Data encoding error: "+e.Error())
 				}
 			}
-		}
-		if !dataIsSlice {
-			var fields string
-			var values string
-			var setUpdate string
-			var inc int
-			for field, val := range dataM {
-				stringval := StringValue(val, "non")
-				if inc == 0 {
-					fields = "(" + field
-					values = "(" + stringval
-					setUpdate = field + " = " + stringval
-				} else {
-					fields += ", " + field
-					values += ", " + stringval
-					setUpdate += ", " + field + " = " + stringval
+
+			var id string
+			var idVal interface{}
+			if where == nil {
+				id, idVal = toolkit.IdInfo(data)
+				if id != "" {
+					where = id + " = " + StringValue(idVal, "non")
 				}
-				inc++
+				out.Set("where", where)
 			}
-			fields += ")"
-			values += ")"
-			out.Set("fields", fields)
-			out.Set("values", values)
-			out.Set("setUpdate", setUpdate)
-		}
-		if hasUpdate {
-			out.Set("cmdType", dbox.QueryPartUpdate)
 
-		} else if hasInsert {
-
-		} else if hasDelete {
-			out.Set("cmdType", dbox.QueryPartDelete)
-		} else if hasSave {
-			out.Set("cmdType", dbox.QueryPartSave)
+			if !dataIsSlice {
+				var fields string
+				var values string
+				var setUpdate string
+				var inc int
+				for field, val := range dataM {
+					stringval := StringValue(val, "non")
+					if inc == 0 {
+						fields = "(" + field
+						values = "(" + stringval
+						setUpdate = field + " = " + stringval
+					} else {
+						fields += ", " + field
+						values += ", " + stringval
+						setUpdate += ", " + field + " = " + stringval
+					}
+					inc++
+				}
+				fields += ")"
+				values += ")"
+				if hasInsert || hasSave {
+					out.Set("fields", fields)
+					out.Set("values", values)
+				}
+				if hasUpdate || hasSave {
+					out.Set("setUpdate", setUpdate)
+				}
+			}
 		}
 	} else {
 		var selectField string
