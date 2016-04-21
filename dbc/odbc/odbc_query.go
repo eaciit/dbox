@@ -85,6 +85,31 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
 				queryString += " LIMIT " + toolkit.ToString(setting.GetInt("take"))
 			}
+		} else if strings.ToLower(q.Connection().(*Connection).GetDriver()) == "mssql" {
+			if setting.Get("isSkip").(bool) && setting.Get("isTake").(bool) {
+				queryString += " OFFSET " + toolkit.ToString(setting.GetInt("skip")) + " ROWS FETCH NEXT " + toolkit.ToString(setting.GetInt("take")) + " ROWS ONLY "
+			} else if setting.Get("isSkip").(bool) && !setting.Get("isTake").(bool) {
+				queryString += " OFFSET " + toolkit.ToString(setting.GetInt("skip")) + " ROWS"
+			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
+				top := "SELECT TOP " + toolkit.ToString(setting.GetInt("take")) + " "
+				queryString = strings.Replace(queryString, "SELECT", top, 1)
+			}
+		} else if strings.ToLower(q.Connection().(*Connection).GetDriver()) == "postgres" {
+			if setting.Get("isSkip").(bool) && setting.Get("isTake").(bool) {
+				queryString += " LIMIT " + toolkit.ToString(setting.GetInt("take")) + " OFFSET " + toolkit.ToString(setting.GetInt("skip"))
+			} else if setting.Get("isSkip").(bool) && !setting.Get("isTake").(bool) {
+				queryString += " LIMIT ALL" + " OFFSET " + toolkit.ToString(setting.GetInt("skip"))
+			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
+				queryString += " LIMIT " + toolkit.ToString(setting.GetInt("take"))
+			}
+		} else if strings.ToLower(q.Connection().(*Connection).GetDriver()) == "oracle" {
+			if setting.Get("isSkip").(bool) && setting.Get("isTake").(bool) {
+				queryString += " ROWNUM <= " + toolkit.ToString(setting.GetInt("take")) + " OFFSET " + toolkit.ToString(setting.GetInt("skip"))
+			} else if setting.Get("isSkip").(bool) && !setting.Get("isTake").(bool) {
+
+			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
+				queryString += "select * from (" + queryString + ") WHERE ROWNUM <= " + toolkit.ToString(setting.GetInt("take"))
+			}
 		}
 	}
 
@@ -283,13 +308,11 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 		}
 
 		tableData = append(tableData, entry)
-		toolkit.Printf("%v\n", row.Data)
+		// toolkit.Printf("%v\n", row.Data)
 	}
 
-	// toolkit.Println(tableData)
 	out.Set("count", len(rows))
 	out.Set("data", tableData)
-	// toolkit.Println(tableData, query)
 
 	return out, nil
 }
@@ -337,6 +360,7 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 	_, hasDelete := parts[dbox.QueryPartDelete]
 	_, hasSave := parts[dbox.QueryPartSave]
 	_, hasFrom := parts[dbox.QueryPartFrom]
+	procedureParts, hasProcedure := parts["procedure"]
 
 	var tableName string
 	if hasFrom {
@@ -443,6 +467,15 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 				}
 			}
 		}
+	} else if hasProcedure {
+		cmd := procedureParts.([]*dbox.QueryPart)[0].Value.(interface{})
+
+		spName := cmd.(toolkit.M)["name"].(string) + " "
+		params, hasParams := cmd.(toolkit.M)["params"]
+		orderparam, hasOrder := cmd.(toolkit.M)["orderparam"]
+		ProcStatement := ""
+		toolkit.Println(spName, params, hasParams, orderparam, hasOrder, ProcStatement)
+
 	} else {
 		var selectField string
 		incAtt := 0
