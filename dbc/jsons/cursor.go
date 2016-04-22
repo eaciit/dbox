@@ -103,7 +103,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 	if c.where == nil {
 		source = c.q.data[lower:upper]
-	} else {
+	} else if len(c.indexes) > 0 {
 		for _, v := range c.indexes[lower:upper] {
 			/*
 				toolkit.Printf("Add index: %d. Source info now: %s \n", v, func() string {
