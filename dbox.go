@@ -58,7 +58,11 @@ func Find(ms interface{}, filters []*Filter) (output []int) {
 func CheckValue(v toolkit.M, f *Filter) (bool, interface{}) {
 	resbool := false
 	filedtemp := []interface{}{}
-	if strings.Contains(f.Field, ".") {
+
+	resbool = v.Has(f.Field)
+	if resbool {
+		return resbool, v.Get(f.Field)
+	} else if strings.Contains(f.Field, ".") {
 		ar := strings.Split(f.Field, ".")
 		for i, dt := range ar {
 			if i == 0 {
@@ -81,11 +85,6 @@ func CheckValue(v toolkit.M, f *Filter) (bool, interface{}) {
 			if i == len(ar)-1 {
 				return true, filedtemp[i]
 			}
-		}
-	} else {
-		resbool = v.Has(f.Field)
-		if resbool {
-			return resbool, v.Get(f.Field)
 		}
 	}
 	return false, nil
