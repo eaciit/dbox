@@ -3,7 +3,7 @@ package dbox
 import (
 	"github.com/eaciit/toolkit"
 	//"reflect"
-	//"strings"
+	"strings"
 	//"time"
 	"regexp"
 )
@@ -55,6 +55,41 @@ func Find(ms interface{}, filters []*Filter) (output []int) {
 	return
 }
 
+func CheckValue(v toolkit.M, f *Filter) (bool, interface{}) {
+	resbool := false
+	filedtemp := []interface{}{}
+
+	resbool = v.Has(f.Field)
+	if resbool {
+		return resbool, v.Get(f.Field)
+	} else if strings.Contains(f.Field, ".") {
+		ar := strings.Split(f.Field, ".")
+		for i, dt := range ar {
+			if i == 0 {
+				resbool = v.Has(dt)
+				if !resbool {
+					break
+				} else {
+					filedtemp = append(filedtemp, v.Get(dt))
+				}
+			} else {
+				temp := toolkit.M(filedtemp[i-1].(map[string]interface{}))
+				resbool = temp.Has(dt)
+				if !resbool {
+					break
+				} else {
+					filedtemp = append(filedtemp, temp.Get(dt))
+				}
+			}
+
+			if i == len(ar)-1 {
+				return true, filedtemp[i]
+			}
+		}
+	}
+	return false, nil
+}
+
 func MatchM(v toolkit.M, filters []*Filter) bool {
 	var match bool
 
@@ -62,8 +97,9 @@ func MatchM(v toolkit.M, filters []*Filter) bool {
 		//toolkit.Printf("Filter:%s V:%s Has:%s Match:%s\n", toolkit.JsonString(f), toolkit.JsonString(v), v.Has(f.Field), match)
 		if f.Field != "" {
 			//--- if has field: $eq, $ne, $gt, $lt, $gte, $lte, $contains
-			if v.Has(f.Field) {
-				match = MatchV(v.Get(f.Field), f)
+			stat, val := CheckValue(v, f)
+			if stat {
+				match = MatchV(val, f)
 				//toolkit.Printf("Filter:%s Value: %v Match:%s \n", toolkit.JsonString(f), v.Get(f.Field), match)
 				if !match {
 					return false

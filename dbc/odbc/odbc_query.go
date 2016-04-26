@@ -85,6 +85,31 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
 				queryString += " LIMIT " + toolkit.ToString(setting.GetInt("take"))
 			}
+		} else if strings.ToLower(q.Connection().(*Connection).GetDriver()) == "mssql" {
+			if setting.Get("isSkip").(bool) && setting.Get("isTake").(bool) {
+				queryString += " OFFSET " + toolkit.ToString(setting.GetInt("skip")) + " ROWS FETCH NEXT " + toolkit.ToString(setting.GetInt("take")) + " ROWS ONLY "
+			} else if setting.Get("isSkip").(bool) && !setting.Get("isTake").(bool) {
+				queryString += " OFFSET " + toolkit.ToString(setting.GetInt("skip")) + " ROWS"
+			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
+				top := "SELECT TOP " + toolkit.ToString(setting.GetInt("take")) + " "
+				queryString = strings.Replace(queryString, "SELECT", top, 1)
+			}
+		} else if strings.ToLower(q.Connection().(*Connection).GetDriver()) == "postgres" {
+			if setting.Get("isSkip").(bool) && setting.Get("isTake").(bool) {
+				queryString += " LIMIT " + toolkit.ToString(setting.GetInt("take")) + " OFFSET " + toolkit.ToString(setting.GetInt("skip"))
+			} else if setting.Get("isSkip").(bool) && !setting.Get("isTake").(bool) {
+				queryString += " LIMIT ALL" + " OFFSET " + toolkit.ToString(setting.GetInt("skip"))
+			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
+				queryString += " LIMIT " + toolkit.ToString(setting.GetInt("take"))
+			}
+		} else if strings.ToLower(q.Connection().(*Connection).GetDriver()) == "oracle" {
+			if setting.Get("isSkip").(bool) && setting.Get("isTake").(bool) {
+				queryString += " ROWNUM <= " + toolkit.ToString(setting.GetInt("take")) + " OFFSET " + toolkit.ToString(setting.GetInt("skip"))
+			} else if setting.Get("isSkip").(bool) && !setting.Get("isTake").(bool) {
+
+			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
+				queryString += "select * from (" + queryString + ") WHERE ROWNUM <= " + toolkit.ToString(setting.GetInt("take"))
+			}
 		}
 	}
 
@@ -101,7 +126,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 func (q *Query) Exec(param toolkit.M) error {
 	setting, e := q.prepare(param)
-	session := q.Session()
+	q.Sess = q.Session()
 	commandType := toolkit.ToString(setting.Get("cmdType", ""))
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec", e.Error())
@@ -117,12 +142,12 @@ func (q *Query) Exec(param toolkit.M) error {
 			values := toolkit.ToString(setting.Get("values", ""))
 			if attributes != "" && values != "" {
 				statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
-				_, e = session.ExecDirect(statement)
+				_, e = q.Sess.ExecDirect(statement)
 				if e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 
-				if e = session.Commit(); e != nil && e.Error() != "" {
+				if e = q.Sess.Commit(); e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			}
@@ -145,11 +170,11 @@ func (q *Query) Exec(param toolkit.M) error {
 					statement = "UPDATE " + tablename + " SET " + setUpdate
 				}
 
-				_, e = session.ExecDirect(statement)
+				_, e = q.Sess.ExecDirect(statement)
 				if e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
-				if e = session.Commit(); e != nil && e.Error() != "" {
+				if e = q.Sess.Commit(); e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			}
@@ -193,11 +218,11 @@ func (q *Query) Exec(param toolkit.M) error {
 					}
 				}
 
-				_, e = session.ExecDirect(statement)
+				_, e = q.Sess.ExecDirect(statement)
 				if e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
-				if e = session.Commit(); e != nil && e.Error() != "" {
+				if e = q.Sess.Commit(); e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			} else if values == "" {
@@ -215,11 +240,11 @@ func (q *Query) Exec(param toolkit.M) error {
 			statement = "DELETE FROM " + tablename
 		}
 
-		_, e = session.ExecDirect(statement)
+		_, e = q.Sess.ExecDirect(statement)
 		if e != nil && e.Error() != "" {
 			return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
-		if e = session.Commit(); e != nil && e.Error() != "" {
+		if e = q.Sess.Commit(); e != nil && e.Error() != "" {
 			return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
 	}
@@ -262,7 +287,7 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 		}
 		fieldName = append(fieldName, field.Name)
 	}
-	// toolkit.Printf("%v\n", rows[0])
+
 	for _, row := range rows {
 		for i := 0; i < len(row.Data); i++ {
 			rf := toolkit.TypeName(row.Data[i])
@@ -283,13 +308,11 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 		}
 
 		tableData = append(tableData, entry)
-		toolkit.Printf("%v\n", row.Data)
+		// toolkit.Printf("%v\n", row.Data)
 	}
 
-	// toolkit.Println(tableData)
 	out.Set("count", len(rows))
 	out.Set("data", tableData)
-	// toolkit.Println(tableData, query)
 
 	return out, nil
 }
@@ -337,6 +360,7 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 	_, hasDelete := parts[dbox.QueryPartDelete]
 	_, hasSave := parts[dbox.QueryPartSave]
 	_, hasFrom := parts[dbox.QueryPartFrom]
+	procedureParts, hasProcedure := parts["procedure"]
 
 	var tableName string
 	if hasFrom {
@@ -443,6 +467,16 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 				}
 			}
 		}
+	} else if hasProcedure {
+		cmd := procedureParts.([]*dbox.QueryPart)[0].Value.(interface{})
+
+		spName := cmd.(toolkit.M)["name"].(string) + " "
+		params, hasParams := cmd.(toolkit.M)["params"]
+		orderparam, hasOrder := cmd.(toolkit.M)["orderparam"]
+		ProcStatement := ""
+		toolkit.Println(spName, params, hasParams, orderparam, hasOrder, ProcStatement)
+		toolkit.Println("## Sorry, Not Yet Implement ##")
+
 	} else {
 		var selectField string
 		incAtt := 0
@@ -462,7 +496,7 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 		out.Set("selectField", selectField)
 
 		///
-		/// not yet iimplement
+		/// Aggregate Condition
 		var aggrExp string
 		if aggrParts, hasAggr := parts[dbox.QueryPartAggr]; hasAggr {
 			incAtt := 0
