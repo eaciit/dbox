@@ -66,14 +66,14 @@ func TestConnect(t *testing.T) {
 }
 
 func TestProcedure(t *testing.T) {
-	// t.Skip("")
+	t.Skip("")
 	c, _ := prepareConnection()
 	defer c.Close()
 
-	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
-	// 	Set("name", "staticproc").
-	// 	Set("parms", toolkit.M{}.Set("", ""))).
-	// 	Cursor(nil)
+	csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
+		Set("name", "staticproc").
+		Set("parms", toolkit.M{}.Set("", ""))).
+		Cursor(nil)
 
 	// csr, e := c.NewQuery().Command("procedure", toolkit.M{}.
 	// 	Set("name", "staticproc")).
@@ -194,7 +194,7 @@ func TestProcedure(t *testing.T) {
 }
 
 func TestSelectFilter(t *testing.T) {
-	t.Skip("")
+	// t.Skip("")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -209,7 +209,8 @@ func TestSelectFilter(t *testing.T) {
 	var tanggal2 time.Time
 	tanggal1, _ = time.Parse(layoutFormat, dateValue1)
 	tanggal2, _ = time.Parse(layoutFormat, dateValue2)
-	fmt.Println(tanggal1, tanggal2)
+	_ = tanggal1
+	_ = tanggal2
 
 	csr, e := c.NewQuery().
 		Select("player_id", "nama", "tanggal", "umur").
@@ -233,41 +234,41 @@ func TestSelectFilter(t *testing.T) {
 		// Order("nama").
 		// Skip(2).
 		// Take(1).
-		// Cursor(nil)
-		// Where(dbox.Eq("nama", "@nama")).
-		// Cursor(toolkit.M{}.Set("nama", "clyne"))
-		// Where(dbox.Eq("umur", "@age")).
-		// Cursor(toolkit.M{}.Set("age", 25))
-		// Where(dbox.Ne("umur", "@age")).
-		// Cursor(toolkit.M{}.Set("age", 25))
-		// Where(dbox.Gt("tanggal", "@date")).
-		// Cursor(toolkit.M{}.Set("date", tanggal1))
-		// Where(dbox.Gt("umur", "@age")).
-		// Cursor(toolkit.M{}.Set("age", 25))
-		// Where(dbox.Gte("umur", "@age")).
-		// Cursor(toolkit.M{}.Set("age", 25))
-		// Where(dbox.Lt("umur", "@age")).
-		// Cursor(toolkit.M{}.Set("age", 25))
-		// Where(dbox.Lte("umur", "@age")).
-		// Cursor(toolkit.M{}.Set("age", 25))
-		// Where(dbox.In("nama", "@nama1", "@nama2")).
-		// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
-		// Where(dbox.Nin("nama", "@nama1", "@nama2")).
-		// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
-		// Where(dbox.And(dbox.Gt("umur", "@age"), dbox.Eq("nama", "@nama"))).
-		// Cursor(toolkit.M{}.Set("age", 25).Set("nama", "Kane"))
-		// Where(dbox.Or(dbox.Lte("umur", "@age"), dbox.Eq("nama", "@nama"))).
-		// Cursor(toolkit.M{}.Set("age", 23).Set("nama", "Kane"))
-		// Where(dbox.And(dbox.Or(dbox.Eq("nama", "@nama1"), dbox.Eq("nama", "@nama2"),
-		// dbox.Eq("nama", "@nama3")), dbox.Lt("umur", "@age"))).
-		// Cursor(toolkit.M{}.Set("nama1", "Kane").Set("nama2", "Roy").
-		// Set("nama3", "Oscar").Set("age", 30))
-		// Where(dbox.Contains("nama", "@name1")).
-		// Cursor(toolkit.M{}.Set("name1", "Os"))
-		// Where(dbox.Startwith("nama", "@nama1")).
-		// Cursor(toolkit.M{}.Set("nama1", "Ba"))
-		Where(dbox.Endwith("nama", "@nama1")).
-		Cursor(toolkit.M{}.Set("nama1", "ta"))
+		Cursor(nil)
+	// Where(dbox.Eq("nama", "@nama")).
+	// Cursor(toolkit.M{}.Set("nama", "clyne"))
+	// Where(dbox.Eq("umur", "@age")).
+	// Cursor(toolkit.M{}.Set("age", 25))
+	// Where(dbox.Ne("umur", "@age")).
+	// Cursor(toolkit.M{}.Set("age", 25))
+	// Where(dbox.Gt("tanggal", "@date")).
+	// Cursor(toolkit.M{}.Set("date", tanggal1))
+	// Where(dbox.Gt("umur", "@age")).
+	// Cursor(toolkit.M{}.Set("age", 25))
+	// Where(dbox.Gte("umur", "@age")).
+	// Cursor(toolkit.M{}.Set("age", 25))
+	// Where(dbox.Lt("umur", "@age")).
+	// Cursor(toolkit.M{}.Set("age", 25))
+	// Where(dbox.Lte("umur", "@age")).
+	// Cursor(toolkit.M{}.Set("age", 25))
+	// Where(dbox.In("nama", "@nama1", "@nama2")).
+	// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
+	// Where(dbox.Nin("nama", "@nama1", "@nama2")).
+	// Cursor(toolkit.M{}.Set("nama1", "clyne").Set("nama2", "Kane"))
+	// Where(dbox.And(dbox.Gt("umur", "@age"), dbox.Eq("nama", "@nama"))).
+	// Cursor(toolkit.M{}.Set("age", 25).Set("nama", "Kane"))
+	// Where(dbox.Or(dbox.Lte("umur", "@age"), dbox.Eq("nama", "@nama"))).
+	// Cursor(toolkit.M{}.Set("age", 23).Set("nama", "Kane"))
+	// Where(dbox.And(dbox.Or(dbox.Eq("nama", "@nama1"), dbox.Eq("nama", "@nama2"),
+	// dbox.Eq("nama", "@nama3")), dbox.Lt("umur", "@age"))).
+	// Cursor(toolkit.M{}.Set("nama1", "Kane").Set("nama2", "Roy").
+	// Set("nama3", "Oscar").Set("age", 30))
+	// Where(dbox.Contains("nama", "@name1")).
+	// Cursor(toolkit.M{}.Set("name1", "Os"))
+	// Where(dbox.Startwith("nama", "@nama1")).
+	// Cursor(toolkit.M{}.Set("nama1", "Ba"))
+	// Where(dbox.Endwith("nama", "@nama1")).
+	// Cursor(toolkit.M{}.Set("nama1", "ta"))
 
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())

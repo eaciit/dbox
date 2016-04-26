@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -100,30 +101,48 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				val := values[i]
 				b, ok := val.([]byte)
 
-				var out interface{}
-				e = toolkit.Unjson(b, &out)
-
-				if e != nil {
-					ok = false
-				}
-				if ok {
-					v = out
+				if ok { /*mysql always byte, postgres only string that byte, oracle always string, mssql agree with field datatype*/
+					v = string(b)
+					intVal, e := strconv.Atoi(toolkit.ToString(v))
+					if e != nil {
+						e = nil
+						floatVal, e := strconv.ParseFloat(toolkit.ToString(v), 64)
+						if e != nil {
+							e = nil
+							dateVal, e := time.Parse("2006-01-02 15:04:05", toolkit.ToString(v))
+							if e != nil {
+								v = string(b)
+							} else { /*if string is float*/
+								v = dateVal
+							}
+						} else { /*if string is float*/
+							v = floatVal
+						}
+					} else { /*if string is int*/
+						v = intVal
+					}
 				} else {
 					if c.driver == "oci8" {
 						if val == nil {
 							v = nil
 						} else if strings.Contains(toolkit.TypeName(val), "string") {
-							sType, e := strconv.Atoi(toolkit.ToString(val))
+							intVal, e := strconv.Atoi(toolkit.ToString(val))
 							if e != nil {
-								v = val
-							} else {
-								v = sType
+								e = nil
+								floatVal, e := strconv.ParseFloat(toolkit.ToString(val), 64)
+								if e != nil {
+									v = val
+								} else { /*if string is float*/
+									v = floatVal
+								}
+							} else { /*if string is int*/
+								v = intVal
 							}
-						} else {
+						} else { /*if not string*/
 							v = val
 						}
-					} else {
-						v = string(b)
+					} else { /*if not oracle*/
+						v = val
 					}
 				}
 				entry.Set(strings.ToLower(col), v)

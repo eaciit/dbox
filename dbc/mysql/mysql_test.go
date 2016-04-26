@@ -62,6 +62,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestFetch(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 
 	if e != nil {
@@ -360,10 +361,11 @@ func TestSelectFilter(t *testing.T) {
 	var tanggal2 time.Time
 	tanggal1, _ = time.Parse(layoutFormat, dateValue1)
 	tanggal2, _ = time.Parse(layoutFormat, dateValue2)
-	fmt.Println(tanggal1, tanggal2)
+	_ = tanggal1
+	_ = tanggal2
 	csr, e := c.NewQuery().
-		// Select("id", "name", "tanggal", "umur").
-		From("orders").
+		Select("id", "name", "tanggal", "umur").
+		From("tes").
 		// Where(dbox.Eq("nama", "buku")).
 		// Where(dbox.Ne("nama", "buku")).
 		// Where(dbox.Gt("price", 100000)).
@@ -476,7 +478,7 @@ func TestSelectAggregate(t *testing.T) {
 }
 
 func TestCRUD(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
