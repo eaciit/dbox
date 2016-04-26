@@ -7,6 +7,14 @@ import (
 	"testing"
 )
 
+type Dummy struct {
+	Id    int
+	Name  string
+	Email string
+	Phone string
+	Cvv   string
+}
+
 func prepareConnection() (dbox.IConnection, error) {
 	settings := toolkit.M{"driver": "mysql", "connector": "odbc"}
 	ci := &dbox.ConnectionInfo{"mysql-dsn", "test", "root", "", settings}
@@ -175,7 +183,7 @@ func TestSelectAggregate(t *testing.T) {
 	}
 }
 
-func TestCRUD(t *testing.T) {
+func TestInsert(t *testing.T) {
 	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
@@ -183,13 +191,6 @@ func TestCRUD(t *testing.T) {
 		return
 	}
 	defer c.Close()
-	type Dummy struct {
-		Id    int
-		Name  string
-		Email string
-		Phone string
-		Cvv   string
-	}
 
 	/*===============================INSERT==============================*/
 	q := c.NewQuery().From("dummy").Insert()
@@ -204,75 +205,86 @@ func TestCRUD(t *testing.T) {
 	if e != nil {
 		t.Errorf("Unable to insert data : %s \n", e.Error())
 	}
+}
 
-	/* ===============================SAVE DATA============================== */
-	// q := c.NewQuery().SetConfig("multiexec", false).From("coba").Save()
-	// dataInsert := Coba{}
-	// dataInsert.Id = fmt.Sprintf("3")
-	// dataInsert.Name = fmt.Sprintf("update data")
+func TestUpdate(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
 
-	// q := c.NewQuery().SetConfig("multiexec", false).From("NoID").Save()
-	// dataInsert := NoID{}
-	// dataInsert.Aidi = fmt.Sprintf("40")
-	// dataInsert.Name = fmt.Sprintf("no update")
-
-	// e = q.Exec(toolkit.M{"data": dataInsert})
-	// if e != nil {
-	// 	t.Errorf("Unable to insert data : %s \n", e.Error())
-	// }
-
-	/* ===============================UPDATE============================== */
-
-	// data := User{}
-	// data.Id = "40"
-	// data.Name = "player40"
-	// data.Tanggal = time.Now()
-	// data.Umur = 24
-	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "30")).Update().Exec(toolkit.M{"data": data})
-	// if e != nil {
-	// 	t.Errorf("Unable to update: %s \n", e.Error())
-	// }
-	// with where and data
-
-	// data := Coba{}
-	// data.Id = "1"
-	// data.Name = "Jamme"
-	// e = c.NewQuery().From("coba").Where(dbox.Eq("id", "1")).Update().Exec(toolkit.M{"data": data})
+	// data := Dummy{}
+	// data.Id = 101
+	// data.Name = "Hendro Kartiko"
+	// data.Email = "hendro.kartiko@persebaya.co.id"
+	// data.Phone = "(08)218993837"
+	// data.Cvv = "475"
+	// e = c.NewQuery().From("dummy").Where(dbox.Eq("id", "101")).Update().Exec(toolkit.M{"data": data})
 	// if e != nil {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
 
-	// ===============================UPDATE ALL ID==============================
-	// data := UpdateID{}
-	// fmt.Println(data)
-	// for i := 1; i < 23; i++ {
-	// 	data := UpdateID{}
-	// 	if i < 10 {
-	// 		data.Id = "ply00" + strconv.Itoa(i)
-	// 	} else {
-	// 		data.Id = "ply0" + strconv.Itoa(i)
-	// 	}
+	/*================ update WITHOUT where ===================================================*/
 
-	// 	e = c.NewQuery().From("tes").Where(dbox.Eq("id", i)).Update().Exec(toolkit.M{"data": data})
-	// 	if e != nil {
-	// 		t.Errorf("Unable to update: %s \n", e.Error())
-	// 	}
+	data := Dummy{}
+	data.Id = 101
+	data.Name = "Aji Santoso"
+	data.Email = "aji.santoso@persebaya.co.id"
+	data.Phone = "(08)873739937"
+	data.Cvv = "637"
+	e = c.NewQuery().From("dummy").Update().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	}
+}
 
-	// }
+func TestSave(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
 
-	// // ===============================DELETE==============================
-	// e = c.NewQuery().From("tes").Where(dbox.And(dbox.Eq("id", "2"), dbox.Eq("name", "Thuram"))).Delete().Exec(nil)
+	q := c.NewQuery().From("dummy").Save()
+	dataSave := Dummy{}
+	dataSave.Id = 101
+	dataSave.Name = "Mursyid Effendi"
+	dataSave.Email = "mursyid.effendi@persebaya.co.id"
+	dataSave.Phone = "(08)98796957"
+	dataSave.Cvv = "423"
+
+	e = q.Exec(toolkit.M{"data": dataSave})
+	if e != nil {
+		t.Errorf("Unable to save data : %s \n", e.Error())
+	}
+}
+
+func TestDelete(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+
+	// e = c.NewQuery().From("dummy").Where(dbox.And(dbox.Eq("id", "101"), dbox.Eq("name", "Mursyid Effendi"))).Delete().Exec(nil)
 	// if e != nil {
-	// 	t.Errorf("Unable to delete table %s\n", e.Error())
+	// 	t.Errorf("Unable to delete data %s\n", e.Error())
 	// 	return
 	// }
 
-	// data := User{}
-	// data.Id = "40"
+	data := Dummy{}
+	data.Id = 101
 
-	// e = c.NewQuery().From("tes").Delete().Exec(toolkit.M{"data": data})
-	// if e != nil {
-	// 	t.Errorf("Unable to delete table %s\n", e.Error())
-	// 	return
-	// }
+	e = c.NewQuery().From("dummy").Delete().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to delete data %s\n", e.Error())
+		return
+	}
 }

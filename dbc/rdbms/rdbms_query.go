@@ -422,7 +422,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString += " LIMIT " + toolkit.ToString(take)
 			}
 		}
-		toolkit.Println(QueryString)
+		// toolkit.Println(QueryString)
 		var querystmt string
 		if where != nil {
 			querystmt = "select count(*) from " + tablename +
@@ -452,7 +452,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			rowCount = take
 		}
 		cursor.(*Cursor).count = rowCount
-
+		cursor.(*Cursor).driver = driverName
 		/*assign cursor.QueryString*/
 		cursor.(*Cursor).QueryString = QueryString
 	} else if hasProcedure {
