@@ -1,15 +1,29 @@
 package oracle
 
 import (
-	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
 	"testing"
 	"time"
 )
 
+const (
+	tableName string = "emp"
+)
+
+type customers struct {
+	Empno    int
+	Ename    string
+	Job      string
+	Mgr      int32
+	HireDate time.Time
+	Sal      int
+	Comm     int
+	DeptNo   int
+}
+
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"localhost", "", "oracle", "oracle", nil}
+	ci := &dbox.ConnectionInfo{"localhost:1521/xe", "dboxtest", "dboxtest", "root", nil}
 	c, e := dbox.NewConnection("oracle", ci)
 	if e != nil {
 		return nil, e
@@ -23,17 +37,21 @@ func prepareConnection() (dbox.IConnection, error) {
 }
 
 func TestConnect(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect: %s \n", e.Error())
-		fmt.Println(e)
+		toolkit.Println(e)
 	} else {
-		// fmt.Println(c)
+		toolkit.Println("###########################")
+		toolkit.Println("Horay, connection success!")
+		toolkit.Println("###########################")
 	}
 	defer c.Close()
 }
 
 func TestSelect(t *testing.T) {
+	t.Skip()
 	c, e := prepareConnection()
 
 	if e != nil {
@@ -42,7 +60,7 @@ func TestSelect(t *testing.T) {
 	defer c.Close()
 
 	// csr, e := c.NewQuery().Select().From("tes").Where(dbox.Eq("id", "3")).Cursor(nil)
-	csr, e := c.NewQuery().Select("id", "nama", "umur").From("tes").Cursor(nil)
+	csr, e := c.NewQuery().Select("empno", "ename", "hiredate").From(tableName).Cursor(nil)
 
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
@@ -54,49 +72,47 @@ func TestSelect(t *testing.T) {
 	}
 	defer csr.Close()
 
-	// //rets := []toolkit.M{}
-
-	ds, e = csr.Fetch(nil, 0, false)
+	rets := []toolkit.M{}
+	e = csr.Fetch(&rets, 0, false)
 	if e != nil {
 		t.Errorf("Unable to fetch N: %s \n", e.Error())
 	} else {
-		fmt.Printf("Fetch N OK. Result: %v \n",
-			ds.Data)
+		toolkit.Printf("Fetch N OK. Result: %v \n", toolkit.JsonString(rets))
+		toolkit.Printf("Total Fetch OK : %v \n", toolkit.SliceLen(rets))
 	}
 }
 
-// func TestSelectFilter(t *testing.T) {
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("Unable to connect %s \n", e.Error())
-// 		return
-// 	}
-// 	defer c.Close()
+func TestSelectFilter(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
 
-// 	csr, e := c.NewQuery().
-// 		Select("id", "title").
-// 		Where(dbox.Or(dbox.Eq("id", "1"),(dbox.Eq("title","user4")))).
-// 		From("testtables").Cursor(nil)
-// 	if e != nil {
-// 		t.Errorf("Cursor pre error: %s \n", e.Error())
-// 		return
-// 	}
-// 	if csr == nil {
-// 		t.Errorf("Cursor not initialized")
-// 		return
-// 	}
-// 	defer csr.Close()
+	csr, e := c.NewQuery().
+		Select("empno", "ename", "mgr", "hiredate").
+		Where(dbox.Or(dbox.Eq("empno", 7521), dbox.Eq("ename", "ADAMS"))).
+		From(tableName).Cursor(nil)
+	if e != nil {
+		t.Errorf("Cursor pre error: %s \n", e.Error())
+		return
+	}
+	if csr == nil {
+		t.Errorf("Cursor not initialized")
+		return
+	}
+	defer csr.Close()
 
-// 	//rets := []toolkit.M{}
-
-// 	ds, e := csr.Fetch(nil, 0, false)
-// 	if e != nil {
-// 		t.Errorf("Unable to fetch: %s \n", e.Error())
-// 	} else {
-// 		fmt.Printf("Fetch N OK. Result: %v \n",
-// 			ds.Data)
-// 	}
-// }
+	rets := /*[]customers{}*/ []toolkit.M{}
+	e = csr.Fetch(&rets, 0, false)
+	if e != nil {
+		t.Errorf("Unable to fetch: %s \n", e.Error())
+	} else {
+		toolkit.Printf("Filter OK. Result: %v \n", toolkit.JsonString(rets))
+	}
+}
 
 /*
 func TestSelectAggregate(t *testing.T) {
@@ -138,51 +154,51 @@ func TestSelectAggregate(t *testing.T) {
 }
 */
 
-// func TestCRUD(t *testing.T) {
-// 	//t.Skip()
-// 	c, e := prepareConnection()
-// 	if e != nil {
-// 		t.Errorf("Unable to connect %s \n", e.Error())
-// 		return
-// 	}
-// 	defer c.Close()
-// 	// e = c.NewQuery().From("tes").Delete().Exec(nil)
-// 	// if e != nil {
-// 	// 	t.Errorf("Unablet to clear table %s\n", e.Error())
-// 	// 	return
-// 	// }
-// 	// e = c.NewQuery().From("testtables").Where(dbox.And(dbox.Eq("id", "3"),dbox.Eq("title", "user3"))).Delete().Exec(nil)
-// 	// if e != nil {
-// 	// 	t.Errorf("Unablet to delete table %s\n", e.Error())
-// 	// 	return
-// 	// }
-// 	// defer c.Close()
-// 	q := c.NewQuery().SetConfig("multiexec", true).From("tes").Save()
-// 	type user struct {
-// 		Id     int
-// 		Name   string
-// 		Date   time.Time
-// 	}
+func TestCRUD(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+	// e = c.NewQuery().From("tes").Delete().Exec(nil)
+	// if e != nil {
+	// 	t.Errorf("Unablet to clear table %s\n", e.Error())
+	// 	return
+	// }
+	// e = c.NewQuery().From("testtables").Where(dbox.And(dbox.Eq("id", "3"),dbox.Eq("title", "user3"))).Delete().Exec(nil)
+	// if e != nil {
+	// 	t.Errorf("Unablet to delete table %s\n", e.Error())
+	// 	return
+	// }
+	// defer c.Close()
+	q := c.NewQuery().SetConfig("multiexec", true).From("tes").Save()
+	type user struct {
+		Id   int
+		Name string
+		// Date time.Time
+	}
 
-// 	// 	//go func(q dbox.IQuery, i int) {
-// 		data := user{}
-// 		data.Id = 9999999
-// 		data.Name = "dsad2"
-// 		data.Date = time.Now()
+	// 	//go func(q dbox.IQuery, i int) {
+	data := user{}
+	data.Id = 9999999
+	data.Name = "dsad2"
+	// data.Date = time.Now()
 
-// 		e = q.Exec(toolkit.M{
-// 			"data": data,
-// 		})
-// 		if e != nil {
-// 			t.Errorf("Unable to save: %s \n", e.Error())
-// 		}
+	e = q.Exec(toolkit.M{
+		"data": data,
+	})
+	if e != nil {
+		t.Errorf("Unable to save: %s \n", e.Error())
+	}
 
-// 	// // q.Close()
-// 	// data.Id = "3"
-// 	// data.Name = "uuuuuuuuuu"
-// 	// e = c.NewQuery().From("testtables").Where(dbox.Eq("id", "3")).Update().Exec(toolkit.M{"data": data})
-// 	// if e != nil {
-// 	// 	t.Errorf("Unable to update: %s \n", e.Error())
-// 	// }
+	// // q.Close()
+	// data.Id = "3"
+	// data.Name = "uuuuuuuuuu"
+	// e = c.NewQuery().From("testtables").Where(dbox.Eq("id", "3")).Update().Exec(toolkit.M{"data": data})
+	// if e != nil {
+	// 	t.Errorf("Unable to update: %s \n", e.Error())
+	// }
 
-// }
+}
