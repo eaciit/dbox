@@ -385,20 +385,20 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	if hasFrom == false {
 		return nil, err.Error(packageName, "Query", "prepare", "Invalid table name")
 	}
-	tablename := fromParts.([]interface{})[0].(*dbox.QueryPart).Value.(string)
+	tablename := fromParts.([]*dbox.QueryPart)[0].Value.(string)
 	output.Set("tablename", tablename)
 	q.jsonPath = filepath.Join(q.Connection().(*Connection).folder, tablename+".json")
 
 	skip := 0
 	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
-		skip = skipParts.([]interface{})[0].(*dbox.QueryPart).
+		skip = skipParts.([]*dbox.QueryPart)[0].
 			Value.(int)
 	}
 	output.Set("skip", skip)
 
 	take := 0
 	if takeParts, has := parts[dbox.QueryPartTake]; has {
-		take = takeParts.([]interface{})[0].(*dbox.QueryPart).
+		take = takeParts.([]*dbox.QueryPart)[0].
 			Value.(int)
 	}
 	output.Set("take", take)
@@ -410,8 +410,8 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		aggregate = true
 		aggrElements := func() []*dbox.QueryPart {
 			var qps []*dbox.QueryPart
-			for _, v := range aggrParts.([]interface{}) {
-				qps = append(qps, v.(*dbox.QueryPart))
+			for _, v := range aggrParts.([]*dbox.QueryPart) {
+				qps = append(qps, v)
 			}
 			return qps
 		}()
@@ -426,8 +426,8 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 		aggregate = true
 		groups := func() toolkit.M {
 			s := toolkit.M{}
-			for _, v := range partGroup.([]interface{}) {
-				gs := v.(*dbox.QueryPart).Value.([]string)
+			for _, v := range partGroup.([]*dbox.QueryPart) {
+				gs := v.Value.([]string)
 				for _, g := range gs {
 					if strings.TrimSpace(g) != "" {
 						s.Set(g, "$"+g)
@@ -449,9 +449,9 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	var fields []string
 	selectParts, hasSelect := parts[dbox.QueryPartSelect]
 	if hasSelect {
-		for _, sl := range selectParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range selectParts.([]*dbox.QueryPart) {
+			// qp := sl.(*dbox.QueryPart)
+			for _, fid := range sl.Value.([]string) {
 				fields = append(fields, fid)
 			}
 		}
@@ -480,9 +480,9 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	sortParts, hasSort := parts[dbox.QueryPartOrder]
 	if hasSort {
 		sort = []string{}
-		for _, sl := range sortParts.([]interface{}) {
-			qp := sl.(*dbox.QueryPart)
-			for _, fid := range qp.Value.([]string) {
+		for _, sl := range sortParts.([]*dbox.QueryPart) {
+			// qp := sl.(*dbox.QueryPart)
+			for _, fid := range sl.Value.([]string) {
 				sort = append(sort, fid)
 			}
 		}
@@ -492,8 +492,8 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	var filters []*dbox.Filter
 	whereParts, hasWhere := parts[dbox.QueryPartWhere]
 	if hasWhere {
-		for _, p := range whereParts.([]interface{}) {
-			fs := p.(*dbox.QueryPart).Value.([]*dbox.Filter)
+		for _, p := range whereParts.([]*dbox.QueryPart) {
+			fs := p.Value.([]*dbox.Filter)
 			for _, f := range fs {
 				if in != nil {
 					f = rdbms.ReadVariable(f, in)
