@@ -69,10 +69,20 @@ func StringValue(v interface{}, db string) string {
 	var ret string
 	switch v.(type) {
 	case string:
-		ret = fmt.Sprintf("%s", "'"+v.(string)+"'")
+		t, e := time.Parse(time.RFC3339, toolkit.ToString(v))
+		if e != nil {
+			ret = fmt.Sprintf("%s", "'"+v.(string)+"'")
+		} else {
+			if strings.Contains(db, "oci8") {
+				// toolkit.Println(t.Format("2006-01-02 15:04:05"))
+				ret = "to_date('" + t.Format("02-01-2006 15:04:05") + "','DD-MM-YYYY hh24:mi:ss')"
+			} else {
+				ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
+			}
+		}
 	case time.Time:
 		t := v.(time.Time).UTC()
-		if strings.Contains(db, "oracle") {
+		if strings.Contains(db, "oci8") {
 			ret = "to_date('" + t.Format("2006-01-02 15:04:05") + "','yyyy-mm-dd hh24:mi:ss')"
 		} else {
 			ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
@@ -186,6 +196,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	procedureParts, hasProcedure := parts["procedure"]
 	freeQueryParts, hasFreeQuery := parts["freequery"]
 
+	idMap := toolkit.M{}
 	if hasFrom {
 		tablename := ""
 		tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
@@ -201,6 +212,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 					} else {
 						attribute = attribute + ", " + fid
 					}
+
+					idMap.Set(fid, fid)
 					incAtt++
 				}
 			}
@@ -352,7 +365,12 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			if attribute == "" {
 				QueryString = "SELECT * FROM " + tablename
 			} else {
-				QueryString = "SELECT " + attribute + " FROM " + tablename
+				if driverName == "oci8" {
+					_, idVal := toolkit.IdInfo(idMap)
+					QueryString = "SELECT " + attribute + ", rank() over(order by " + idVal.(string) + " asc) rn FROM " + tablename
+				} else {
+					QueryString = "SELECT " + attribute + " FROM " + tablename
+				}
 			}
 		}
 
@@ -387,11 +405,16 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				QueryString = strings.Replace(QueryString, "SELECT", top, 1)
 			}
 
-		} else if driverName == "oracle" {
+		} else if driverName == "oci8" {
 			if hasSkip && hasTake {
-				QueryString += " ROWNUM <= " + cast.ToString(take) + " OFFSET " + cast.ToString(skip)
-			} else if hasSkip && !hasTake {
+				var lower, upper int
+				upper = skip + take
+				lower = upper - take + 1
 
+				QueryString = "select * from (" + QueryString + ") t1 WHERE t1.rn BETWEEN " + cast.ToString(lower) + " AND " + cast.ToString(upper)
+			} else if hasSkip && !hasTake {
+				QueryString = "select * from (" + QueryString +
+					") t1 WHERE t1.rn > " + cast.ToString(skip)
 			} else if hasTake && !hasSkip {
 				QueryString = "select * from (" + QueryString +
 					") WHERE ROWNUM <= " + cast.ToString(take)
@@ -516,7 +539,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			}
 
 			ProcStatement = "EXECUTE " + spName + paramstring
-		} else if driverName == "oracle" {
+		} else if driverName == "oci8" {
 			var paramstring string
 			var variable string
 			var isEmpty bool
@@ -554,7 +577,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			}
 
 			ProcStatement = variable + "EXECUTE " + spName + paramstring
-
+			// toolkit.Println("ProcStatement>", ProcStatement)
 		} else if driverName == "postgres" {
 			paramstring := ""
 			if hasParam && hasOrder {
@@ -616,10 +639,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 	driverName := q.GetDriverDB()
 	// driverName = "oracle"
 	tablename := ""
-
-	if parm == nil {
-		parm = toolkit.M{}
-	}
 	data := parm.Get("data", nil)
 	// fmt.Println("Hasil ekstraksi Param : ", data)
 
@@ -642,12 +661,14 @@ func (q *Query) Exec(parm toolkit.M) error {
 			stringValues := StringValue(dataValues, driverName)
 			if i == 0 {
 				attributes = "(" + namaField
-				values = "(" + stringValues
 				setUpdate = namaField + " = " + stringValues
+				values = "(" + stringValues
+
 			} else {
 				attributes += ", " + namaField
-				values += ", " + stringValues
 				setUpdate += ", " + namaField + " = " + stringValues
+				values += ", " + stringValues
+
 			}
 			i += 1
 		}
@@ -745,9 +766,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 			} else {
 				statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
 				_, e = session.Exec(statement)
-				if e != nil {
-					toolkit.Println(" halo :: ", statement)
-				}
 			}
 
 			if e != nil {
