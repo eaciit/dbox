@@ -15,6 +15,14 @@ type User struct {
 	Umur      int
 }
 
+type DataType struct {
+	T_Int    int
+	T_Float  float64
+	T_Bool   bool
+	T_String string
+	T_Date   time.Time
+}
+
 type Player struct {
 	Player_id string
 	Nama      string
@@ -193,6 +201,25 @@ func TestProcedure(t *testing.T) {
 	}
 }
 
+func TestUpdate(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	data := User{}
+	data.Player_id = "1"
+	data.Nama = "Bourne"
+	data.Tanggal = time.Now()
+	data.Umur = 23
+
+	e = c.NewQuery().From("tes").Where(dbox.Eq("player_id", "ply001")).Update().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	}
+}
+
 func TestSelectFilter(t *testing.T) {
 	// t.Skip("")
 	c, e := prepareConnection()
@@ -213,8 +240,10 @@ func TestSelectFilter(t *testing.T) {
 	_ = tanggal2
 
 	csr, e := c.NewQuery().
-		Select("player_id", "nama", "tanggal", "umur").
-		From("tes").
+		// Select("player_id", "nama", "tanggal", "umur").
+		// From("tes").
+		Select("t_int", "t_float", "t_bool", "t_string", "t_date").
+		From("tipedata").
 		// Where(dbox.Eq("nama", "Bourne")).
 		// Where(dbox.Ne("nama", "Bourne")).
 		// Where(dbox.Gt("umur", 25)).
@@ -281,7 +310,8 @@ func TestSelectFilter(t *testing.T) {
 	defer csr.Close()
 
 	// results := make([]map[string]interface{}, 0)
-	results := make([]User, 0)
+	// results := make([]User, 0)
+	results := make([]DataType, 0)
 
 	err := csr.Fetch(&results, 0, false)
 	if err != nil {
