@@ -172,6 +172,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		session := q.Session()
 		cursor.(*Cursor).session = session
 	}
+	cursor.(*Cursor).DateFormat = q.Connection().(*Connection).DateFormat
 	driverName := q.GetDriverDB()
 	// driverName = "oracle"
 	var QueryString string

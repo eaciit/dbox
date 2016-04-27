@@ -180,7 +180,7 @@ func (c *Connection) SetReaderParam() {
 func (c *Connection) SetHeaderToolkitM(tMapHeader toolkit.M) {
 	var tempstruct []headerstruct
 	i := 0
-	for cols, _ := range tMapHeader {
+	for cols := range tMapHeader {
 		ts := headerstruct{}
 		ts.name = cols
 		ts.dataType = "string"
