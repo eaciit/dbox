@@ -9,7 +9,9 @@ import (
 	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
 	"reflect"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -21,11 +23,11 @@ const (
 
 type Cursor struct {
 	dbox.Cursor
-	ResultType   string
-	count, start int
-	sessionHive  *hive.Hive
-	session      sql.DB
-	QueryString  string
+	ResultType          string
+	count, start        int
+	sessionHive         *hive.Hive
+	session             sql.DB
+	QueryString, driver string
 }
 
 func (c *Cursor) Close() {
@@ -99,16 +101,49 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				val := values[i]
 				b, ok := val.([]byte)
 
-				var out interface{}
-				e = toolkit.Unjson(b, &out)
-
-				if e != nil {
-					ok = false
-				}
-				if ok {
-					v = out
-				} else {
+				if ok { /*mysql always byte, postgres only string that byte, oracle always string, mssql agree with field datatype*/
 					v = string(b)
+					intVal, e := strconv.Atoi(toolkit.ToString(v))
+					if e != nil {
+						e = nil
+						floatVal, e := strconv.ParseFloat(toolkit.ToString(v), 64)
+						if e != nil {
+							e = nil
+							dateVal, e := time.Parse("2006-01-02 15:04:05", toolkit.ToString(v))
+							if e != nil {
+								v = string(b)
+							} else { /*if string is float*/
+								v = dateVal
+							}
+						} else { /*if string is float*/
+							v = floatVal
+						}
+					} else { /*if string is int*/
+						v = intVal
+					}
+				} else {
+					if c.driver == "oci8" {
+						if val == nil {
+							v = nil
+						} else if strings.Contains(toolkit.TypeName(val), "string") {
+							intVal, e := strconv.Atoi(toolkit.ToString(val))
+							if e != nil {
+								e = nil
+								floatVal, e := strconv.ParseFloat(toolkit.ToString(val), 64)
+								if e != nil {
+									v = val
+								} else { /*if string is float*/
+									v = floatVal
+								}
+							} else { /*if string is int*/
+								v = intVal
+							}
+						} else { /*if not string*/
+							v = val
+						}
+					} else { /*if not oracle*/
+						v = val
+					}
 				}
 				entry.Set(strings.ToLower(col), v)
 			}
@@ -123,8 +158,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 							entry.Set(namaField,
 								cast.ToInt(entry[namaField], cast.RoundingAuto))
 						} else if strings.Contains(dataType, "time.time") {
-							entry.Set(namaField,
-								cast.String2Date(cast.ToString(entry[namaField]), "2006-01-02 15:04:05"))
+							// entry.Set(namaField, cast.String2Date(cast.ToString(entry[namaField]), "2006-01-02 15:04:05"))
+							entry.Set(namaField, entry[namaField])
 						}
 					}
 				}

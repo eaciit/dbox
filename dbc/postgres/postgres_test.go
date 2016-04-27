@@ -29,7 +29,8 @@ type NoId struct {
 }
 
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"localhost:5432", "test", "postgres", "budi123", nil}
+	// ci := &dbox.ConnectionInfo{"localhost:5432", "test", "postgres", "", nil}
+	ci := &dbox.ConnectionInfo{"localhost", "test", "postgres", "postgres", nil}
 	c, e := dbox.NewConnection("postgres", ci)
 	if e != nil {
 		return nil, e
@@ -122,7 +123,7 @@ func TestConnect(t *testing.T) {
 // 	}
 // }
 
-/*func TestSelectFilter(t *testing.T) {
+func TestSelectFilter(t *testing.T) {
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -131,9 +132,12 @@ func TestConnect(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().
-		Select().
-		Where(dbox.Eq("id", "3456")).
-		From("tes").Cursor(nil)
+		Select("player_id", "nama", "tanggal", "umur").
+		From("tes").
+		// Where(dbox.Eq("nama", "buku")).
+		Cursor(nil)
+	// Where(dbox.Lte("price", "@price")).
+	// Cursor(toolkit.M{}.Set("@price", 100000))
 	if e != nil {
 		t.Errorf("Cursor pre error: %s \n", e.Error())
 		return
@@ -162,7 +166,7 @@ func TestConnect(t *testing.T) {
 		}
 
 	}
-}*/
+}
 
 // func TestCRUD(t *testing.T) {
 // t.Skip()
