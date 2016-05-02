@@ -1,11 +1,14 @@
 package oracle
 
 import (
-	"database/sql"
+	// "database/sql"
 	"fmt"
+	"github.com/eaciit/dbox"
+	"github.com/eaciit/dbox/dbc/rdbms"
+	"github.com/eaciit/toolkit"
 	_ "github.com/mattn/go-oci8"
-	"os"
-	"strings"
+	// "os"
+	// "strings"
 )
 
 const (
@@ -33,7 +36,7 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 func (c *Connection) Connect() error {
 	ci := c.Info()
 	host := ci.Host
-	db := ci.Database
+	// db := ci.Database
 	username := ci.UserName
 	pass := ci.Password
 	ConnectionString := username + "/" + pass + "@" + host

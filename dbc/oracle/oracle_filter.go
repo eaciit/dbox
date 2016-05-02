@@ -1,11 +1,9 @@
 package oracle
 
 import (
-	// "github.com/eaciit/cast"
-	// "fmt"
+	"github.com/eaciit/cast"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/dbox/dbc/rdbms"
-	// "time"
 )
 
 type FilterBuilder struct {
@@ -28,9 +26,9 @@ func CombineIn(operator string, f *dbox.Filter) string {
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := ""
 	if f.Op == dbox.FilterOpEqual {
-		fm = fm + f.Field + "= " + rdbms.StringValue(f.Value, "oracle") + ""
+		fm = fm + f.Field + " = " + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpNoEqual {
-		fm = fm + f.Field + "<>" + rdbms.StringValue(f.Value, "oracle") + ""
+		fm = fm + f.Field + " <> " + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpGt {
 		fm = fm + f.Field + " > " + rdbms.StringValue(f.Value, "oracle") + ""
 	} else if f.Op == dbox.FilterOpGte {
@@ -46,7 +44,7 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	} else if f.Op == dbox.FilterOpContains {
 		fm = CombineIn("NOT IN", f)
 	} else if f.Op == dbox.FilterOpOr || f.Op == dbox.FilterOpAnd {
-		f
+		// f
 		fs := f.Value.([]*dbox.Filter)
 		for _, ff := range fs {
 			bf, _ := fb.BuildFilter(ff)
