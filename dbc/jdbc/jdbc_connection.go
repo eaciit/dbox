@@ -60,8 +60,8 @@ func (c *Connection) Connect() error {
 			ConnectionString = "jdbc:sqlserver:" //"jdbc:sqlserver://ServerName\\sqlexpress;database=DBName;user=UserName;password=Password"
 			hostdb = ConnectionString + "//" + host + ";dbname=" + database
 		} else if splitdriver[1] == "oracle" {
-			ConnectionString = "jdbc:oracle:thin:@" //"jdbc:oracle:thin:@//localhost:1521/orcl", "scott", "tiger"
-			hostdb = ConnectionString + "//" + host + "/" + database
+			ConnectionString = "jdbc:oracle:thin:@" //"jdbc:oracle:thin:@//localhost:1521:orcl", "scott", "tiger"
+			hostdb = ConnectionString + host + ":" + database
 		}
 		connStr := hostdb
 

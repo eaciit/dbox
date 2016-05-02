@@ -1,6 +1,4 @@
-// com.microsoft.sqlserver.jdbc.SQLServerDriver jdbc:sqlserver://WINDOWS:1433;databaseName=test;user=sa;password=root; sa root
-
-package mssql_test
+package oracle_test
 
 import (
 	"fmt"
@@ -17,8 +15,9 @@ type User struct {
 }
 
 func prepareConnection() (dbox.IConnection, error) {
-	settings := toolkit.M{"driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver", "connector": "jdbc:mssql", "jar": "sqljdbc4-3.0.jar"}
-	ci := &dbox.ConnectionInfo{"WINDOWS:1433", "test", "sa", "root", settings}
+	// java -cp ojdbc6.jar;. JdbcGo oracle.jdbc.driver.OracleDriver jdbc:oracle:thin:@localhost:1521:XE dboxtest Bismillah
+	settings := toolkit.M{"driver": "oracle.jdbc.driver.OracleDriver", "connector": "jdbc:oracle", "jar": "ojdbc6.jar"}
+	ci := &dbox.ConnectionInfo{"localhost:1521", "XE", "dboxtest", "Bismillah", settings}
 	c, e := dbox.NewConnection("jdbc", ci)
 	if e != nil {
 		return nil, e
@@ -52,8 +51,8 @@ func TestFetch(t *testing.T) {
 
 	csr, e := c.NewQuery().
 		Select("name", "id").
-		From("dbo.userne").Order("id").
-		Skip(4).
+		From("test").Order("id").
+		Skip(2).
 		Take(2).
 		Cursor(nil)
 
@@ -129,7 +128,7 @@ func TestCRUD(t *testing.T) {
 	defer c.Close()
 
 	// ===============================INSERT==============================
-	q := c.NewQuery().From("coba").Insert()
+	q := c.NewQuery().From("test").Insert()
 	dataInsert := User{}
 	dataInsert.Id = 6
 	dataInsert.Name = fmt.Sprintf("New Player")
@@ -138,5 +137,4 @@ func TestCRUD(t *testing.T) {
 	if e != nil {
 		t.Errorf("Unable to insert data : %s \n", e.Error())
 	}
-	// defer q.Close()
 }

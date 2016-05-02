@@ -297,17 +297,22 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				top := "SELECT TOP " + cast.ToString(take) + " "
 				QueryString = strings.Replace(QueryString, "SELECT", top, 1)
 			}
-
+			fmt.Println(" :: ", QueryString)
 		} else if driverName == "oracle" {
 			if hasSkip && hasTake {
-				QueryString += " ROWNUM <= " + cast.ToString(take) + " OFFSET " + cast.ToString(skip)
+				QueryString = "SELECT " + attribute + ", rownum as rnum FROM (" + QueryString +
+					") where rownum <= " + cast.ToString(take+skip) + ")"
+				QueryString = "SELECT " + attribute + " FROM (" + QueryString + " WHERE rnum > " + cast.ToString(skip)
+
 			} else if hasSkip && !hasTake {
+				QueryString = "SELECT " + attribute + ", rownum as rnum FROM (" + QueryString + "))"
+				QueryString = "SELECT " + attribute + " FROM (" + QueryString + " WHERE rnum > " + cast.ToString(skip)
 
 			} else if hasTake && !hasSkip {
-				QueryString = "select * from (" + QueryString +
-					") WHERE ROWNUM <= " + cast.ToString(take)
+				QueryString = "SELECT " + attribute + ", rownum as rnum FROM (" + QueryString +
+					") where rownum <= " + cast.ToString(take) + ")"
+				QueryString = "SELECT " + attribute + " FROM (" + QueryString
 			}
-
 		} else if driverName == "postgres" {
 			if hasSkip && hasTake {
 				QueryString += " LIMIT " + cast.ToString(take) +
