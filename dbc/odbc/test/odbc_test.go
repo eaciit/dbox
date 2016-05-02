@@ -15,9 +15,16 @@ type Dummy struct {
 	Cvv   string
 }
 
+const (
+	oracle    = "oci8"
+	sqlServer = "mssql"
+	postgre   = "postgre"
+	mysql     = "mysql"
+)
+
 func prepareConnection() (dbox.IConnection, error) {
-	settings := toolkit.M{"driver": "mysql", "connector": "odbc", "dateformat": "2006-01-02 15:04:05"}
-	ci := &dbox.ConnectionInfo{"mysql-dsn", "test", "root", "root", settings}
+	settings := toolkit.M{"driver": oracle, "connector": "odbc", "dateformat": "2006-01-02 15:04:05"}
+	ci := &dbox.ConnectionInfo{"oracle-dsn", "dboxtest", "dboxtest", "root", settings}
 	c, e := dbox.NewConnection("odbc", ci)
 	if e != nil {
 		return nil, e
@@ -63,7 +70,7 @@ func TestSelect(t *testing.T) {
 
 	csr, e := c.NewQuery().
 		From("customers").
-		Select("date", "currency"). //tested and not working with 2 field
+		Select("datenow", "currency"). //tested and not working with 2 field
 		// Order("unitsinstock"). //tested and not working
 		// Skip(10). //tested and not working
 
