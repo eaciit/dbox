@@ -1,0 +1,1 @@
+[{"_id":"ord001","amount":150,"nama":"buku","price":50,"quantity":3,"status":"available"},{"_id":"ord002","amount":200,"nama":"buku","price":50,"quantity":4,"status":"available"},{"_id":"ord003","amount":400,"nama":"tas","price":200,"quantity":2,"status":"available"},{"_id":"ord004","amount":1000,"nama":"tas","price":250,"quantity":4,"status":"available"}]

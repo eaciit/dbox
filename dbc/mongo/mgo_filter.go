@@ -17,8 +17,29 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	} else if f.Op == dbox.FilterOpNoEqual {
 		fm.Set(f.Field, M{}.Set("$ne", f.Value))
 	} else if f.Op == dbox.FilterOpContains {
+		fs := f.Value.([]string)
+		if len(fs) > 1 {
+			bfs := []interface{}{}
+			for _, ff := range fs {
+				pfm := M{}
+				pfm.Set(f.Field, M{}.
+					Set("$regex", fmt.Sprintf(".*%s.*", ff)).
+					Set("$options", "i"))
+				bfs = append(bfs, pfm)
+			}
+			fm.Set("$or", bfs)
+		} else {
+			fm.Set(f.Field, M{}.
+				Set("$regex", fmt.Sprintf(".*%s.*", fs[0])).
+				Set("$options", "i"))
+		}
+	} else if f.Op == dbox.FilterOpStartWith {
 		fm.Set(f.Field, M{}.
-			Set("$regex", fmt.Sprintf(".*%s.*", f.Value)).
+			Set("$regex", fmt.Sprintf("^%s.*$", f.Value)).
+			Set("$options", "i"))
+	} else if f.Op == dbox.FilterOpEndWith {
+		fm.Set(f.Field, M{}.
+			Set("$regex", fmt.Sprintf("^.*%s$", f.Value)).
 			Set("$options", "i"))
 	} else if f.Op == dbox.FilterOpIn {
 		fm.Set(f.Field, M{}.Set("$in", f.Value))
@@ -62,6 +83,7 @@ func (fb *FilterBuilder) CombineFilters(mfs []interface{}) (interface{}, error) 
 		vm := v.(M)
 		filters = append(filters, vm)
 	}
+	//fmt.Println(JsonString(filters))
 	ret.Set("$and", filters)
 	return ret, nil
 }

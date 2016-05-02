@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
-	_ "github.com/eaciit/toolkit"
+	. "github.com/eaciit/toolkit"
 	"gopkg.in/mgo.v2"
-	//"reflect"
+	"reflect"
 )
 
 const (
@@ -62,8 +62,10 @@ func (c *Cursor) prepIter() error {
 	}
 	if c.mgoIter == nil {
 		if c.ResultType == QueryResultPipe {
+			//fmt.Println("Preparing Pipe Iter")
 			c.mgoIter = c.mgoPipe.Iter()
 		} else if c.ResultType == QueryResultCursor {
+			//fmt.Println("Preparing Query Iter")
 			c.mgoIter = c.mgoCursor.Iter()
 		}
 	}
@@ -83,38 +85,71 @@ func (c *Cursor) ResetFetch() error {
 	return nil
 }
 
-func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
-	*dbox.DataSet, error) {
+func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	if closeWhenDone {
 		defer c.Close()
 	}
 
 	e := c.prepIter()
 	if e != nil {
-		return nil, errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
 	}
 
 	if c.mgoIter == nil {
-		return nil, errorlib.Error(packageName, modCursor, "Fetch", "Iter object is not yet initialized")
+		return errorlib.Error(packageName, modCursor, "Fetch", "Iter object is not yet initialized")
 	}
 
-	ds := dbox.NewDataSet(m)
+	if !IsPointer(m) {
+		return errorlib.Error(packageName, modCursor, "Fetch", "Model object should be pointer")
+	}
+
+	//ds := dbox.NewDataSet(m)
+	//	var datas []interface{}
+	//	rt := reflect.TypeOf(m)
+	//datias := reflect.MakeSlice(rt, 0, 0)
 	if n == 0 {
-		datas := []interface{}{}
-		e = c.mgoIter.All(&datas)
+		//datas := []interface{}{}
+		e = c.mgoIter.All(m)
 		if e != nil {
-			return ds, errorlib.Error(packageName, modCursor,
+			return errorlib.Error(packageName, modCursor,
 				"Fetch", e.Error())
 		}
-		ds.Data = datas
-	} else if n > 0 {
+		//ds.Data = datas
+	} else if n == 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice {
+		//dataBuf := M{}
+		//Printf("Record count: %d\n", func() int { count, _ := c.mgoCursor.Count(); return count }())
+
+		bOk := c.mgoIter.Next(m)
+
+		if !bOk {
+			errtxt := ""
+			if c.mgoIter.Err() == nil {
+				errtxt = "Not found"
+			} else {
+				errtxt = c.mgoIter.Err().Error()
+			}
+			return errorlib.Error(packageName, modCursor, "Fetch", errtxt)
+		}
+		/*
+			e := Serde(dataBuf, m, "json")
+			if e != nil {
+				return errorlib.Error(packageName, modCursor, "Fetch", "Fetch serde fail. "+e.Error())
+			}
+		*/
+	} else if n > 1 || reflect.ValueOf(m).Elem().Kind() == reflect.Slice {
 		fetched := 0
 		fetching := true
-		for fetching {
-			dataHolder := m
 
-			if bOk := c.mgoIter.Next(&dataHolder); bOk {
-				ds.Data = append(ds.Data, dataHolder)
+		v := reflect.TypeOf(m).Elem().Elem()
+		ivs := reflect.MakeSlice(reflect.SliceOf(v), 0, 0)
+		for fetching {
+			iv := reflect.New(v).Interface()
+
+			tiv := M{}
+			bOk := c.mgoIter.Next(&tiv)
+			if bOk {
+				Serde(tiv, iv, "json")
+				ivs = reflect.Append(ivs, reflect.ValueOf(iv).Elem())
 				fetched++
 				if fetched == n {
 					fetching = false
@@ -123,7 +158,29 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) (
 				fetching = false
 			}
 		}
+		reflect.ValueOf(m).Elem().Set(ivs)
+		// for fetching {
+		// 	dataHolder, e := GetEmptySliceElement(m)
+		// 	if e != nil {
+		// 		return errorlib.Error(packageName, modCursor, "Fetch", e.Error())
+		// 	}
+		// 	var bOk bool
+		// 	if IsPointer(dataHolder) {
+		// 		bOk = c.mgoIter.Next(dataHolder)
+		// 	} else {
+		// 		bOk = c.mgoIter.Next(&dataHolder)
+		// 	}
+		// 	if bOk {
+		// 		AppendSlice(m, dataHolder)
+		// 		fetched++
+		// 		if fetched == n {
+		// 			fetching = false
+		// 		}
+		// 	} else {
+		// 		fetching = false
+		// 	}
+		// }
 	}
 
-	return ds, nil
+	return nil
 }
