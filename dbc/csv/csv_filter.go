@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	. "github.com/eaciit/toolkit"
+	"strings"
 )
 
 type FilterBuilder struct {
@@ -12,6 +13,7 @@ type FilterBuilder struct {
 
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := M{}
+	f.Field = strings.ToLower(f.Field)
 	if f.Op == dbox.FilterOpEqual {
 		fm.Set(f.Field, f.Value)
 	} else if f.Op == dbox.FilterOpNoEqual {
@@ -19,6 +21,14 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	} else if f.Op == dbox.FilterOpContains {
 		fm.Set(f.Field, M{}.
 			Set("$regex", fmt.Sprintf(".*%s.*", f.Value)).
+			Set("$options", "i"))
+	} else if f.Op == dbox.FilterOpStartWith {
+		fm.Set(f.Field, M{}.
+			Set("$regex", fmt.Sprintf("^%s.*$", f.Value)).
+			Set("$options", "i"))
+	} else if f.Op == dbox.FilterOpEndWith {
+		fm.Set(f.Field, M{}.
+			Set("$regex", fmt.Sprintf("^.*%s$", f.Value)).
 			Set("$options", "i"))
 	} else if f.Op == dbox.FilterOpIn {
 		fm.Set(f.Field, M{}.Set("$in", f.Value))
