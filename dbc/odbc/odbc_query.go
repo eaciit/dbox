@@ -22,10 +22,10 @@ const (
 type Query struct {
 	dbox.Query
 	// Sql        *sql.DB
-	Sess                 *odbc.Connection
-	usePooling           bool
-	DriverDB, DateFormat string
-	count                int
+	Sess                             *odbc.Connection
+	usePooling                       bool
+	DriverDB, DateFormat, QStatement string
+	count                            int
 }
 
 func (q *Query) Session() *odbc.Connection {
@@ -37,6 +37,7 @@ func (q *Query) Prepare() error {
 }
 
 func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
+	q.Sess = q.Session()
 
 	cursor := new(Cursor)
 	var queryString string
@@ -121,20 +122,21 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		}
 	}
 
-	out, e := q.statement(queryString)
+	q.QStatement = queryString
+	out, e := q.Statement()
 	if e != nil {
 		return nil, err.Error(packageName, modQuery, "Cursor", e.Error())
 	}
 	// toolkit.Println(out)
 	cursor.data = out.Get("data", "").(toolkit.Ms)
 	cursor.count = out.Get("count", "").(int)
-	cursor.Sess = q.Connection().(*Connection).Sess
+	cursor.Sess = q.Sess
 	return cursor, nil
 }
 
 func (q *Query) Exec(param toolkit.M) error {
 	setting, e := q.prepare(param)
-	session := q.Session()
+	q.Sess = q.Session()
 	commandType := toolkit.ToString(setting.Get("cmdType", ""))
 	if e != nil {
 		return err.Error(packageName, modQuery, "Exec", e.Error())
@@ -150,12 +152,12 @@ func (q *Query) Exec(param toolkit.M) error {
 			values := toolkit.ToString(setting.Get("values", ""))
 			if attributes != "" && values != "" {
 				statement := "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
-				_, e = session.ExecDirect(statement)
+				_, e = q.Sess.ExecDirect(statement)
 				if e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 
-				if e = session.Commit(); e != nil && e.Error() != "" {
+				if e = q.Sess.Commit(); e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			}
@@ -178,11 +180,11 @@ func (q *Query) Exec(param toolkit.M) error {
 					statement = "UPDATE " + tablename + " SET " + setUpdate
 				}
 
-				_, e = session.ExecDirect(statement)
+				_, e = q.Sess.ExecDirect(statement)
 				if e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
-				if e = session.Commit(); e != nil && e.Error() != "" {
+				if e = q.Sess.Commit(); e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			}
@@ -206,7 +208,8 @@ func (q *Query) Exec(param toolkit.M) error {
 
 				var rowCount int
 				if querystmt != "" {
-					out, e := q.statement(querystmt)
+					q.QStatement = querystmt
+					out, e := q.Statement()
 					if e != nil {
 						return err.Error(packageName, modQuery, "Exec", e.Error())
 					}
@@ -226,11 +229,11 @@ func (q *Query) Exec(param toolkit.M) error {
 					}
 				}
 
-				_, e = session.ExecDirect(statement)
+				_, e = q.Sess.ExecDirect(statement)
 				if e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
-				if e = session.Commit(); e != nil && e.Error() != "" {
+				if e = q.Sess.Commit(); e != nil && e.Error() != "" {
 					return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 				}
 			} else if values == "" {
@@ -248,11 +251,11 @@ func (q *Query) Exec(param toolkit.M) error {
 			statement = "DELETE FROM " + tablename
 		}
 
-		_, e = session.ExecDirect(statement)
+		_, e = q.Sess.ExecDirect(statement)
 		if e != nil && e.Error() != "" {
 			return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
-		if e = session.Commit(); e != nil && e.Error() != "" {
+		if e = q.Sess.Commit(); e != nil && e.Error() != "" {
 			return err.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
 	}
@@ -260,15 +263,15 @@ func (q *Query) Exec(param toolkit.M) error {
 	return nil
 }
 
-func (q *Query) statement(query string) (toolkit.M, error) {
-	toolkit.Println(query)
+func (q *Query) Statement() (toolkit.M, error) {
+	toolkit.Println(q.QStatement)
 	out := toolkit.M{}
 	tableData := toolkit.Ms{}
 	fieldName := []string{}
 	q.DateFormat = q.Connection().(*Connection).dateFormat
 
 	// stmt, e := q.Connection().(*Connection).OdbcCon.Prepare(query)
-	stmt, e := q.Connection().(*Connection).Sess.Prepare(query)
+	stmt, e := q.Connection().(*Connection).Sess.Prepare(q.QStatement)
 	if e != nil {
 		return nil, err.Error(packageName, modQuery, "statement", e.Error())
 	}
@@ -315,38 +318,40 @@ func (q *Query) statement(query string) (toolkit.M, error) {
 }
 
 func (q *Query) DataType(data interface{}) interface{} {
-	rf := toolkit.TypeName(data)
-	// toolkit.Println("data>", rf)
-	if rf == "[]uint8" {
-		uintToString := string(data.([]uint8))
-		spChar := strings.Contains(uintToString, "\x00")
-		if spChar {
-			uintToString = strings.Replace(uintToString, "\x00", "", 1)
-		}
+	if data != nil {
+		rf := toolkit.TypeName(data)
+		// toolkit.Println("data>", rf)
+		if rf == "[]uint8" {
+			uintToString := string(data.([]uint8))
+			spChar := strings.Contains(uintToString, "\x00")
+			if spChar {
+				uintToString = strings.Replace(uintToString, "\x00", "", 1)
+			}
 
-		floatVal, e := strconv.ParseFloat(uintToString, 64)
-		if e != nil {
+			floatVal, e := strconv.ParseFloat(uintToString, 64)
+			if e != nil {
 
-		} else {
-			data = floatVal
-		}
-	} else if rf == "string" {
-		boolVal, e := strconv.ParseBool(toolkit.ToString(data))
-		if e != nil {
-			e = nil
-			dateVal, e := time.Parse(q.DateFormat, toolkit.ToString(data.(string)))
+			} else {
+				data = floatVal
+			}
+		} else if rf == "string" {
+			boolVal, e := strconv.ParseBool(toolkit.ToString(data))
 			if e != nil {
 				e = nil
-				if strings.Contains(data.(string), "fal") {
-					data = false
-				} else if strings.Contains(data.(string), "tru") {
-					data = true
+				dateVal, e := time.Parse(q.DateFormat, toolkit.ToString(data.(string)))
+				if e != nil {
+					e = nil
+					if strings.Contains(data.(string), "fal") {
+						data = false
+					} else if strings.Contains(data.(string), "tru") {
+						data = true
+					}
+				} else {
+					data = dateVal
 				}
 			} else {
-				data = dateVal
+				data = boolVal
 			}
-		} else {
-			data = boolVal
 		}
 	}
 
@@ -357,7 +362,17 @@ func StringValue(v interface{}, db string) string {
 	var ret string
 	switch v.(type) {
 	case string:
-		ret = toolkit.Sprintf("%s", "'"+v.(string)+"'")
+		t, e := time.Parse(time.RFC3339, toolkit.ToString(v))
+		if e != nil {
+			ret = toolkit.Sprintf("%s", "'"+v.(string)+"'")
+		} else {
+			if strings.Contains(db, "oci8") {
+				// toolkit.Println(t.Format("2006-01-02 15:04:05"))
+				ret = "to_date('" + t.Format("02-01-2006 15:04:05") + "','DD-MM-YYYY hh24:mi:ss')"
+			} else {
+				ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
+			}
+		}
 	case time.Time:
 		t := v.(time.Time).UTC()
 		if strings.Contains(db, "oracle") {
@@ -526,8 +541,8 @@ func (q *Query) prepare(in toolkit.M) (out toolkit.M, e error) {
 					incAtt++
 				}
 			}
-			out.Set("cmdType", dbox.QueryPartSelect)
 		}
+		out.Set("cmdType", dbox.QueryPartSelect)
 		out.Set("selectField", selectField)
 
 		///

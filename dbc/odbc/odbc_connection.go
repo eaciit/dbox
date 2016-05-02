@@ -61,27 +61,6 @@ func (c *Connection) OdbcConnect(connector string, stringConnection string) erro
 	}
 	c.Sess = odbcconn
 
-	/*query := "SELECT id, name FROM dummy"
-	stmt, e := c.Sess.Prepare(query)
-	if e != nil {
-		return err.Error(packageName, modQuery, "statement", e.Error())
-	}
-	defer stmt.Close()
-
-	e = stmt.Execute()
-	if e != nil {
-		return err.Error(packageName, modQuery, "statement", e.Error())
-	}
-
-	rows, e := stmt.FetchAll()
-	if e != nil {
-		return err.Error(packageName, modQuery, "statement", e.Error())
-	}
-
-	for _, row := range rows {
-		toolkit.Println(row.Data)
-	}*/
-
 	/*sqlcon, er := sql.Open(connector, stringConnection)
 	if er != nil {
 		return err.Error(packageName, modConnection, "SQL Open", e.Error())
