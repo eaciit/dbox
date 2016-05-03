@@ -108,4 +108,97 @@ go run oracle.go
 ```
 
 
+---
+
+### Guide for Linux (ubuntu 14.04)
+For install and setup oracle please follow this link [http://blog.whitehorses.nl/2014/03/18/installing-java-oracle-11g-r2-express-edition-and-sql-developer-on-ubuntu-64-bit/][2]
+
+After success install oracle on your operation system, below is oci8 setup in order to use the go-oci8 library.
+Install PECL, Build Essential, Unzip, and the AIO Library
+```bash
+apt-get install build-essential unzip libaio1
+```
+
+Create new folder `/opt/oracle`.
+```bash
+mkdir /opt/oracle
+```
+
+Move **basic**, and **sdk** files from download directory. 
+```bash
+mv instantclient-* /opt/oracle/
+```
+
+Navigate to oracle directory.
+```bash
+cd /opt/oracle/
+```
+
+Unzip it as one folder.
+```bash
+unzip instantclient-*
+```
+
+Rename the created directory.
+```bash
+mv instantclient_11_2 instantclient
+```
+
+Navigate to instant client direcotry and create the following soft links
+```bash
+ln -s libclntsh.so.11.2 libclntsh.so
+ln -s libocci.so.11.2 libocci.so
+```
+
+cd to /opt
+Set the permission on oracle directory.
+```bash
+chown -R root:www-data oracle/
+```
+
+Add instant client to the ld config files
+```bash
+sudo sh -c "echo '/opt/oracle/instantclient' >> /etc/ld.so.conf.d/oracle-instantclient"
+```
+
+pdate the Dynamic Linker Run-Time Bindings
+```bash
+ldconfig
+```
+
+Install pkg-config if not installed
+```bash
+sudo apt-get install pkg-config
+```
+
+If you already set LD_LIBRARY_PATH before like this on ~/.bashrc.
+```bash
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
+```
+Change it to your instant client path.
+```bash
+export LD_LIBRARY_PATH=/opt/oracle/instantclient:$LD_LIBRARY_PATH
+source ~/.bashrc
+```
+
+Create oci8.pc file in /usr/lib/pkgconfig and add below
+```bash
+sudo touch /usr/lib/pkgconfig/oci8.pc
+sudo nano /usr/lib/pkgconfig/oci8.pc
+
+# Package Information for pkg-config
+prefix=/opt/oracle/instantclient
+libdir=${prefix}
+includedir=${prefix}/sdk/include/
+
+Name: oci8
+Description: oci8 library
+Version: 12.1
+Libs: -L${libdir} -lclntsh
+Cflags: -I${includedir}
+```
+
+if have link error,check if instantclient package can be used for your system version and check pkg-config if correct.
+
   [1]: http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html
+  [2]: http://blog.whitehorses.nl/2014/03/18/installing-java-oracle-11g-r2-express-edition-and-sql-developer-on-ubuntu-64-bit/
