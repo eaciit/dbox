@@ -62,7 +62,19 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			}
 		} else {
 			if setting.GetString("selectField") != "" {
-				queryString = "SELECT " + setting.GetString("selectField") + " FROM " + setting.GetString("tableName")
+				if (strings.ToLower(q.Connection().(*Connection).GetDriver()) == "oci8" &&
+					setting.Get("isSkip").(bool)) || (strings.ToLower(q.Connection().(*Connection).GetDriver()) == "oci8" && setting.Get("isSkip").(bool) && setting.Get("isTake").(bool)) {
+					splitField := strings.Split(setting.GetString("selectField"), ", ")
+					field := toolkit.M{}
+					for _, f := range splitField {
+						field.Set(f, f)
+					}
+					_, idVal := toolkit.IdInfo(field)
+					toolkit.Println(splitField, idVal)
+					queryString = "SELECT " + setting.GetString("selectField") + ", rank() over(order by " + toolkit.ToString(idVal) + " asc) rn FROM " + setting.GetString("tableName")
+				} else {
+					queryString = "SELECT " + setting.GetString("selectField") + " FROM " + setting.GetString("tableName")
+				}
 			} else {
 				queryString = "SELECT * FROM " + setting.GetString("tableName")
 			}
@@ -105,7 +117,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			} else if setting.Get("isTake").(bool) && !setting.Get("isSkip").(bool) {
 				queryString += " LIMIT " + toolkit.ToString(setting.GetInt("take"))
 			}
-		} else if strings.ToLower(q.Connection().(*Connection).GetDriver()) == "oracle" {
+		} else if strings.ToLower(q.Connection().(*Connection).GetDriver()) == "oci8" {
 			if setting.Get("isSkip").(bool) && setting.Get("isTake").(bool) {
 				var lower, upper int
 				upper = setting.GetInt("skip") + setting.GetInt("take")
@@ -334,23 +346,30 @@ func (q *Query) DataType(data interface{}) interface{} {
 			} else {
 				data = floatVal
 			}
-		} else if rf == "string" {
-			boolVal, e := strconv.ParseBool(toolkit.ToString(data))
+		} else {
+			intVal, e := strconv.Atoi(toolkit.ToString(data))
 			if e != nil {
 				e = nil
-				dateVal, e := time.Parse(q.DateFormat, toolkit.ToString(data.(string)))
+				floatVal, e := strconv.ParseFloat(toolkit.ToString(data), 64)
 				if e != nil {
 					e = nil
-					if strings.Contains(data.(string), "fal") {
-						data = false
-					} else if strings.Contains(data.(string), "tru") {
-						data = true
+					boolVal, e := strconv.ParseBool(toolkit.ToString(data))
+					if e != nil {
+						e = nil
+						dateVal, e := time.Parse(q.DateFormat, toolkit.ToString(data))
+						if e != nil {
+							data = data
+						} else { /*if string is date*/
+							data = dateVal
+						}
+					} else { /*if string is bool*/
+						data = boolVal
 					}
-				} else {
-					data = dateVal
+				} else { /*if string is float*/
+					data = floatVal
 				}
-			} else {
-				data = boolVal
+			} else { /*if string is int*/
+				data = intVal
 			}
 		}
 	}
@@ -375,7 +394,7 @@ func StringValue(v interface{}, db string) string {
 		}
 	case time.Time:
 		t := v.(time.Time).UTC()
-		if strings.Contains(db, "oracle") {
+		if strings.Contains(db, "oci8") {
 			ret = "to_date('" + t.Format("2006-01-02 15:04:05") + "','yyyy-mm-dd hh24:mi:ss')"
 		} else {
 			ret = "'" + t.Format("2006-01-02 15:04:05") + "'"

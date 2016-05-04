@@ -45,7 +45,12 @@ func (c *Connection) Connect() error {
 	if ci.Settings != nil {
 		c.Drivername = ci.Settings.Get("driver", "").(string)
 	}
-	c.dateFormat = ci.Settings.Get("dateformat", "").(string)
+
+	c.dateFormat = "2006-01-02 15:04:05"
+	if ci.Settings.Get("dateformat", "").(string) != "" {
+		c.dateFormat = ci.Settings.Get("dateformat", "").(string)
+	}
+
 	ConnectionString := "DSN=" + host + ";UID=" + username + ";PWD=" + pass //DSN=mysql-dsn;UID=root;PWD=root
 	e := c.OdbcConnect(ci.Settings.Get("connector", "").(string), ConnectionString)
 	if e != nil {
