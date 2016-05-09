@@ -10,10 +10,18 @@ import (
 )
 
 type User struct {
-	Id      string
-	Name    string
-	Tanggal time.Time
-	Umur    int
+	Player_id string
+	Nama      string
+	Tanggal   time.Time
+	Umur      int
+}
+
+type DataType struct {
+	T_Int    int
+	T_Float  float64
+	T_Bool   bool
+	T_String string
+	T_Date   time.Time
 }
 
 type Coba struct {
@@ -123,7 +131,27 @@ func TestConnect(t *testing.T) {
 // 	}
 // }
 
+func TestUpdate(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	data := User{}
+	data.Player_id = "1"
+	data.Nama = "Bourne"
+	data.Tanggal = time.Now()
+	data.Umur = 23
+
+	e = c.NewQuery().From("tes").Where(dbox.Eq("player_id", "ply001")).Update().Exec(toolkit.M{"data": data})
+	if e != nil {
+		t.Errorf("Unable to update: %s \n", e.Error())
+	}
+}
+
 func TestSelectFilter(t *testing.T) {
+	// t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -132,8 +160,10 @@ func TestSelectFilter(t *testing.T) {
 	defer c.Close()
 
 	csr, e := c.NewQuery().
-		Select("player_id", "nama", "tanggal", "umur").
-		From("tes").
+		// Select("player_id", "nama", "tanggal", "umur").
+		// From("tes").
+		Select("t_int", "t_float", "t_bool", "t_string", "t_date").
+		From("tipedata").
 		// Where(dbox.Eq("nama", "buku")).
 		Cursor(nil)
 	// Where(dbox.Lte("price", "@price")).
@@ -150,7 +180,9 @@ func TestSelectFilter(t *testing.T) {
 
 	//rets := []toolkit.M{}
 
-	results := make([]map[string]interface{}, 0)
+	// results := make([]map[string]interface{}, 0)
+	// results := make([]User, 0)
+	results := make([]DataType, 0)
 
 	err := csr.Fetch(&results, 0, false)
 	if err != nil {
@@ -534,7 +566,7 @@ func TestSelectFilter(t *testing.T) {
 // }
 
 func TestCRUD(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
