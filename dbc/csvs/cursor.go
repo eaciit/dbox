@@ -107,7 +107,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 		datatemp, ef := c.q.reader.Read()
 		c.realIndex += 1
-		if c.indexes[c.currentIndex] != c.realIndex {
+		if c.currentIndex>=len(c.indexes) || 
+			c.indexes[c.currentIndex] != c.realIndex {
 			continue
 		}
 

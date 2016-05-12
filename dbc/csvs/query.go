@@ -10,6 +10,7 @@ import (
 	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"io"
+	"bufio"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -31,8 +32,11 @@ type Query struct {
 	file     *os.File
 	tempfile *os.File
 
-	reader *csv.Reader
-	writer *csv.Writer
+	//reader *csv.Reader
+	//writer *csv.Writer
+	
+	br *bufio.Reader
+	bw *bufio.Writer
 
 	isUseHeader  bool
 	headerColumn []headerstruct
@@ -448,7 +452,10 @@ func (q *Query) prepare(in toolkit.M) (output toolkit.M, e error) {
 	}
 	tablename := fromParts.([]*dbox.QueryPart)[0].Value.(string)
 	output.Set("tablename", tablename)
-	q.filePath = filepath.Join(q.Connection().(*Connection).folder, tablename+".csv")
+	
+	ci := q.Connection().(*Connection).Info()
+	ext := ci.Settings.Get("extension","csv").(string)
+	q.filePath = filepath.Join(q.Connection().(*Connection).folder, tablename+"."+ext)
 
 	skip := 0
 	if skipParts, hasSkip := parts[dbox.QueryPartSkip]; hasSkip {
