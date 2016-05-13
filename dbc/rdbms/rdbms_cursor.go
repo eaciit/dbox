@@ -202,7 +202,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 						}
 					}
 				}
-				toolkit.Println(col, toolkit.TypeName(v), v)
+				// toolkit.Println(col, toolkit.TypeName(v), v) -- unremark to check the result value
 				entry.Set(strings.ToLower(col), v)
 			}
 
@@ -223,7 +223,11 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	if c.start >= maxIndex {
 		e = errors.New("No more data to fetched!")
 	} else {
-		e = toolkit.Serde(tableData[c.start:end], m, "json")
+		if n == 1 && reflect.ValueOf(m).Elem().Kind() != reflect.Slice && len(tableData) > 0 {
+			e = toolkit.Serde(tableData[c.start], m, "json")
+		} else {
+			e = toolkit.Serde(tableData[c.start:end], m, "json")
+		}
 	}
 	c.start = end
 
