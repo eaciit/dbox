@@ -51,7 +51,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestFetch(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect: %s \n", e.Error())
@@ -129,6 +129,22 @@ func TestFetch(t *testing.T) {
 	// }
 }
 
+func TestRowsTables(t *testing.T) {
+	// t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect: %s \n", e.Error())
+		toolkit.Println(e)
+	}
+	defer c.Close()
+
+	csr := c.ObjectNames(dbox.ObjTypeTable)
+
+	for i := 0; i < len(csr); i++ {
+		fmt.Printf("show name table %v \n", toolkit.JsonString(csr[i]))
+	}
+}
+
 func TestCRUD(t *testing.T) {
 	t.Skip()
 	c, e := prepareConnection()
@@ -138,15 +154,71 @@ func TestCRUD(t *testing.T) {
 	defer c.Close()
 
 	// ===============================INSERT==============================
-	q := c.NewQuery().From("tes").Insert()
+	// q := c.NewQuery().From("tes").Insert()
+	// dataInsert := User{}
+	// dataInsert.Id = 20
+	// dataInsert.Name = fmt.Sprintf("New Player")
+	// dataInsert.Umur = 40
+
+	// e = q.Exec(toolkit.M{"data": dataInsert})
+	// if e != nil {
+	// 	t.Errorf("Unable to insert data : %s \n", e.Error())
+	// }
+
+	// ===============================SAVE==============================
+	// q := c.NewQuery().From("tes").Save()
+	// dataInsert := User{}
+	// dataInsert.Id = 21
+	// dataInsert.Name = fmt.Sprintf("New baru")
+	// dataInsert.Umur = 40
+
+	// e = q.Exec(toolkit.M{"data": dataInsert})
+	// if e != nil {
+	// 	t.Errorf("Unable to insert data : %s \n", e.Error())
+	// }
+
+	// ===============================DELETE==============================
 	dataInsert := User{}
 	dataInsert.Id = 20
-	dataInsert.Name = fmt.Sprintf("New Player")
-	dataInsert.Umur = 40
 
-	e = q.Exec(toolkit.M{"data": dataInsert})
+	e = c.NewQuery().From("tes").Delete().Exec(toolkit.M{"data": dataInsert})
 	if e != nil {
-		t.Errorf("Unable to insert data : %s \n", e.Error())
+		t.Errorf("Unable to delete data %s\n", e.Error())
+		return
 	}
-	// defer q.Close()
+}
+
+func TestFreeQuery(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().
+		Command("freequery", toolkit.M{}.
+			Set("syntax", "select name from tes where name like 'r%'")).
+		Cursor(nil)
+
+	if csr == nil {
+		t.Errorf("Cursor not initialized", e.Error())
+		return
+	}
+	defer csr.Close()
+
+	results := make([]map[string]interface{}, 0)
+	err := csr.Fetch(&results, 0, false)
+	if err != nil {
+		t.Errorf("Unable to fetch: %s \n", err.Error())
+	} else {
+		toolkit.Println("======================")
+		toolkit.Println("TEST FREE QUERY")
+		toolkit.Println("======================")
+		toolkit.Println("Fetch N OK. Result: ")
+		for _, val := range results {
+			toolkit.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
 }
