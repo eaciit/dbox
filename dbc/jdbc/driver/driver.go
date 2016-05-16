@@ -448,8 +448,9 @@ func RandomString() string {
 	rand.Seed(time.Now().UTC().UnixNano())
 	const dictionary = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	var bytes = make([]byte, 16)
-	rand.Read(bytes)
-	for k, _ := range bytes {
+	// rand.Read(bytes) // not supported on go v1.5.2, use randRead instead
+	randRead(bytes)
+	for k := range bytes {
 		bytes[k] = dictionary[rand.Intn(len(dictionary))]
 	}
 	return string(bytes)
