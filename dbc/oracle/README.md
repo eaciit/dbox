@@ -19,6 +19,7 @@ After that follow tutorial below.
 Create new folder `/Application/oracle`, put these three files on it, and extract it as one folder.
 Then **basic**, **sqlplus**, and **sdk**.
 
+
 Then run this commands.bbbb
 
 ```bash
