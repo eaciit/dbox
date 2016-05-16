@@ -239,6 +239,8 @@ func (c *Connection) SetHeaderData() {
 				matchFloat := false
 				matchDate := false
 
+				//dd.mm.yyyy dd/mm/yyyy dd-mm-yyyy
+				//yyyy.mm.dd yyyy/mm/dd yyyy-mm-dd
 				formatDate := "((^(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)[\\d]{4}$)|(^[\\d]{4}(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])$))"
 				matchDate, _ = regexp.MatchString(formatDate, v)
 				if !matchDate && dateformat != "" {
