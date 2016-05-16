@@ -19,6 +19,7 @@ type Connection struct {
 	Hive       *hive.Hive
 	Sql        sql.DB
 	Drivername string
+	DateFormat string
 }
 
 func (c *Connection) RdbmsConnect(drivername string, stringConnection string) error {
@@ -42,8 +43,11 @@ func (c *Connection) RdbmsConnect(drivername string, stringConnection string) er
 		if e != nil {
 			return err.Error(packageName, modConnection, "Connect", e.Error())
 		}
-
 	}
+	if c.Info().Settings.Has("dateformat") {
+		c.DateFormat = toolkit.ToString(c.Info().Settings.Get("dateformat", ""))
+	}
+
 	return nil
 }
 

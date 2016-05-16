@@ -138,3 +138,38 @@ func TestCRUD(t *testing.T) {
 	}
 	// defer q.Close()
 }
+
+func TestFreeQuery(t *testing.T) {
+	t.Skip()
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+	}
+	defer c.Close()
+
+	csr, e := c.NewQuery().
+		Command("freequery", toolkit.M{}.
+			Set("syntax", "select name from coba where name like 'r%'")).
+		Cursor(nil)
+
+	if csr == nil {
+		t.Errorf("Cursor not initialized", e.Error())
+		return
+	}
+	defer csr.Close()
+
+	results := make([]map[string]interface{}, 0)
+	err := csr.Fetch(&results, 0, false)
+	if err != nil {
+		t.Errorf("Unable to fetch: %s \n", err.Error())
+	} else {
+		toolkit.Println("======================")
+		toolkit.Println("TEST FREE QUERY")
+		toolkit.Println("======================")
+		toolkit.Println("Fetch N OK. Result: ")
+		for _, val := range results {
+			toolkit.Printf("%v \n",
+				toolkit.JsonString(val))
+		}
+	}
+}

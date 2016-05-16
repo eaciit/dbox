@@ -17,6 +17,14 @@ type User struct {
 	Umur    int
 }
 
+type DataType struct {
+	T_Int    int
+	T_Float  float64
+	T_Bool   bool
+	T_String string
+	T_Date   time.Time
+}
+
 type Player struct {
 	Id   string
 	Name string
@@ -38,7 +46,9 @@ type NoID struct {
 }
 
 func prepareConnection() (dbox.IConnection, error) {
-	ci := &dbox.ConnectionInfo{"localhost:3306", "test", "root", "", nil}
+	config := toolkit.M{}
+	config.Set("dateformat", "2006-01-02 15:04:05")
+	ci := &dbox.ConnectionInfo{"localhost:3306", "test", "root", "", config}
 	c, e := dbox.NewConnection("mysql", ci)
 	if e != nil {
 		return nil, e
@@ -364,8 +374,10 @@ func TestSelectFilter(t *testing.T) {
 	_ = tanggal1
 	_ = tanggal2
 	csr, e := c.NewQuery().
-		Select("id", "name", "tanggal", "umur").
-		From("tes").
+		// Select("id", "name", "tanggal", "umur").
+		// From("tes").
+		Select("t_int", "t_float", "t_bool", "t_string", "t_date").
+		From("tipedata").
 		// Where(dbox.Eq("nama", "buku")).
 		// Where(dbox.Ne("nama", "buku")).
 		// Where(dbox.Gt("price", 100000)).
@@ -412,8 +424,9 @@ func TestSelectFilter(t *testing.T) {
 	}
 	defer csr.Close()
 
-	results := make([]map[string]interface{}, 0)
+	// results := make([]map[string]interface{}, 0)
 	// results := make([]User, 0)
+	results := make([]DataType, 0)
 
 	err := csr.Fetch(&results, 0, false)
 	if err != nil {
@@ -427,7 +440,6 @@ func TestSelectFilter(t *testing.T) {
 		for i := 0; i < len(results); i++ {
 			fmt.Printf("%v \n", toolkit.JsonString(results[i]))
 		}
-
 	}
 }
 
