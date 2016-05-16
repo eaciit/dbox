@@ -21,6 +21,7 @@ type headerstruct struct {
 	// index 	 int
 	name     string
 	dataType string
+	format   string
 }
 
 const (
@@ -235,18 +236,25 @@ func (c *Connection) SetHeaderData() {
 
 		for i, v := range tempData {
 			if v != "" {
+				tempstruct[i].dataType = "string"
 				matchNumber := false
 				matchFloat := false
-				matchDate := false
+
+				matchF1 := false
+				matchF2 := false
 
 				//dd.mm.yyyy dd/mm/yyyy dd-mm-yyyy
 				//yyyy.mm.dd yyyy/mm/dd yyyy-mm-dd
-				formatDate := "((^(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)[\\d]{4}$)|(^[\\d]{4}(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])$))"
-				matchDate, _ = regexp.MatchString(formatDate, v)
-				if !matchDate && dateformat != "" {
+				// formatDate := "((^(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)[\\d]{4}$)|(^[\\d]{4}(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])$))"
+				F1 := "(^(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)[\\d]{4}$)"
+				F2 := "(^[\\d]{4}(\\.|\\/|-)(0[0-9]|[0-9]|1[0-2])(\\.|\\/|-)(0[0-9]|[0-9]|(1|2)[0-9]|3[0-1])$)"
+				matchF1, _ = regexp.MatchString(F1, v)
+				matchF2, _ = regexp.MatchString(F2, v)
+				if !matchF1 && !matchF2 && dateformat != "" {
 					d := cast.String2Date(v, dateformat)
-					if d.Year() > 1 {
-						matchDate = true
+					if !d.IsZero() {
+						tempstruct[i].dataType = "date"
+						tempstruct[i].format = dateformat
 					}
 				}
 
@@ -259,7 +267,6 @@ func (c *Connection) SetHeaderData() {
 
 				matchNumber, _ = regexp.MatchString("^\\d+$", v)
 
-				tempstruct[i].dataType = "string"
 				if matchNumber {
 					tempstruct[i].dataType = "int"
 					if matchFloat {
@@ -267,8 +274,25 @@ func (c *Connection) SetHeaderData() {
 					}
 				}
 
-				if matchDate {
+				if matchF1 || matchF2 {
 					tempstruct[i].dataType = "date"
+					switch {
+					case strings.Contains(v, "."):
+						tempstruct[i].format = "dd.MM.YYYY"
+						if matchF2 {
+							tempstruct[i].format = "YYYY.MM.dd"
+						}
+					case strings.Contains(v, "-"):
+						tempstruct[i].format = "dd-MM-YYYY"
+						if matchF2 {
+							tempstruct[i].format = "YYYY-MM-dd"
+						}
+					case strings.Contains(v, "/"):
+						tempstruct[i].format = "dd/MM/YYYY"
+						if matchF2 {
+							tempstruct[i].format = "YYYY/MM/dd"
+						}
+					}
 				}
 			}
 		}

@@ -13,7 +13,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"time"
+	// "time"
 )
 
 const (
@@ -210,7 +210,8 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 				decimalPoint := len(val) - (strings.Index(val, ".") + 1)
 				recData[lowername] = cast.ToF64(val, decimalPoint, cast.RoundingAuto)
 			case "date":
-				// recData[lowername] = time.Now() // Just for test
+				recData[lowername] = toolkit.String2Date(val, c.headerColumn[i].format) // Just for test
+				// fmt.Printf("FOR DEBUG : %v \n", c.headerColumn[i].format)
 			default:
 				recData[lowername] = val
 			}
