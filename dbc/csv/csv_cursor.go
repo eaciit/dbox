@@ -13,6 +13,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	// "time"
 )
 
 const (
@@ -187,7 +188,7 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 	lineCount := 0
 
 	//=============================
-	// fmt.Println("Qursor 133 : ", c.ConditionVal.indexes)
+	// fmt.Println("Qursor 191 : ", c.headerColumn)
 	for {
 		iv := reflect.New(v).Interface()
 
@@ -206,7 +207,11 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			case "int":
 				recData[lowername] = cast.ToInt(val, cast.RoundingAuto)
 			case "float":
-				recData[lowername] = cast.ToF64(val, 2, cast.RoundingAuto)
+				decimalPoint := len(val) - (strings.Index(val, ".") + 1)
+				recData[lowername] = cast.ToF64(val, decimalPoint, cast.RoundingAuto)
+			case "date":
+				recData[lowername] = toolkit.String2Date(val, c.headerColumn[i].format) // Just for test
+				// fmt.Printf("FOR DEBUG : %v \n", c.headerColumn[i].format)
 			default:
 				recData[lowername] = val
 			}
@@ -229,13 +234,24 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 		if c.count <= c.ConditionVal.skip || (c.count > (c.ConditionVal.skip+c.ConditionVal.limit) && c.ConditionVal.limit > 0) {
 			isAppend = false
 		}
+		// fmt.Printf("%v - %v \n", v.Elem().Kind(), toolkit.TypeName(v))
+		if v.Kind() == reflect.Struct || v.Elem().Kind() == reflect.Struct {
+			tv := v
+			if v.Elem().Kind() == reflect.Struct {
+				tv = v.Elem()
+			}
 
-		if v.Kind() == reflect.Struct {
-			for i := 0; i < v.NumField(); i++ {
-				if appendData.Has(v.Field(i).Name) {
-					switch v.Field(i).Type.Kind() {
+			for i := 0; i < tv.NumField(); i++ {
+				if appendData.Has(tv.Field(i).Name) {
+					switch tv.Field(i).Type.Kind() {
 					case reflect.Int:
-						appendData.Set(v.Field(i).Name, cast.ToInt(appendData[v.Field(i).Name], cast.RoundingAuto))
+						appendData.Set(tv.Field(i).Name, cast.ToInt(appendData[tv.Field(i).Name], cast.RoundingAuto))
+					case reflect.String:
+						appendData.Set(tv.Field(i).Name, toolkit.ToString(appendData[tv.Field(i).Name]))
+					case reflect.Float64:
+						tstr := toolkit.ToString(appendData[tv.Field(i).Name])
+						decimalPoint := len(tstr) - (strings.Index(tstr, ".") + 1)
+						appendData.Set(tv.Field(i).Name, toolkit.ToFloat64(tstr, decimalPoint, toolkit.RoundingAuto))
 					}
 				}
 			}
