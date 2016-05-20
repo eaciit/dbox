@@ -71,7 +71,7 @@ func StringValue(v interface{}, db string) string {
 	case string:
 		t, e := time.Parse(time.RFC3339, toolkit.ToString(v))
 		if e != nil {
-			ret = fmt.Sprintf("%s", "'"+v.(string)+"'")
+			ret = fmt.Sprintf("%s", "'"+strings.Replace(v.(string), "'", "''", -1)+"'")
 		} else {
 			nullDateTime := time.Time{}
 			if t.Equal(nullDateTime) {
