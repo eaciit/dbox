@@ -73,13 +73,16 @@ func StringValue(v interface{}, db string) string {
 		if e != nil {
 			ret = fmt.Sprintf("%s", "'"+v.(string)+"'")
 		} else {
-			if strings.Contains(db, "oci8") {
-				// toolkit.Println(t.Format("2006-01-02 15:04:05"))
+			nullDateTime := time.Time{}
+			if t.Equal(nullDateTime) {
+				ret = "NULL"
+			} else if strings.Contains(db, "oci8") {
 				ret = "to_date('" + t.Format("02-01-2006 15:04:05") + "','DD-MM-YYYY hh24:mi:ss')"
 			} else {
 				ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
 			}
 		}
+		break
 	case time.Time:
 		t := v.(time.Time).UTC()
 		if strings.Contains(db, "oci8") {
@@ -87,12 +90,16 @@ func StringValue(v interface{}, db string) string {
 		} else {
 			ret = "'" + t.Format("2006-01-02 15:04:05") + "'"
 		}
+		break
 	case int, int32, int64, uint, uint32, uint64:
 		ret = fmt.Sprintf("%d", v.(int))
+		break
 	case nil:
 		ret = ""
+		break
 	default:
 		ret = fmt.Sprintf("%v", v)
+		break
 	}
 	return ret
 }
