@@ -267,7 +267,7 @@ func (c *Connection) SetHeaderData() {
 
 				matchNumber, _ = regexp.MatchString("^\\d+$", v)
 
-				if matchNumber {
+				if matchNumber && string(v[0]) != "0" {
 					tempstruct[i].dataType = "int"
 					if matchFloat {
 						tempstruct[i].dataType = "float"

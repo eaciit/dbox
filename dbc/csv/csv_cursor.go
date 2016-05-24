@@ -242,16 +242,28 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 			}
 
 			for i := 0; i < tv.NumField(); i++ {
-				if appendData.Has(tv.Field(i).Name) {
+				str := tv.Field(i).Name
+				fcond := false
+				if appendData.Has(str) {
+					fcond = true
+				} else if appendData.Has(strings.ToLower(str)) {
+					fcond = true
+					str = strings.ToLower(str)
+				} else if strings.ToLower(str) == "id" && appendData.Has("_id") {
+					str = "_id"
+					fcond = true
+				}
+
+				if fcond {
 					switch tv.Field(i).Type.Kind() {
 					case reflect.Int:
-						appendData.Set(tv.Field(i).Name, cast.ToInt(appendData[tv.Field(i).Name], cast.RoundingAuto))
+						appendData.Set(str, cast.ToInt(appendData[str], cast.RoundingAuto))
 					case reflect.String:
-						appendData.Set(tv.Field(i).Name, toolkit.ToString(appendData[tv.Field(i).Name]))
+						appendData.Set(str, toolkit.ToString(appendData[str]))
 					case reflect.Float64:
-						tstr := toolkit.ToString(appendData[tv.Field(i).Name])
+						tstr := toolkit.ToString(appendData[str])
 						decimalPoint := len(tstr) - (strings.Index(tstr, ".") + 1)
-						appendData.Set(tv.Field(i).Name, toolkit.ToFloat64(tstr, decimalPoint, toolkit.RoundingAuto))
+						appendData.Set(str, toolkit.ToFloat64(tstr, decimalPoint, toolkit.RoundingAuto))
 					}
 				}
 			}
