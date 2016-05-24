@@ -97,6 +97,20 @@ func StringValue(v interface{}, db string) string {
 	case nil:
 		ret = ""
 		break
+	case bool:
+		// Please check for other database
+		switch strings.ToLower(db) {
+		case "mssql":
+			if v.(bool) {
+				ret = fmt.Sprintf("%v", 1)
+			} else {
+				ret = fmt.Sprintf("%v", 0)
+			}
+			break
+		default:
+			ret = fmt.Sprintf("%v", v)
+		}
+		break
 	default:
 		ret = fmt.Sprintf("%v", v)
 		break
