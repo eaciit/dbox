@@ -142,7 +142,11 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		for _, sl := range selectParts.([]*dbox.QueryPart) {
 			// qp := sl.(*dbox.QueryPart)
 			for _, fid := range sl.Value.([]string) {
-				fields.Set(fid, 1)
+				if fid=="$score"{
+					fields.Set("score",toolkit.M{}.Set("$meta","textScore"))
+				} else {
+					fields.Set(fid, 1)
+				}
 			}
 		}
 	} else {
@@ -165,7 +169,11 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		for _, sl := range sortParts.([]*dbox.QueryPart) {
 			// qp := sl.(*dbox.QueryPart)
 			for _, fid := range sl.Value.([]string) {
-				sort = append(sort, fid)
+				if fid=="$score"{
+					sort=append(sort,"$textScore:score")
+				}else{
+					sort = append(sort, fid)
+				}
 			}
 		}
 	}
