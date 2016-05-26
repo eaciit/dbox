@@ -492,7 +492,7 @@ func TestSelectAggregate(t *testing.T) {
 }
 
 func TestCRUD(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -538,34 +538,34 @@ func TestCRUD(t *testing.T) {
 
 	/* ===============================INSERT MANY==============================*/
 	/* ===============================STRUCT TYPE==============================*/
-	q := c.NewQuery().From("tes").Insert()
-	// nama := []string{"Barkley", "Vidal", "Arnautovic", "Agger", "Wijnaldum", "Ighalo", "Mahrez"}
-	// var dataInsert []User
-	dataInsert := []User{}
+	// q := c.NewQuery().From("tes").Insert()
+	// // nama := []string{"Barkley", "Vidal", "Arnautovic", "Agger", "Wijnaldum", "Ighalo", "Mahrez"}
+	// // var dataInsert []User
+	// dataInsert := []User{}
 
-	for i := 0; i < 10; i++ {
-		// var data User
-		data := User{}
-		data.Id = toolkit.ToString(i + 1)
-		data.Name = "Player" + data.Id
-		data.Tanggal = time.Now()
-		data.Umur = i + 20
+	// for i := 0; i < 10; i++ {
+	// 	// var data User
+	// 	data := User{}
+	// 	data.Id = toolkit.ToString(i + 1)
+	// 	data.Name = "Player" + data.Id
+	// 	data.Tanggal = time.Now()
+	// 	data.Umur = i + 20
 
-		// tipedata := DataType{}
-		// tipedataslice := []DataType{}
-		// var tipeslice = []int{0, 1, 2}
-		// data.TipeData = tipedata
-		// data.TipeSlice = tipeslice
-		// tipedataslice = append(tipedataslice, tipedata)
-		// data.TipeDataSlice = tipedataslice
+	// 	// tipedata := DataType{}
+	// 	// tipedataslice := []DataType{}
+	// 	// var tipeslice = []int{0, 1, 2}
+	// 	// data.TipeData = tipedata
+	// 	// data.TipeSlice = tipeslice
+	// 	// tipedataslice = append(tipedataslice, tipedata)
+	// 	// data.TipeDataSlice = tipedataslice
 
-		dataInsert = append(dataInsert, data)
-	}
+	// 	dataInsert = append(dataInsert, data)
+	// }
 
-	e = q.Exec(toolkit.M{"data": dataInsert})
-	if e != nil {
-		t.Errorf("Unable to insert: %s \n", e.Error())
-	}
+	// e = q.Exec(toolkit.M{"data": dataInsert})
+	// if e != nil {
+	// 	t.Errorf("Unable to insert: %s \n", e.Error())
+	// }
 
 	/* ===============================TOOLKIT TYPE==============================*/
 
@@ -588,41 +588,83 @@ func TestCRUD(t *testing.T) {
 	// 	t.Errorf("Unable to insert: %s \n", e.Error())
 	// }
 
-	/* ===============================SAVE DATA============================== */
-	// q := c.NewQuery().SetConfig("multiexec", false).From("coba").Save()
-	// dataInsert := Coba{}
-	// dataInsert.Id = fmt.Sprintf("3")
-	// dataInsert.Name = fmt.Sprintf("update data")
-
-	// q := c.NewQuery().SetConfig("multiexec", false).From("NoID").Save()
-	// dataInsert := NoID{}
-	// dataInsert.Aidi = fmt.Sprintf("40")
-	// dataInsert.Name = fmt.Sprintf("no update")
+	/* ===============================SAVE ONE ROW============================== */
+	// q := c.NewQuery().From("tes").Save()
+	// dataInsert := User{}
+	// dataInsert.Id = fmt.Sprintf("60")
+	// dataInsert.Name = fmt.Sprintf("Player1")
+	// dataInsert.Tanggal = time.Now()
+	// dataInsert.Umur = 69
 
 	// e = q.Exec(toolkit.M{"data": dataInsert})
 	// if e != nil {
 	// 	t.Errorf("Unable to insert data : %s \n", e.Error())
 	// }
 
+	/* ===============================SAVE MANY==============================*/
+	// q := c.NewQuery().From("tes").Save()
+	// dataInsert := []User{}
+
+	// for i := 0; i < 10; i++ {
+	// 	data := User{}
+	// 	data.Id = toolkit.ToString(i + 1)
+	// 	data.Name = "Player" + data.Id
+	// 	data.Tanggal = time.Now()
+	// 	data.Umur = i + 30
+
+	// 	// tipedata := DataType{}
+	// 	// tipedataslice := []DataType{}
+	// 	// var tipeslice = []int{0, 1, 2}
+	// 	// data.TipeData = tipedata
+	// 	// data.TipeSlice = tipeslice
+	// 	// tipedataslice = append(tipedataslice, tipedata)
+	// 	// data.TipeDataSlice = tipedataslice
+
+	// 	dataInsert = append(dataInsert, data)
+	// }
+
+	// e = q.Exec(toolkit.M{"data": dataInsert})
+	// if e != nil {
+	// 	t.Errorf("Unable to insert: %s \n", e.Error())
+	// }
+
 	/* ===============================UPDATE============================== */
 
 	// data := User{}
 	// data.Id = "40"
-	// data.Name = "player40"
+	// data.Name = "Player40"
 	// data.Tanggal = time.Now()
 	// data.Umur = 24
-	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "30")).Update().Exec(toolkit.M{"data": data})
+	// e = c.NewQuery().From("tes").Where(dbox.Eq("id", "40")).Update().Exec(toolkit.M{"data": data})
 	// if e != nil {
 	// 	t.Errorf("Unable to update: %s \n", e.Error())
 	// }
-	// with where and data
 
-	// data := Coba{}
-	// data.Id = "1"
-	// data.Name = "Jamme"
-	// e = c.NewQuery().From("coba").Where(dbox.Eq("id", "1")).Update().Exec(toolkit.M{"data": data})
+	/* ===============================UPDATE MANY==============================*/
+	// q := c.NewQuery().From("tes").Update()
+	// dataUpdate := []User{}
+
+	// for i := 0; i < 10; i++ {
+	// 	data := User{}
+	// 	data.Id = toolkit.ToString(i + 1)
+	// 	data.Name = "Player" + data.Id
+	// 	data.Tanggal = time.Now()
+	// 	data.Umur = i + 50
+
+	// 	// tipedata := DataType{}
+	// 	// tipedataslice := []DataType{}
+	// 	// var tipeslice = []int{0, 1, 2}
+	// 	// data.TipeData = tipedata
+	// 	// data.TipeSlice = tipeslice
+	// 	// tipedataslice = append(tipedataslice, tipedata)
+	// 	// data.TipeDataSlice = tipedataslice
+
+	// 	dataUpdate = append(dataUpdate, data)
+	// }
+
+	// e = q.Exec(toolkit.M{"data": dataUpdate})
 	// if e != nil {
-	// 	t.Errorf("Unable to update: %s \n", e.Error())
+	// 	t.Errorf("Unable to insert: %s \n", e.Error())
 	// }
 
 	// ===============================UPDATE ALL ID==============================
@@ -649,7 +691,7 @@ func TestCRUD(t *testing.T) {
 	// 	t.Errorf("Unable to delete table %s\n", e.Error())
 	// 	return
 	// }
-
+	/* ===============================DELETE ONE ROW==============================*/
 	// data := User{}
 	// data.Id = "40"
 
@@ -658,6 +700,20 @@ func TestCRUD(t *testing.T) {
 	// 	t.Errorf("Unable to delete table %s\n", e.Error())
 	// 	return
 	// }
+
+	/* ===============================DELETE MANY==============================*/
+	datas := []User{}
+	for i := 1; i < 11; i++ {
+		data := User{}
+		data.Id = toolkit.ToString(i)
+		datas = append(datas, data)
+	}
+
+	e = c.NewQuery().From("tes").Delete().Exec(toolkit.M{"data": datas})
+	if e != nil {
+		t.Errorf("Unable to delete table %s\n", e.Error())
+		return
+	}
 
 	// ===============================CLEAR ALL TABLE DATA==============================
 
