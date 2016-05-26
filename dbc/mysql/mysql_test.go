@@ -5,16 +5,18 @@ import (
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
 	//"reflect"
-	// "strconv"
 	"testing"
 	"time"
 )
 
 type User struct {
-	Id      string
-	Name    string
-	Tanggal time.Time
-	Umur    int
+	Id            string
+	Name          string
+	Tanggal       time.Time
+	Umur          int
+	TipeData      DataType
+	TipeSlice     []int
+	TipeDataSlice []DataType
 }
 
 type DataType struct {
@@ -498,36 +500,92 @@ func TestCRUD(t *testing.T) {
 	}
 	defer c.Close()
 
-	// ===============================INSERT==============================
+	/* ===============================INSERT==============================*/
+	/* ===============================STRUCT TYPE==============================*/
 	// q := c.NewQuery().From("tes").Insert()
 	// dataInsert := User{}
+
 	// dataInsert.Id = fmt.Sprintf("40")
-	// dataInsert.Name = fmt.Sprintf("New Player")
+	// dataInsert.Name = fmt.Sprintf("Player1")
 	// dataInsert.Tanggal = time.Now()
-	// dataInsert.Umur = 40
+	// dataInsert.Umur = 90
+
+	// // tipedata := DataType{}
+	// // tipedataslice := []DataType{}
+	// // var tipeslice = []int{0, 1, 2}
+	// // dataInsert.TipeData = tipedata
+	// // dataInsert.TipeSlice = tipeslice
+	// // tipedataslice = append(tipedataslice, tipedata)
+	// // dataInsert.TipeDataSlice = tipedataslice
 
 	// e = q.Exec(toolkit.M{"data": dataInsert})
 	// if e != nil {
 	// 	t.Errorf("Unable to insert data : %s \n", e.Error())
 	// }
 
-	// ===============================INSERT MANY==============================
-	// q := c.NewQuery().SetConfig("multiexec", true).From("tes").Insert()
+	/* ===============================TOOLKIT TYPE==============================*/
+	// q := c.NewQuery().From("tes").Insert()
+	// dataInsert := toolkit.M{}
+	// dataInsert.Set("Id", fmt.Sprintf("40"))
+	// dataInsert.Set("Name", fmt.Sprintf("Player1"))
+	// dataInsert.Set("Tanggal", time.Now())
+	// dataInsert.Set("Umur", 90)
+
+	// e = q.Exec(toolkit.M{"data": dataInsert})
+	// if e != nil {
+	// 	t.Errorf("Unable to insert data : %s \n", e.Error())
+	// }
+
+	/* ===============================INSERT MANY==============================*/
+	/* ===============================STRUCT TYPE==============================*/
+	q := c.NewQuery().From("tes").Insert()
 	// nama := []string{"Barkley", "Vidal", "Arnautovic", "Agger", "Wijnaldum", "Ighalo", "Mahrez"}
-	// dataInsert := User{}
+	// var dataInsert []User
+	dataInsert := []User{}
 
-	// for i, val := range nama {
+	for i := 0; i < 10; i++ {
+		// var data User
+		data := User{}
+		data.Id = toolkit.ToString(i + 1)
+		data.Name = "Player" + data.Id
+		data.Tanggal = time.Now()
+		data.Umur = i + 20
 
-	// 	dataInsert.Id = strconv.Itoa(i + 1)
-	// 	dataInsert.Name = fmt.Sprintf(val)
-	// 	dataInsert.Tanggal = time.Now()
-	// 	dataInsert.Umur = i + 20
-	// 	e = q.Exec(toolkit.M{
-	// 		"data": dataInsert,
-	// 	})
-	// 	if e != nil {
-	// 		t.Errorf("Unable to save: %s \n", e.Error())
-	// 	}
+		// tipedata := DataType{}
+		// tipedataslice := []DataType{}
+		// var tipeslice = []int{0, 1, 2}
+		// data.TipeData = tipedata
+		// data.TipeSlice = tipeslice
+		// tipedataslice = append(tipedataslice, tipedata)
+		// data.TipeDataSlice = tipedataslice
+
+		dataInsert = append(dataInsert, data)
+	}
+
+	e = q.Exec(toolkit.M{"data": dataInsert})
+	if e != nil {
+		t.Errorf("Unable to insert: %s \n", e.Error())
+	}
+
+	/* ===============================TOOLKIT TYPE==============================*/
+
+	// q := c.NewQuery().From("tes").Insert()
+	// // nama := []string{"Barkley", "Vidal", "Arnautovic", "Agger", "Wijnaldum", "Ighalo", "Mahrez"}
+	// var dataInsert []toolkit.M
+	// // dataInsert := []toolkit.M{}
+
+	// for i := 0; i < 10; i++ {
+	// 	data := toolkit.M{}
+	// 	data.Set("Id", toolkit.ToString(i+1))
+	// 	data.Set("Name", "Player"+toolkit.ToString(i+1))
+	// 	data.Set("Tanggal", time.Now())
+	// 	data.Set("Umur", i+20)
+	// 	dataInsert = append(dataInsert, data)
+	// }
+
+	// e = q.Exec(toolkit.M{"data": dataInsert})
+	// if e != nil {
+	// 	t.Errorf("Unable to insert: %s \n", e.Error())
 	// }
 
 	/* ===============================SAVE DATA============================== */
