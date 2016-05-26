@@ -2,9 +2,7 @@ package rdbms
 
 import (
 	"database/sql"
-	//"encoding/json"
 	"github.com/eaciit/cast"
-	// "github.com/eaciit/crowd.old"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -689,7 +687,6 @@ func (q *Query) Exec(parm toolkit.M) error {
 		parm = toolkit.M{}
 	}
 
-	dbname := q.Connection().Info().Database
 	driverName := q.GetDriverDB()
 	// driverName = "oracle"
 	tablename := ""
@@ -715,9 +712,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 		}
 	}
 
-	for _, val := range dataMs {
-		attributes, setUpdate, values = extractData(val, driverName)
-
+	for _, dataVal := range dataMs {
 		temp := ""
 		quyerParts := q.Parts()
 		c := crowd.From(&quyerParts)
@@ -733,9 +728,31 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 		}
 
+		commandType := ""
+
+		_, hasDelete := parts[dbox.QueryPartDelete]
+		_, hasInsert := parts[dbox.QueryPartInsert]
+		_, hasUpdate := parts[dbox.QueryPartUpdate]
+		_, hasSave := parts[dbox.QueryPartSave]
+
+		if hasDelete {
+			commandType = dbox.QueryPartDelete
+		} else if hasInsert {
+			commandType = dbox.QueryPartInsert
+		} else if hasUpdate {
+			commandType = dbox.QueryPartUpdate
+		} else if hasSave {
+			commandType = dbox.QueryPartSave
+		}
+
+		if hasInsert || hasUpdate || hasSave {
+			attributes, setUpdate, values = extractData(dataVal, driverName)
+		} else if hasDelete {
+
+		}
+
 		fromParts, hasFrom := parts[dbox.QueryPartFrom]
 		if !hasFrom {
-
 			return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
 		}
 		tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
@@ -759,45 +776,20 @@ func (q *Query) Exec(parm toolkit.M) error {
 			}
 
 		}
-		commandType := ""
-		multi := false
-
-		_, hasDelete := parts[dbox.QueryPartDelete]
-		_, hasInsert := parts[dbox.QueryPartInsert]
-		_, hasUpdate := parts[dbox.QueryPartUpdate]
-		_, hasSave := parts[dbox.QueryPartSave]
-
-		if hasDelete {
-			commandType = dbox.QueryPartDelete
-		} else if hasInsert {
-			commandType = dbox.QueryPartInsert
-		} else if hasUpdate {
-			commandType = dbox.QueryPartUpdate
-		} else if hasSave {
-			commandType = dbox.QueryPartSave
-		}
 
 		var id string
 		var idVal interface{}
-		if data == nil {
-			multi = true
-		} else {
-			if where == nil {
-				id, idVal = toolkit.IdInfo(data)
-				if id != "" {
-					where = id + " = " + StringValue(idVal, "non")
-				}
-			} else {
-				multi = true
+
+		if where == nil {
+			id, idVal = toolkit.IdInfo(dataVal)
+			if id != "" {
+				where = id + " = " + StringValue(idVal, "non")
 			}
 		}
 
 		session := q.Session()
 		sessionHive := q.SessionHive()
 
-		if dbname != "" && tablename != "" && multi == true {
-			/*kondisi iki sakjane gawe opo seh???*/
-		}
 		if commandType == dbox.QueryPartInsert {
 			if attributes != "" && values != "" {
 				var statement string
