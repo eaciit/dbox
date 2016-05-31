@@ -2,15 +2,16 @@ package rdbms
 
 import (
 	"database/sql"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/eaciit/cast"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
-	"reflect"
-	"strings"
-	"time"
 )
 
 const (
@@ -682,6 +683,11 @@ func extractData(data toolkit.M, driverName string) (string, string, string) {
 }
 
 func (q *Query) Exec(parm toolkit.M) error {
+	_, e := q.ExecOut(parm)
+	return e
+}
+
+func (q *Query) ExecOut(parm toolkit.M) (int64, error) {
 	var e error
 	if parm == nil {
 		parm = toolkit.M{}
@@ -698,17 +704,18 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 	var dataM toolkit.M
 	var dataMs []toolkit.M
+	var returnId int64
 
 	if toolkit.IsSlice(data) {
 		e = toolkit.Unjson(toolkit.Jsonify(data), &dataMs)
 		if e != nil {
-			return errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
+			return returnId, errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
 		}
 	} else {
 		dataM, e = toolkit.ToM(data)
 		dataMs = append(dataMs, dataM)
 		if e != nil {
-			return errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
+			return returnId, errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
 		}
 	}
 
@@ -753,7 +760,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 
 		fromParts, hasFrom := parts[dbox.QueryPartFrom]
 		if !hasFrom {
-			return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
+			return returnId, errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
 		}
 		tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
 
@@ -798,15 +805,19 @@ func (q *Query) Exec(parm toolkit.M) error {
 					e = sessionHive.Exec(statement, nil)
 				} else {
 					statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
-					_, e = session.Exec(statement)
+					var res sql.Result
+					res, e = session.Exec(statement)
+					if res != nil {
+						returnId, _ = res.LastInsertId()
+					}
 				}
 
 				if e != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					return returnId, errorlib.Error(packageName, modQuery+".Exec", commandType,
 						cast.ToString(e.Error()))
 				}
 			} else {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				return returnId, errorlib.Error(packageName, modQuery+".Exec", commandType,
 					"please provide the data")
 			}
 		} else if commandType == dbox.QueryPartUpdate {
@@ -824,11 +835,11 @@ func (q *Query) Exec(parm toolkit.M) error {
 					_, e = session.Exec(statement)
 				}
 				if e != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					return returnId, errorlib.Error(packageName, modQuery+".Exec", commandType,
 						cast.ToString(e.Error()))
 				}
 			} else {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				return returnId, errorlib.Error(packageName, modQuery+".Exec", commandType,
 					"please provide the data")
 			}
 
@@ -845,7 +856,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 				_, e = session.Exec(statement)
 			}
 			if e != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				return returnId, errorlib.Error(packageName, modQuery+".Exec", commandType,
 					cast.ToString(e.Error()))
 			}
 		} else if commandType == dbox.QueryPartSave {
@@ -887,19 +898,19 @@ func (q *Query) Exec(parm toolkit.M) error {
 					_, e = session.Exec(statement)
 				}
 				if e != nil {
-					return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					return returnId, errorlib.Error(packageName, modQuery+".Exec", commandType,
 						cast.ToString(e.Error()))
 				}
 
 			} else if values == "" {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				return returnId, errorlib.Error(packageName, modQuery+".Exec", commandType,
 					"please provide the data")
 			}
 
 		}
 		if e != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+			return returnId, errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
 		}
 	}
-	return nil
+	return returnId, nil
 }
