@@ -2,10 +2,7 @@ package rdbms
 
 import (
 	"database/sql"
-	//"encoding/json"
-	"fmt"
 	"github.com/eaciit/cast"
-	// "github.com/eaciit/crowd.old"
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
@@ -71,7 +68,7 @@ func StringValue(v interface{}, db string) string {
 	case string:
 		t, e := time.Parse(time.RFC3339, toolkit.ToString(v))
 		if e != nil {
-			ret = fmt.Sprintf("%s", "'"+strings.Replace(v.(string), "'", "''", -1)+"'")
+			ret = toolkit.Sprintf("%s", "'"+strings.Replace(v.(string), "'", "''", -1)+"'")
 		} else {
 			nullDateTime := time.Time{}
 			if t.Equal(nullDateTime) {
@@ -92,7 +89,7 @@ func StringValue(v interface{}, db string) string {
 		}
 		break
 	case int, int32, int64, uint, uint32, uint64:
-		ret = fmt.Sprintf("%d", v.(int))
+		ret = toolkit.Sprintf("%d", v.(int))
 		break
 	case nil:
 		ret = ""
@@ -102,17 +99,17 @@ func StringValue(v interface{}, db string) string {
 		switch strings.ToLower(db) {
 		case "mssql":
 			if v.(bool) {
-				ret = fmt.Sprintf("%v", 1)
+				ret = toolkit.Sprintf("%v", 1)
 			} else {
-				ret = fmt.Sprintf("%v", 0)
+				ret = toolkit.Sprintf("%v", 0)
 			}
 			break
 		default:
-			ret = fmt.Sprintf("%v", v)
+			ret = toolkit.Sprintf("%v", v)
 		}
 		break
 	default:
-		ret = fmt.Sprintf("%v", v)
+		ret = toolkit.Sprintf("%v", v)
 		break
 	}
 	return ret
@@ -180,7 +177,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	/*
 		if q.Parts == nil {
 			return nil, errorlib.Error(packageName, modQuery,
-				"Cursor", fmt.Sprintf("No Query Parts"))
+				"Cursor", toolkit.Sprintf("No Query Parts"))
 		}
 	*/
 
@@ -625,7 +622,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 						}
 					}
 
-					// fmt.Println("Print value order", paramstring)
+					// toolkit.Println("Print value order", paramstring)
 				}
 
 			} else if hasParam && !hasOrder {
@@ -642,7 +639,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 
 		cursor.(*Cursor).QueryString = ProcStatement
 
-		// fmt.Println("Proc Statement : ", ProcStatement)
+		// toolkit.Println("Proc Statement : ", ProcStatement)
 	} else if hasFreeQuery {
 		querySyntax := freeQueryParts.([]*dbox.QueryPart)[0].Value.(interface{})
 		syntax := querySyntax.(toolkit.M)["syntax"].(string)
@@ -651,44 +648,28 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	return cursor, nil
 }
 
-func (q *Query) Exec(parm toolkit.M) error {
-	var e error
-	if parm == nil {
-		parm = toolkit.M{}
-	}
-
-	dbname := q.Connection().Info().Database
-	driverName := q.GetDriverDB()
-	// driverName = "oracle"
-	tablename := ""
-	data := parm.Get("data", nil)
-	// fmt.Println("Hasil ekstraksi Param : ", data)
-
-	/*========================EXTRACT FIELD, DATA AND FORMAT DATE=============================*/
-
-	var attributes string
-	var values string
-	var setUpdate, statement string
-	var i int
-
-	dataM, e := toolkit.ToM(data)
-	if e != nil {
-		return errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
-	}
-
+func extractData(data toolkit.M, driverName string) (string, string, string) {
+	var attributes, setUpdate, values string
 	if data != nil {
-		for field, val := range dataM {
-			namaField := field
-			dataValues := val
-			stringValues := StringValue(dataValues, driverName)
+		var i int
+		for field, val := range data {
+			var datatypelist = []string{"map", "invalid", "struct", "slice"}
+			var value reflect.Value
+			if val != nil {
+				value = reflect.Zero(reflect.TypeOf(val))
+			}
+			if toolkit.HasMember(datatypelist, value.Kind().String()) {
+				continue
+			}
+			stringValues := StringValue(val, driverName)
 			if i == 0 {
-				attributes = "(" + namaField
-				setUpdate = namaField + " = " + stringValues
+				attributes = "(" + field
+				setUpdate = field + " = " + stringValues
 				values = "(" + stringValues
 
 			} else {
-				attributes += ", " + namaField
-				setUpdate += ", " + namaField + " = " + stringValues
+				attributes += ", " + field
+				setUpdate += ", " + field + " = " + stringValues
 				values += ", " + stringValues
 
 			}
@@ -697,179 +678,167 @@ func (q *Query) Exec(parm toolkit.M) error {
 		attributes += ")"
 		values += ")"
 	}
+	return attributes, setUpdate, values
+}
 
-	/*=================================END OF EXTRACTION=======================================*/
+func (q *Query) Exec(parm toolkit.M) error {
+	var e error
+	if parm == nil {
+		parm = toolkit.M{}
+	}
 
-	temp := ""
-	quyerParts := q.Parts()
-	c := crowd.From(&quyerParts)
-	groupParts := c.Group(func(x interface{}) interface{} {
-		qp := x.(*dbox.QueryPart)
-		temp = toolkit.JsonString(qp)
-		return qp.PartType
-	}, nil).Exec()
-	parts := map[interface{}]interface{}{}
-	if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
-		for _, kv := range groupParts.Result.Data().([]crowd.KV) {
-			parts[kv.Key] = kv.Value
+	driverName := q.GetDriverDB()
+	// driverName = "oracle"
+	tablename := ""
+	data := parm.Get("data")
+
+	var attributes string
+	var values string
+	var setUpdate string
+
+	var dataM toolkit.M
+	var dataMs []toolkit.M
+
+	if toolkit.IsSlice(data) {
+		e = toolkit.Unjson(toolkit.Jsonify(data), &dataMs)
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
+		}
+	} else {
+		dataM, e = toolkit.ToM(data)
+		dataMs = append(dataMs, dataM)
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
 		}
 	}
 
-	fromParts, hasFrom := parts[dbox.QueryPartFrom]
-	if !hasFrom {
-
-		return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
-	}
-	tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
-
-	var where interface{}
-	whereParts, hasWhere := parts[dbox.QueryPartWhere]
-	if hasWhere {
-		fb := q.Connection().Fb()
-		for _, p := range whereParts.([]*dbox.QueryPart) {
-			fs := p.Value.([]*dbox.Filter)
-			for _, f := range fs {
-				fb.AddFilter(f)
+	for _, dataVal := range dataMs {
+		temp := ""
+		quyerParts := q.Parts()
+		c := crowd.From(&quyerParts)
+		groupParts := c.Group(func(x interface{}) interface{} {
+			qp := x.(*dbox.QueryPart)
+			temp = toolkit.JsonString(qp)
+			return qp.PartType
+		}, nil).Exec()
+		parts := map[interface{}]interface{}{}
+		if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
+			for _, kv := range groupParts.Result.Data().([]crowd.KV) {
+				parts[kv.Key] = kv.Value
 			}
 		}
 
-		where, e = fb.Build()
-		if e != nil {
+		commandType := ""
 
-		} else {
+		_, hasDelete := parts[dbox.QueryPartDelete]
+		_, hasInsert := parts[dbox.QueryPartInsert]
+		_, hasUpdate := parts[dbox.QueryPartUpdate]
+		_, hasSave := parts[dbox.QueryPartSave]
+
+		if hasDelete {
+			commandType = dbox.QueryPartDelete
+		} else if hasInsert {
+			commandType = dbox.QueryPartInsert
+		} else if hasUpdate {
+			commandType = dbox.QueryPartUpdate
+		} else if hasSave {
+			commandType = dbox.QueryPartSave
+		}
+
+		if hasInsert || hasUpdate || hasSave {
+			attributes, setUpdate, values = extractData(dataVal, driverName)
+		} else if hasDelete {
 
 		}
 
-	}
-	commandType := ""
-	multi := false
+		fromParts, hasFrom := parts[dbox.QueryPartFrom]
+		if !hasFrom {
+			return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
+		}
+		tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
 
-	_, hasDelete := parts[dbox.QueryPartDelete]
-	_, hasInsert := parts[dbox.QueryPartInsert]
-	_, hasUpdate := parts[dbox.QueryPartUpdate]
-	_, hasSave := parts[dbox.QueryPartSave]
+		var where interface{}
+		whereParts, hasWhere := parts[dbox.QueryPartWhere]
+		if hasWhere {
+			fb := q.Connection().Fb()
+			for _, p := range whereParts.([]*dbox.QueryPart) {
+				fs := p.Value.([]*dbox.Filter)
+				for _, f := range fs {
+					fb.AddFilter(f)
+				}
+			}
 
-	if hasDelete {
-		commandType = dbox.QueryPartDelete
-	} else if hasInsert {
-		commandType = dbox.QueryPartInsert
-	} else if hasUpdate {
-		commandType = dbox.QueryPartUpdate
-	} else if hasSave {
-		commandType = dbox.QueryPartSave
-	}
+			where, e = fb.Build()
+			if e != nil {
 
-	var id string
-	var idVal interface{}
-	if data == nil {
-		multi = true
-	} else {
+			} else {
+
+			}
+
+		}
+
+		var id string
+		var idVal interface{}
+
 		if where == nil {
-			id, idVal = toolkit.IdInfo(data)
+			id, idVal = toolkit.IdInfo(dataVal)
 			if id != "" {
 				where = id + " = " + StringValue(idVal, "non")
 			}
-		} else {
-			multi = true
-		}
-	}
-
-	session := q.Session()
-	sessionHive := q.SessionHive()
-
-	if dbname != "" && tablename != "" && multi == true {
-
-	}
-	if commandType == dbox.QueryPartInsert {
-		if attributes != "" && values != "" {
-			if driverName == "hive" {
-				statement = "INSERT INTO " + tablename + " VALUES " + values
-				e = sessionHive.Exec(statement, nil)
-			} else {
-				statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
-				_, e = session.Exec(statement)
-			}
-
-			if e != nil {
-				fmt.Println(e.Error())
-			}
-		} else {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please provide the data")
 		}
 
-	} else if commandType == dbox.QueryPartUpdate {
-		if setUpdate != "" {
-			var statement string
-			if where != nil {
-				statement = "UPDATE " + tablename + " SET " + setUpdate +
-					" WHERE " + cast.ToString(where)
-			} else {
-				statement = "UPDATE " + tablename + " SET " + setUpdate
-			}
-			if driverName == "hive" {
-				e = sessionHive.Exec(statement, nil)
-			} else {
-				_, e = session.Exec(statement)
-			}
-			if e != nil {
-				return errorlib.Error(packageName, modQuery+".Exec", commandType,
-					cast.ToString(e.Error()))
-			}
-		} else {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please provide the data")
-		}
+		session := q.Session()
+		sessionHive := q.SessionHive()
 
-	} else if commandType == dbox.QueryPartDelete {
-		var statement string
-		if where != nil {
-			statement = "DELETE FROM " + tablename + " where " + cast.ToString(where)
-		} else {
-			statement = "DELETE FROM " + tablename
-		}
-		if driverName == "hive" {
-			e = sessionHive.Exec(statement, nil)
-		} else {
-			_, e = session.Exec(statement)
-		}
-		if e != nil {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				cast.ToString(e.Error()))
-		}
-	} else if commandType == dbox.QueryPartSave {
-		if attributes != "" && values != "" {
-			var querystmt string
-			if where != nil {
-				querystmt = "select 1 as data from " + tablename + " where " + cast.ToString(where)
-			}
-			var rowCount int
-			if driverName == "hive" {
-				rowCount = 0
-				// row := sessionHive.Exec(querystmt, nil)
-				// rowCount = toolkit.ToInt(row[0], "auto")
-			} else {
-				if querystmt != "" {
-					rows, _ := session.Query(querystmt)
-					for rows.Next() {
-						rows.Scan(&rowCount)
-					}
-				}
-			}
-
-			var statement string
-			if rowCount == 0 || where == nil {
+		if commandType == dbox.QueryPartInsert {
+			if attributes != "" && values != "" {
+				var statement string
 				if driverName == "hive" {
 					statement = "INSERT INTO " + tablename + " VALUES " + values
+					e = sessionHive.Exec(statement, nil)
 				} else {
-					statement = "INSERT INTO " + tablename + " " +
-						attributes + " VALUES " + values
+					statement = "INSERT INTO " + tablename + " " + attributes + " VALUES " + values
+					_, e = session.Exec(statement)
+				}
+
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType,
+						cast.ToString(e.Error()))
 				}
 			} else {
-				statement = "UPDATE " + tablename + " SET " + setUpdate +
-					" WHERE " + cast.ToString(where)
+				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					"please provide the data")
+			}
+		} else if commandType == dbox.QueryPartUpdate {
+			if setUpdate != "" {
+				var statement string
+				if where != nil {
+					statement = "UPDATE " + tablename + " SET " + setUpdate +
+						" WHERE " + cast.ToString(where)
+				} else {
+					statement = "UPDATE " + tablename + " SET " + setUpdate
+				}
+				if driverName == "hive" {
+					e = sessionHive.Exec(statement, nil)
+				} else {
+					_, e = session.Exec(statement)
+				}
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType,
+						cast.ToString(e.Error()))
+				}
+			} else {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					"please provide the data")
 			}
 
+		} else if commandType == dbox.QueryPartDelete {
+			var statement string
+			if where != nil {
+				statement = "DELETE FROM " + tablename + " where " + cast.ToString(where)
+			} else {
+				statement = "DELETE FROM " + tablename
+			}
 			if driverName == "hive" {
 				e = sessionHive.Exec(statement, nil)
 			} else {
@@ -879,15 +848,58 @@ func (q *Query) Exec(parm toolkit.M) error {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType,
 					cast.ToString(e.Error()))
 			}
+		} else if commandType == dbox.QueryPartSave {
+			if attributes != "" && values != "" {
+				var querystmt string
+				if where != nil {
+					querystmt = "select 1 as data from " + tablename + " where " + cast.ToString(where)
+				}
+				var rowCount int
+				if driverName == "hive" {
+					rowCount = 0
+					// row := sessionHive.Exec(querystmt, nil)
+					// rowCount = toolkit.ToInt(row[0], "auto")
+				} else {
+					if querystmt != "" {
+						rows, _ := session.Query(querystmt)
+						for rows.Next() {
+							rows.Scan(&rowCount)
+						}
+					}
+				}
 
-		} else if values == "" {
-			return errorlib.Error(packageName, modQuery+".Exec", commandType,
-				"please provide the data")
+				var statement string
+				if rowCount == 0 || where == nil {
+					if driverName == "hive" {
+						statement = "INSERT INTO " + tablename + " VALUES " + values
+					} else {
+						statement = "INSERT INTO " + tablename + " " +
+							attributes + " VALUES " + values
+					}
+				} else {
+					statement = "UPDATE " + tablename + " SET " + setUpdate +
+						" WHERE " + cast.ToString(where)
+				}
+
+				if driverName == "hive" {
+					e = sessionHive.Exec(statement, nil)
+				} else {
+					_, e = session.Exec(statement)
+				}
+				if e != nil {
+					return errorlib.Error(packageName, modQuery+".Exec", commandType,
+						cast.ToString(e.Error()))
+				}
+
+			} else if values == "" {
+				return errorlib.Error(packageName, modQuery+".Exec", commandType,
+					"please provide the data")
+			}
+
 		}
-
-	}
-	if e != nil {
-		return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+		if e != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", commandType, e.Error())
+		}
 	}
 	return nil
 }
