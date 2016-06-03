@@ -2,6 +2,7 @@ package rdbms
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -682,10 +683,67 @@ func extractData(data toolkit.M, driverName string) (string, string, string) {
 	return attributes, setUpdate, values
 }
 
-func (q *Query) Exec(parm toolkit.M) error {
-	_, e := q.ExecOut(parm)
+func extractDataBulk(attrList []string, data toolkit.M, driverName string) string {
+	var values string
+	if data != nil {
+		for i, attr := range attrList {
+			val := data.Get(attr)
+			var datatypelist = []string{"map", "invalid", "struct", "slice"}
+			var value reflect.Value
+			if val != nil {
+				value = reflect.Zero(reflect.TypeOf(val))
+			}
+			if toolkit.HasMember(datatypelist, value.Kind().String()) {
+				continue
+			}
+			stringValues := StringValue(val, driverName)
+			if i == 0 {
+				values = "(" + stringValues
+
+			} else {
+				values += ", " + stringValues
+
+			}
+		}
+		values += ")"
+	}
+	return values
+}
+
+func extractFields(data toolkit.M) []string {
+	var attributes []string
+	if data != nil {
+		for field, val := range data {
+			var datatypelist = []string{"map", "invalid", "struct", "slice"}
+			var value reflect.Value
+			if val != nil {
+				value = reflect.Zero(reflect.TypeOf(val))
+			}
+			if toolkit.HasMember(datatypelist, value.Kind().String()) {
+				continue
+			}
+			attributes = append(attributes, field)
+		}
+	}
+	return attributes
+}
+
+func (q *Query) Exec(parm toolkit.M) (e error) {
+	data := parm.Get("data")
+	driverName := q.GetDriverDB()
+
+	if toolkit.IsSlice(data) && driverName == "mssql" {
+		e = q.insertBulk(parm)
+	} else {
+		_, e = q.ExecOut(parm)
+	}
 	return e
 }
+
+/*func (q *Query) Exec(parm toolkit.M) error {
+	_, e := q.ExecOut(parm)
+	return e
+}*/
 
 func (q *Query) ExecOut(parm toolkit.M) (int64, error) {
 	var e error
@@ -913,4 +971,113 @@ func (q *Query) ExecOut(parm toolkit.M) (int64, error) {
 		}
 	}
 	return returnId, nil
+}
+
+func (q *Query) insertBulk(parm toolkit.M) error {
+
+	var e error
+	if parm == nil {
+		parm = toolkit.M{}
+	}
+
+	driverName := q.GetDriverDB()
+	// driverName = "oracle"
+	tablename := ""
+	data := parm.Get("data")
+
+	var attributes string
+
+	var dataM toolkit.M
+	var dataMs []toolkit.M
+
+	if toolkit.IsSlice(data) {
+		e = toolkit.Unjson(toolkit.Jsonify(data), &dataMs)
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
+		}
+	} else {
+		dataM, e = toolkit.ToM(data)
+		dataMs = append(dataMs, dataM)
+		if e != nil {
+			return errorlib.Error(packageName, modQuery, "Exec: data extraction", "Data encoding error: "+e.Error())
+		}
+	}
+
+	temp := ""
+	quyerParts := q.Parts()
+	c := crowd.From(&quyerParts)
+	groupParts := c.Group(func(x interface{}) interface{} {
+		qp := x.(*dbox.QueryPart)
+		temp = toolkit.JsonString(qp)
+		return qp.PartType
+	}, nil).Exec()
+	parts := map[interface{}]interface{}{}
+	if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
+		for _, kv := range groupParts.Result.Data().([]crowd.KV) {
+			parts[kv.Key] = kv.Value
+		}
+	}
+
+	commandType := ""
+
+	_, hasInsert := parts[dbox.QueryPartInsert]
+
+	if hasInsert {
+		commandType = dbox.QueryPartInsert
+	} else {
+		_, e = q.ExecOut(parm)
+		return e
+		// return errorlib.Error(packageName, "Query", modQuery+".InsertBulk", "Invalid Operation")
+	}
+
+	fromParts, hasFrom := parts[dbox.QueryPartFrom]
+
+	if !hasFrom {
+		return errorlib.Error(packageName, "Query", modQuery, "Invalid table name")
+	}
+	tablename = fromParts.([]*dbox.QueryPart)[0].Value.(string)
+
+	session := q.Session()
+	attributeList := extractFields(dataMs[0])
+
+	var datas []string
+
+	for _, dataVal := range dataMs {
+		var values string
+		tmp := toolkit.M{}
+
+		for _, attr := range attributeList {
+			tmp.Set(attr, dataVal.Get(attr))
+		}
+
+		values = extractDataBulk(attributeList, tmp, driverName)
+		// toolkit.Printf("test: \n %v \n------\n %v \n------\n %v \n------\n %v \n", attributeList, dataVal, tmp, values)
+
+		datas = append(datas, values)
+	}
+
+	attributes = "(" + strings.Join(attributeList, ",") + ")"
+
+	if attributes != "" && nil != datas {
+		var statement string
+		if driverName == "hive" {
+			/*statement = "INSERT INTO " + tablename + " VALUES " + values
+			e = sessionHive.Exec(statement, nil)*/
+			return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				"Not Implemented Yet for HIVE")
+		} else {
+			statement = fmt.Sprintf("INSERT INTO "+tablename+" "+attributes+" VALUES %s", strings.Join(datas, ","))
+			_, e = session.Exec(statement)
+		}
+
+		if e != nil {
+			return errorlib.Error(packageName, modQuery+".Exec", commandType,
+				cast.ToString(e.Error()))
+		}
+	} else {
+		return errorlib.Error(packageName, modQuery+".Exec", commandType,
+			"please provide the data")
+	}
+
+	return nil
 }
