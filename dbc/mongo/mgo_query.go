@@ -122,7 +122,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				gs := v.Value.([]string)
 				for _, g := range gs {
 					if strings.TrimSpace(g) != "" {
-						s.Set(g, "$"+g)
+						s.Set(strings.Replace(g,".","_",-1), "$"+g)
 					}
 				}
 			}
