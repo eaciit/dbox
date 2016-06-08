@@ -110,6 +110,15 @@ func StringValue(v interface{}, db string) string {
 			ret = toolkit.Sprintf("%v", v)
 		}
 		break
+	case []string:
+		for x, i := range v.([]string) {
+			if x == 0 {
+				ret += "'" + i + "'"
+			} else {
+				ret += ",'" + i + "'"
+			}
+		}
+		break
 	default:
 		ret = toolkit.Sprintf("%v", v)
 		break
