@@ -47,6 +47,7 @@ type IQuery interface {
 	//-- ouputs
 	Cursor(toolkit.M) (ICursor, error)
 	Exec(toolkit.M) error
+	ExecOut(toolkit.M) (int64, error)
 
 	//-- getter
 	Connection() IConnection
@@ -199,6 +200,10 @@ func (q *Query) Prepare() error {
 
 func (q *Query) Exec(parm toolkit.M) error {
 	return errorlib.Error(packageName, modQuery, "Exec", errorlib.NotYetImplemented)
+}
+
+func (q *Query) ExecOut(parm toolkit.M) (int64, error) {
+	return 0, errorlib.Error(packageName, modQuery, "Exec", errorlib.NotYetImplemented)
 }
 
 func (q *Query) Close() {
