@@ -3,14 +3,16 @@ package rdbms
 import (
 	"database/sql"
 	"errors"
+
 	"github.com/eaciit/dbox"
 	//"github.com/eaciit/errorlib"
-	"github.com/eaciit/hdc/hive"
-	"github.com/eaciit/toolkit"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/eaciit/hdc/hive"
+	"github.com/eaciit/toolkit"
 )
 
 const (
@@ -203,7 +205,12 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 					}
 				}
 				// toolkit.Println(col, toolkit.TypeName(v), v) -- unremark to check the result value
-				entry.Set(strings.ToLower(col), v)
+
+				if v != nil {
+					entry.Set(strings.ToLower(col), v)
+				} else {
+					toolkit.Printf("col: %v | v: %v \n", col, v)
+				}
 			}
 
 			tableData = append(tableData, entry)
