@@ -208,8 +208,6 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 
 				if v != nil {
 					entry.Set(strings.ToLower(col), v)
-				} else {
-					toolkit.Printf("col: %v | v: %v \n", col, v)
 				}
 			}
 
