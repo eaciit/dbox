@@ -16,10 +16,11 @@ const (
 
 type Connection struct {
 	dbox.Connection
-	Hive       *hive.Hive
-	Sql        sql.DB
-	Drivername string
-	DateFormat string
+	Hive        *hive.Hive
+	Sql         sql.DB
+	Drivername  string
+	DateFormat  string
+	AutoCasting bool
 }
 
 func (c *Connection) RdbmsConnect(drivername string, stringConnection string) error {
@@ -46,6 +47,11 @@ func (c *Connection) RdbmsConnect(drivername string, stringConnection string) er
 	}
 	if c.Info().Settings.Has("dateformat") {
 		c.DateFormat = toolkit.ToString(c.Info().Settings.Get("dateformat", ""))
+	}
+	if c.Info().Settings.Has("autocasting") {
+		c.AutoCasting = c.Info().Settings["autocasting"].(bool)
+	} else {
+		c.AutoCasting = false
 	}
 
 	return nil
