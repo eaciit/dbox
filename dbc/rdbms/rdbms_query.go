@@ -492,8 +492,10 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 			// rowCount = toolkit.ToInt(row[0], "auto")
 		} else {
 			rows, _ := cursor.(*Cursor).session.Query(querystmt)
-			for rows.Next() {
-				rows.Scan(&rowCount)
+			if rows != nil {
+				for rows.Next() {
+					rows.Scan(&rowCount)
+				}
 			}
 		}
 		if rowCount <= skip {
