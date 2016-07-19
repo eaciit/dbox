@@ -30,6 +30,7 @@ type Cursor struct {
 	session             sql.DB
 	QueryString, driver string
 	DateFormat          string
+	AutoCasting         bool
 }
 
 func (c *Cursor) Close() {
@@ -174,33 +175,35 @@ func (c *Cursor) Fetch(m interface{}, n int, closeWhenDone bool) error {
 					}
 				}
 				/*mysql always byte, postgres only string that byte, oracle always string, mssql agree with field datatype*/
-				if (ok && (c.driver == "mysql" || c.driver == "postgres")) || c.driver == "oci8" {
-					if isStruct {
-						v = c.structValue(dataTypeList, col, v)
-					} else {
-						intVal, e := strconv.Atoi(toolkit.ToString(v))
-						if e != nil {
-							e = nil
-							floatVal, e := strconv.ParseFloat(toolkit.ToString(v), 64)
+				if c.AutoCasting == true {
+					if (ok && (c.driver == "mysql" || c.driver == "postgres")) || c.driver == "oci8" {
+						if isStruct {
+							v = c.structValue(dataTypeList, col, v)
+						} else {
+							intVal, e := strconv.Atoi(toolkit.ToString(v))
 							if e != nil {
 								e = nil
-								boolVal, e := strconv.ParseBool(toolkit.ToString(v))
+								floatVal, e := strconv.ParseFloat(toolkit.ToString(v), 64)
 								if e != nil {
 									e = nil
-									dateVal, e := time.Parse(c.DateFormat, toolkit.ToString(v))
+									boolVal, e := strconv.ParseBool(toolkit.ToString(v))
 									if e != nil {
-										v = v
-									} else { /*if string is date*/
-										v = dateVal
+										e = nil
+										dateVal, e := time.Parse(c.DateFormat, toolkit.ToString(v))
+										if e != nil {
+											v = v
+										} else { /*if string is date*/
+											v = dateVal
+										}
+									} else { /*if string is bool*/
+										v = boolVal
 									}
-								} else { /*if string is bool*/
-									v = boolVal
+								} else { /*if string is float*/
+									v = floatVal
 								}
-							} else { /*if string is float*/
-								v = floatVal
+							} else { /*if string is int*/
+								v = intVal
 							}
-						} else { /*if string is int*/
-							v = intVal
 						}
 					}
 				}
