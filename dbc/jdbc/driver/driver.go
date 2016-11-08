@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -40,7 +41,7 @@ func (j Driver) Open(name string) (driver.Conn, error) {
 		for _, j := range v["jar"] {
 			out = append(out, j)
 		}
-		return strings.Join(out, ";")
+		return strings.Join(out, checkOs())
 	}()
 	// connStr := v.Get("str")
 	driver := v.Get("driver")
@@ -96,6 +97,15 @@ func (j Driver) Open(name string) (driver.Conn, error) {
 	return &conn{ch}, nil
 }
 
+func checkOs() string {
+	var punct string
+	if runtime.GOOS == "windows" {
+		punct = ";"
+	} else if runtime.GOOS == "linux" {
+		punct = ":"
+	}
+	return punct
+}
 func checkJava() {
 	_, err := os.Stat("JdbcGo.class")
 	if err != nil {
