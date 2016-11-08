@@ -8,6 +8,8 @@ import java.util.*;
 public class JdbcGo {
 
     public static void main(String... args) throws Exception {
+    	TimeZone timeZone = TimeZone.getTimeZone("Asia/Jakarta");
+        TimeZone.setDefault(timeZone);
 	try {
 	    run(args);
 	} catch (Exception e) {
