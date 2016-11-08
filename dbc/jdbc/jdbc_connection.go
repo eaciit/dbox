@@ -62,7 +62,7 @@ func (c *Connection) Connect() error {
 			hostdb = ConnectionString + "//" + host + ";dbname=" + database
 		} else if splitdriver[1] == "oracle" {
 			ConnectionString = "jdbc:oracle:thin:@" //"jdbc:oracle:thin:@//localhost:1521:orcl", "scott", "tiger"
-			hostdb = ConnectionString + host + ":" + database
+			hostdb = ConnectionString + host + "/" + database
 		}
 		connStr := hostdb
 
