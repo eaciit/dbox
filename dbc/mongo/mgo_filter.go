@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/eaciit/dbox"
 	. "github.com/eaciit/toolkit"
+	"regexp"
 )
 
 type FilterBuilder struct {
@@ -22,15 +23,17 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 			bfs := []interface{}{}
 			for _, ff := range fs {
 				pfm := M{}
+				chr := regexp.QuoteMeta(ff)
 				pfm.Set(f.Field, M{}.
-					Set("$regex", fmt.Sprintf(".*%s.*", ff)).
+					Set("$regex", fmt.Sprintf(".*%s.*", chr)).
 					Set("$options", "i"))
 				bfs = append(bfs, pfm)
 			}
 			fm.Set("$or", bfs)
 		} else {
+			chr := regexp.QuoteMeta(fs[0])
 			fm.Set(f.Field, M{}.
-				Set("$regex", fmt.Sprintf(".*%s.*", fs[0])).
+				Set("$regex", fmt.Sprintf(".*%s.*", chr)).
 				Set("$options", "i"))
 		}
 	} else if f.Op == dbox.FilterOpStartWith {
