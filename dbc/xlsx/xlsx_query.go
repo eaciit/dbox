@@ -137,10 +137,17 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	aggregate := false
 	tablename := ""
 
-	parts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
+	groupParts := crowd.From(q.Parts()).Group(func(x interface{}) interface{} {
 		qp := x.(*dbox.QueryPart)
 		return qp.PartType
-	}, nil).Data
+	}, nil).Exec()
+
+	parts := map[interface{}]interface{}{}
+	if len(groupParts.Result.Data().([]crowd.KV)) > 0 {
+		for _, kv := range groupParts.Result.Data().([]crowd.KV) {
+			parts[kv.Key] = kv.Value
+		}
+	}
 
 	fromParts, hasFrom := parts[dbox.QueryPartFrom]
 	if hasFrom == false {
