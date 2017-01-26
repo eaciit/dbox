@@ -1,0 +1,32 @@
+ODBC database driver for Go
+
+Install:
+	cd $GOPATH/src
+	git clone git://github.com/weigj/go-odbc.git odbc
+	cd odbc
+	go install
+
+Example:
+
+package main
+
+import (
+	"odbc"
+)
+
+func main() {
+	conn, _ := odbc.Connect("DSN=dsn;UID=user;PWD=password")
+	stmt, _ := conn.Prepare("select * from user where username = ?")
+	stmt.Execute("admin")
+	rows, _ := stmt.FetchAll()
+	for i, row := range rows {
+		println(i, row)
+	}
+	stmt.Close()
+	conn.Close()
+}
+
+Tested on:
+	SQL Server 2005 and Windows 7 
+	SQL Server 2005 and Ubuntu 10.4 (UnixODBC+FreeTDS)
+	Oracle 10g and Windows 7
