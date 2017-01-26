@@ -13,11 +13,15 @@ type FilterBuilder struct {
 
 func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 	fm := M{}
-	if f.Op == dbox.FilterOpEqual {
+
+	switch f.Op {
+	case dbox.FilterOpEqual:
 		fm.Set(f.Field, f.Value)
-	} else if f.Op == dbox.FilterOpNoEqual {
+
+	case dbox.FilterOpNoEqual:
 		fm.Set(f.Field, M{}.Set("$ne", f.Value))
-	} else if f.Op == dbox.FilterOpContains {
+
+	case dbox.FilterOpContains:
 		fs := f.Value.([]string)
 		if len(fs) > 1 {
 			bfs := []interface{}{}
@@ -36,27 +40,36 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 				Set("$regex", fmt.Sprintf(".*%s.*", chr)).
 				Set("$options", "i"))
 		}
-	} else if f.Op == dbox.FilterOpStartWith {
+
+	case dbox.FilterOpStartWith:
 		fm.Set(f.Field, M{}.
 			Set("$regex", fmt.Sprintf("^%s.*$", f.Value)).
 			Set("$options", "i"))
-	} else if f.Op == dbox.FilterOpEndWith {
+
+	case dbox.FilterOpEndWith:
 		fm.Set(f.Field, M{}.
 			Set("$regex", fmt.Sprintf("^.*%s$", f.Value)).
 			Set("$options", "i"))
-	} else if f.Op == dbox.FilterOpIn {
+
+	case dbox.FilterOpIn:
 		fm.Set(f.Field, M{}.Set("$in", f.Value))
-	} else if f.Op == dbox.FilterOpNin {
+
+	case dbox.FilterOpNin:
 		fm.Set(f.Field, M{}.Set("$nin", f.Value))
-	} else if f.Op == dbox.FilterOpGt {
+
+	case dbox.FilterOpGt:
 		fm.Set(f.Field, M{}.Set("$gt", f.Value))
-	} else if f.Op == dbox.FilterOpGte {
+
+	case dbox.FilterOpGte:
 		fm.Set(f.Field, M{}.Set("$gte", f.Value))
-	} else if f.Op == dbox.FilterOpLt {
+
+	case dbox.FilterOpLt:
 		fm.Set(f.Field, M{}.Set("$lt", f.Value))
-	} else if f.Op == dbox.FilterOpLte {
+
+	case dbox.FilterOpLte:
 		fm.Set(f.Field, M{}.Set("$lte", f.Value))
-	} else if f.Op == dbox.FilterOpOr || f.Op == dbox.FilterOpAnd {
+
+	case dbox.FilterOpOr, dbox.FilterOpAnd:
 		bfs := []interface{}{}
 		fs := f.Value.([]*dbox.Filter)
 		for _, ff := range fs {
@@ -67,9 +80,11 @@ func (fb *FilterBuilder) BuildFilter(f *dbox.Filter) (interface{}, error) {
 		}
 
 		fm.Set(f.Op, bfs)
-	} else {
+
+	default:
 		return nil, fmt.Errorf("Filter Op %s is not defined", f.Op)
 	}
+
 	return fm, nil
 }
 
