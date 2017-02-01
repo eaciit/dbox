@@ -161,3 +161,23 @@ Id, use the old Object Id instead.
 ```
 
 When mongodb encounter insertion with same _id, it will do replacement instead.
+
+### Delete
+
+Delete is as simple as select.
+
+```golang
+    // Delete query
+    q := conn.NewQuery().
+        From("Users").
+        Where(dbox.Eq("_id", "0123456789")).
+        Delete()
+    // Make sure q is closed when exiting function
+    defer q.Close()
+
+    // Execute delete
+    err = q.Exec(nil)
+    if err != nil {
+        panic("Query Failed")
+    }
+```
