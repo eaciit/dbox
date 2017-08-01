@@ -33,10 +33,10 @@ driver, we just need to import with blank identifier. Dbox driver will
 initialize itself using import side-effect.
 
 ```golang
-import {
+import (
     "github.com/eaciit/dbox"
     _ "github.com/eaciit/dbox/dbc/mongo"
-}
+)
 ```
 
 Now our driver is initialized.
@@ -51,10 +51,13 @@ Next, we create our connection info struct. In this example we want to connect t
         "dbname",
         "user",
         "pass",
-        nil
+        nil,
     }
-    conn, e := dbox.NewConnection("mongo", ci)
-    err := conn.Connect()
+    conn, err := dbox.NewConnection("mongo", &ci)
+    if err != nil {
+        panic("Connect Failed"); // Change with your error handling
+    }
+    err = conn.Connect()
     if err != nil {
         panic("Connect Failed"); // Change with your error handling
     }
