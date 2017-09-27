@@ -1,13 +1,18 @@
 package mongo
 
 import (
+	"fmt"
+	"os"
+	"sync"
+
 	"github.com/eaciit/dbox"
 	"gopkg.in/mgo.v2"
 
-	"github.com/eaciit/errorlib"
-	"github.com/eaciit/toolkit"
 	"regexp"
 	"time"
+
+	"github.com/eaciit/errorlib"
+	"github.com/eaciit/toolkit"
 )
 
 const (
@@ -33,6 +38,47 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 	c.SetInfo(ci)
 	c.SetFb(dbox.NewFilterBuilder(new(FilterBuilder)))
 	return c, nil
+}
+
+var traceSession map[*mgo.Session][]byte
+var traceLock sync.Mutex
+
+func IsTraceEnable() bool {
+	return traceSession != nil
+}
+
+func StartTrace() {
+	traceLock.Lock()
+	defer traceLock.Unlock()
+
+	// already started?
+	if traceSession != nil {
+		return
+	}
+
+	traceSession = make(map[*mgo.Session][]byte)
+	fmt.Fprintf(os.Stderr, "::Trace enable\n")
+}
+
+func PrintTrace() {
+	traceLock.Lock()
+	defer traceLock.Unlock()
+
+	if traceSession == nil {
+		fmt.Fprintf(os.Stderr, "::Trace is not enabled")
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, "::Connection Trace Result: %d probably leaked\n", len(traceSession))
+	if len(traceSession) == 0 {
+		return
+	}
+
+	count := 1
+	for _, val := range traceSession {
+		fmt.Fprintf(os.Stderr, "::Connection %d\n%s\n", count, string(val))
+		count++
+	}
 }
 
 func (c *Connection) Connect() error {

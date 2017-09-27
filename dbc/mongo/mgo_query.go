@@ -2,12 +2,14 @@ package mongo
 
 import (
 	"fmt"
+	"runtime"
+	"strings"
+
 	"github.com/eaciit/crowd"
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"gopkg.in/mgo.v2"
-	"strings"
 )
 
 const (
@@ -36,6 +38,12 @@ func (q *Query) Session() *mgo.Session {
 func (q *Query) Close() {
 	if q.session != nil && q.usePooling == false {
 		q.session.Close()
+
+		if traceSession != nil {
+			traceLock.Lock()
+			delete(traceSession, q.session)
+			traceLock.Unlock()
+		}
 	}
 }
 
@@ -211,6 +219,16 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 	cursor := dbox.NewCursor(new(Cursor))
 	cursor.(*Cursor).session = session
 	cursor.(*Cursor).isPoolingSession = q.usePooling
+
+	// TRACE //
+	if traceSession != nil {
+		stack := make([]byte, 2048)
+		runtime.Stack(stack, false)
+		traceLock.Lock()
+		traceSession[session] = stack
+		traceLock.Unlock()
+	}
+	// END TRACE //
 
 	if aggregate == true {
 		if len(pipes) == 0 {

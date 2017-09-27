@@ -3,11 +3,12 @@ package mongo
 import (
 	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/errorlib"
 	. "github.com/eaciit/toolkit"
 	"gopkg.in/mgo.v2"
-	"reflect"
 )
 
 const (
@@ -38,6 +39,12 @@ func (c *Cursor) Close() {
 
 	if c.session != nil && !c.isPoolingSession {
 		c.session.Close()
+
+		if traceSession != nil {
+			traceLock.Lock()
+			delete(traceSession, c.session)
+			traceLock.Unlock()
+		}
 	}
 }
 
