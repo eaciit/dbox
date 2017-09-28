@@ -51,12 +51,20 @@ func (q *Query) GetDriverDB() string {
 }
 
 func (q *Query) Close() {
-	if q.GetDriverDB() != "hive" {
-		q.Sql.Close()
-	} else {
+	if q.GetDriverDB() == "hive" {
 		// if q.SessionHive().Conn.Open() != nil {
 		// 	q.SessionHive().Conn.Close()
 		// }
+	} else {
+		if q.GetDriverDB() == "oracle" {
+			defer func() {
+				if err := recover(); err != nil {
+					fmt.Println("Failed to close *Query.", err)
+				}
+			}()
+		}
+
+		q.Sql.Close()
 	}
 }
 
