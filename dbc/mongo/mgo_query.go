@@ -384,9 +384,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 	if commandType == dbox.QueryPartInsert {
 		sdata := []interface{}{}
 		if toolkit.IsSlice(data) {
-			for _, _dt := range toolkit.ToInterfaceArray(data) {
-				sdata = append(sdata, _dt)
-			}
+			sdata = toolkit.ToInterfaceArray(data)
 		} else {
 			sdata = append(sdata, data)
 		}
