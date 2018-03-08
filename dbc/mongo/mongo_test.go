@@ -2,14 +2,16 @@ package mongo
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/eaciit/dbox"
 	"github.com/eaciit/toolkit"
-	"testing"
 )
 
 func prepareConnection() (dbox.IConnection, error) {
 	var config = toolkit.M{}.Set("timeout", 3)
-	ci := &dbox.ConnectionInfo{"localhost:27017", "eccolony", "", "", config}
+	ci := &dbox.ConnectionInfo{"localhost:27017", "belajar_golang", "admin", "qwerty", config}
 	c, e := dbox.NewConnection("mongo", ci)
 	if e != nil {
 		return nil, e
@@ -87,6 +89,7 @@ func TestFilter(t *testing.T) {
 }*/
 
 func TestSelectFilter(t *testing.T) {
+	t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -275,6 +278,7 @@ func TestProcedure(t *testing.T) {
 // }
 
 func TestGetObj(t *testing.T) {
+	t.Skip("Just Skip Test")
 	c, e := prepareConnection()
 	if e != nil {
 		t.Errorf("Unable to connect %s \n", e.Error())
@@ -285,4 +289,125 @@ func TestGetObj(t *testing.T) {
 	toolkit.Printf("List Table : %v\n", c.ObjectNames(dbox.ObjTypeTable))
 	toolkit.Printf("List Procedure : %v\n", c.ObjectNames(dbox.ObjTypeProcedure))
 	toolkit.Printf("List All Object : %v\n", c.ObjectNames(""))
+}
+
+func TestInsertBulk(t *testing.T) {
+	// t.Skip("Just Skip Test")
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+	atkm := []toolkit.M{}
+
+	atkm = append(atkm, toolkit.M{}.Set("name", "alip").Set("company", "eaciit").Set("dtime", time.Now().UTC()).Set("Experience", float64(6.45)))
+	atkm = append(atkm, toolkit.M{}.Set("name", "eko").Set("company", "eaciit").Set("dtime", time.Now().UTC()).Set("Experience", int(6)))
+	atkm = append(atkm, toolkit.M{}.Set("name", "xxx").Set("company", "xxxxxx").Set("dtime", time.Now().UTC()).Set("Experience", 6.45))
+	_ = atkm
+	q := c.NewQuery().SetConfig("pooling", true).From("bulktest").Insert()
+	// e = q.Exec(toolkit.M{"data": toolkit.M{}.Set("name", "aaa").Set("city", "aaaaa")})
+	e = q.Exec(toolkit.M{"data": atkm})
+	if e != nil {
+		t.Errorf("Found %s \n", e.Error())
+		return
+	}
+
+}
+
+type dtests struct {
+	Name            string
+	City            string
+	YearsExperience int
+	StartWorking    time.Time
+	Married         bool
+	Benefit         float64
+}
+
+func TestInsertBulkStruct(t *testing.T) {
+	t.Skip("Just Skip Test")
+
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+	astruct := []dtests{}
+
+	astruct = append(astruct, dtests{Name: "Alip01", City: "Surabaya", YearsExperience: 5, StartWorking: time.Now().UTC(), Married: true, Benefit: 5000})
+	astruct = append(astruct, dtests{Name: "Alip02", City: "Ngawi", YearsExperience: 5, StartWorking: time.Now().UTC(), Married: true, Benefit: 5000})
+	astruct = append(astruct, dtests{Name: "Alip03", City: "Tuban", YearsExperience: 5, StartWorking: time.Now().UTC(), Married: true, Benefit: 5000})
+	_ = astruct
+	q := c.NewQuery().SetConfig("pooling", true).From("bulktest").Insert()
+	// e = q.Exec(toolkit.M{"data": toolkit.M{}.Set("name", "aaa").Set("city", "aaaaa")})
+	e = q.Exec(toolkit.M{"data": astruct})
+	if e != nil {
+		t.Errorf("Found %s \n", e.Error())
+		return
+	}
+
+}
+
+func TestInsertBulkStructPointer(t *testing.T) {
+	t.Skip("Just Skip Test")
+
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+	astruct := []*dtests{}
+
+	astruct = append(astruct, &dtests{Name: "Alip04", City: "Surabaya", YearsExperience: 5, StartWorking: time.Now().UTC(), Married: true, Benefit: 5000})
+	astruct = append(astruct, &dtests{Name: "Alip05", City: "Ngawi", YearsExperience: 5, StartWorking: time.Now().UTC(), Married: true, Benefit: 5000})
+	astruct = append(astruct, &dtests{Name: "Alip06", City: "Tuban", YearsExperience: 5, StartWorking: time.Now().UTC(), Married: true, Benefit: 5000})
+	_ = astruct
+	q := c.NewQuery().SetConfig("pooling", true).From("bulktest").Insert()
+	// e = q.Exec(toolkit.M{"data": toolkit.M{}.Set("name", "aaa").Set("city", "aaaaa")})
+	e = q.Exec(toolkit.M{"data": astruct})
+	if e != nil {
+		t.Errorf("Found %s \n", e.Error())
+		return
+	}
+
+}
+
+func TestInsertStructPointer(t *testing.T) {
+	t.Skip("Just Skip Test")
+
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+	q := c.NewQuery().SetConfig("pooling", true).From("bulktest").Insert()
+	// e = q.Exec(toolkit.M{"data": toolkit.M{}.Set("name", "aaa").Set("city", "aaaaa")})
+	e = q.Exec(toolkit.M{"data": &dtests{Name: "Alip07", City: "Surabaya", YearsExperience: 5, StartWorking: time.Now().UTC(), Married: true, Benefit: 5000}})
+	if e != nil {
+		t.Errorf("Found %s \n", e.Error())
+		return
+	}
+
+}
+
+func TestInsertStruct(t *testing.T) {
+	t.Skip("Just Skip Test")
+
+	c, e := prepareConnection()
+	if e != nil {
+		t.Errorf("Unable to connect %s \n", e.Error())
+		return
+	}
+	defer c.Close()
+	q := c.NewQuery().SetConfig("pooling", true).From("bulktest").Insert()
+	// e = q.Exec(toolkit.M{"data": toolkit.M{}.Set("name", "aaa").Set("city", "aaaaa")})
+	e = q.Exec(toolkit.M{"data": dtests{Name: "Alip08", City: "Surabaya", YearsExperience: 5, StartWorking: time.Now().UTC(), Married: true, Benefit: 5000}})
+	if e != nil {
+		t.Errorf("Found %s \n", e.Error())
+		return
+	}
+
 }
