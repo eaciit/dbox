@@ -130,7 +130,7 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 				gs := v.Value.([]string)
 				for _, g := range gs {
 					if strings.TrimSpace(g) != "" {
-						s.Set(strings.Replace(g,".","_",-1), "$"+g)
+						s.Set(strings.Replace(g, ".", "_", -1), "$"+g)
 					}
 				}
 			}
@@ -150,8 +150,8 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		for _, sl := range selectParts.([]*dbox.QueryPart) {
 			// qp := sl.(*dbox.QueryPart)
 			for _, fid := range sl.Value.([]string) {
-				if fid=="$score"{
-					fields.Set("score",toolkit.M{}.Set("$meta","textScore"))
+				if fid == "$score" {
+					fields.Set("score", toolkit.M{}.Set("$meta", "textScore"))
 				} else {
 					fields.Set(fid, 1)
 				}
@@ -177,9 +177,9 @@ func (q *Query) Cursor(in toolkit.M) (dbox.ICursor, error) {
 		for _, sl := range sortParts.([]*dbox.QueryPart) {
 			// qp := sl.(*dbox.QueryPart)
 			for _, fid := range sl.Value.([]string) {
-				if fid=="$score"{
-					sort=append(sort,"$textScore:score")
-				}else{
+				if fid == "$score" {
+					sort = append(sort, "$textScore:score")
+				} else {
 					sort = append(sort, fid)
 				}
 			}
@@ -382,7 +382,13 @@ func (q *Query) Exec(parm toolkit.M) error {
 	}
 	mgoColl := session.DB(dbname).C(tablename)
 	if commandType == dbox.QueryPartInsert {
-		e = mgoColl.Insert(data)
+		sdata := []interface{}{}
+		if toolkit.IsSlice(data) {
+			sdata = toolkit.ToInterfaceArray(data)
+		} else {
+			sdata = append(sdata, data)
+		}
+		e = mgoColl.Insert(sdata...)
 	} else if commandType == dbox.QueryPartUpdate {
 		if multi {
 			dataM, e := toolkit.ToM(data)
