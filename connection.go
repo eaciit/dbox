@@ -1,11 +1,12 @@
 package dbox
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/eaciit/cast"
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
-	"regexp"
-	"strings"
 )
 
 type ObjTypeEnum string
@@ -87,10 +88,11 @@ func (c *Connection) SetFb(fb IFilterBuilder) {
 }
 
 func (c *Connection) Fb() IFilterBuilder {
-	if c.fb == nil {
-		c.fb = new(FilterBuilder)
-	}
-	return c.fb
+	//if c.fb == nil {
+	//c.fb = new(FilterBuilder)
+	//}
+	//return c.fb
+	return new(FilterBuilder)
 }
 
 func (c *Connection) Close() {
