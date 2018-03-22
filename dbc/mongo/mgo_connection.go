@@ -81,6 +81,12 @@ func PrintTrace() {
 	}
 }
 
+func (c *Connection) Fb() dbox.IFilterBuilder {
+	fb := new(FilterBuilder)
+	fb.SetThis(fb)
+	return fb
+}
+
 func (c *Connection) Connect() error {
 	info := new(mgo.DialInfo)
 	ci := c.Info()
