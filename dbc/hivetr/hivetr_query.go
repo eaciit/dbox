@@ -63,6 +63,43 @@ func MyToM(obj interface{}) (toolkit.M, error) {
 	}
 	return res, nil
 }
+func HiveRowToSetSql(obj HiveRow) string {
+	order := obj.FieldOrder()
+	m, err := MyToM(obj)
+	idName := toolkit.IdField(obj)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
+	fields := []string{}
+	for _, attr := range order {
+		if attr == idName {
+			continue
+		}
+		if _, ok := m[attr]; ok {
+			switch m[attr].(type) {
+			case string:
+				fields = append(fields, fmt.Sprintf("%s=%q", attr, m[attr]))
+				break
+			case float64:
+			case float32:
+				//nozero := fmt.Sprintf("%.0f", m[attr])
+				full := fmt.Sprintf("%s=%f", attr, m[attr])
+				fields = append(fields, full)
+				break
+			case int:
+			case int32:
+			case int64:
+				fields = append(fields, fmt.Sprintf("%s=%d", attr, m[attr]))
+			default:
+				fields = append(fields, fmt.Sprintf("%s=%s", attr, m[attr]))
+			}
+		} else {
+			fields = append(fields, "")
+		}
+	}
+	return fmt.Sprintf("%s", strings.Join(fields, ","))
+}
 
 //
 func ToHiveRow(obj HiveRow) string {
@@ -176,6 +213,8 @@ func (q *Query) String() string {
 		if q.Condition != "" {
 			output += " WHERE " + q.Condition
 		}
+	} else if q.isUpdate {
+		output += "UPDATE " + q.TableName
 	}
 
 	return output
@@ -210,6 +249,7 @@ func (q *Query) GetData(parm toolkit.M) ([]HiveRow, error) {
 var NoDataError = errors.New("No Payload found")
 var DataNotImplementInterfaceError = errors.New("Data not implement HiveRow interface")
 var ArrayIsNotHiveRowError = errors.New("Data not implement HiveRow interface")
+var TooManyObjectInUpdateError = errors.New("Too many object, Only set single object when update")
 
 func (q *Query) Exec(parm toolkit.M) error {
 	//return errors.New(errorlib.NotYetImplemented)
@@ -233,6 +273,29 @@ func (q *Query) Exec(parm toolkit.M) error {
 		response.Close()
 	} else if q.isDelete {
 		execQ := q.String()
+		response, e := q.Conn.(*Connection).Conn.Query(execQ)
+		if e != nil {
+			return e
+		}
+		response.Close()
+	} else if q.isUpdate {
+		execQ := q.String()
+		data, err := q.GetData(parm)
+		if err != nil {
+			return err
+		}
+		if len(data) > 1 {
+			return TooManyObjectInUpdateError
+		}
+		SetField := HiveRowToSetSql(data[0])
+		execQ += " SET " + SetField
+		if q.Condition == "" {
+			idName, idVal := toolkit.IdInfo(data[0])
+			execQ += " WHERE " + idName + "=" + fmt.Sprintf("%s", idVal)
+		} else {
+			execQ += " WHERE " + q.Condition
+		}
+		fmt.Println(execQ)
 		response, e := q.Conn.(*Connection).Conn.Query(execQ)
 		if e != nil {
 			return e
