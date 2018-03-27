@@ -2,6 +2,9 @@ package hivetr
 
 import (
 	"errors"
+	"fmt"
+
+	"github.com/eaciit/toolkit"
 
 	"github.com/kharism/dbox"
 	"github.com/kharism/gohive"
@@ -10,7 +13,7 @@ import (
 type Cursor struct {
 	rowSet   *gohive.RowSetR
 	Conn     dbox.IConnection
-	count    int
+	count    int64
 	rawQuery string
 }
 
@@ -31,12 +34,51 @@ func (c *Cursor) ResetFetch() error {
 	return errors.New("NOT IMPLEMENTED")
 }
 func (c *Cursor) Fetch(target interface{}, num int, close bool) error {
-	return errors.New("NOT IMPLEMENTED")
+	if num > 1 && !toolkit.IsSlice(target) {
+		return errors.New("target must be slice")
+	}
+	if c.rowSet == nil {
+		return errors.New("Rowset is nil")
+	}
+	if num == 1 && !toolkit.IsSlice(target) {
+		if c.rowSet.Next() {
+			c.rowSet.ScanObject(target)
+		} else {
+			return errors.New("No more data")
+		}
+	} else {
+		noLimit := false
+		if num == 0 {
+			noLimit = true
+		}
+		outputTKM := []toolkit.M{}
+		counter := 0
+		for {
+			newTarget := toolkit.M{}
+			if c.rowSet.Next() {
+				err := c.rowSet.ScanObject(&newTarget)
+				if err != nil {
+					fmt.Println("FETCH ERROR", err.Error)
+				}
+				counter++
+				outputTKM = append(outputTKM, newTarget)
+			} else {
+				toolkit.Serde(outputTKM, target, "json")
+				return nil
+			}
+			if !noLimit {
+				if counter == num {
+					toolkit.Serde(outputTKM, target, "json")
+				}
+			}
+		}
+	}
+	return nil
 }
 
 //--- getter
 func (c *Cursor) Connection() dbox.IConnection {
-	return nil
+	return c.Conn
 }
 
 //-- setter
