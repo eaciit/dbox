@@ -1,9 +1,12 @@
 package hivetr
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 
@@ -35,7 +38,85 @@ type Query struct {
 	Closable  io.Closer
 }
 
+// this interface so that each object to be inserted is able to generate its hive query representation
+type HiveRow interface {
+	//the order of FIELD NAME which needs to be inserted, dont' confuse this with field value
+	FieldOrder() []string
+}
+
+// this function is basically the same wiht  github.eaciit.toolkit.ToM it just
+// able to differentiate between int and float
+func MyToM(obj interface{}) (toolkit.M, error) {
+	buffer := []byte{}
+	buff := bytes.NewBuffer(buffer)
+	encoder := json.NewEncoder(buff)
+	err := encoder.Encode(obj)
+	if err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(buff)
+	decoder.UseNumber()
+	res := toolkit.M{}
+	err = decoder.Decode(&res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+//
+func ToHiveRow(obj HiveRow) string {
+	order := obj.FieldOrder()
+	m, err := MyToM(obj)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
+	fields := []string{}
+	for _, attr := range order {
+		if _, ok := m[attr]; ok {
+			switch m[attr].(type) {
+			case string:
+				fields = append(fields, fmt.Sprintf("%q", m[attr]))
+				break
+			case float64:
+			case float32:
+				//nozero := fmt.Sprintf("%.0f", m[attr])
+				full := fmt.Sprintf("%f", m[attr])
+				fields = append(fields, full)
+				break
+			case int:
+			case int32:
+			case int64:
+				fields = append(fields, fmt.Sprintf("%d", m[attr]))
+			default:
+				fields = append(fields, fmt.Sprintf("%s", m[attr]))
+			}
+		} else {
+			fields = append(fields, "")
+		}
+	}
+	return fmt.Sprintf("(%s)", strings.Join(fields, ","))
+}
+
 func (q *Query) Cursor(config toolkit.M) (dbox.ICursor, error) {
+	cursor := &Cursor{}
+	resultSet2, e := q.Conn.(*Connection).Conn.Query(q.CountString())
+	if e != nil {
+		return nil, e
+	}
+	_, e = resultSet2.Wait()
+	if e != nil {
+		return nil, e
+	}
+	var countAll int64
+	resultSet2.Next()
+	e = resultSet2.Scan(&countAll)
+	if e != nil {
+		return nil, e
+	}
+	cursor.count = countAll
+	resultSet2.Close()
 	resultSet, e := q.Conn.(*Connection).Conn.Query(q.String())
 	if e != nil {
 		return nil, e
@@ -44,14 +125,22 @@ func (q *Query) Cursor(config toolkit.M) (dbox.ICursor, error) {
 	if e != nil {
 		return nil, e
 	}
-	cursor := &Cursor{}
+
 	cursor.Conn = q.Conn
 	cursor.rowSet = resultSet.(*gohive.RowSetR)
+
 	return cursor, nil
+
+}
+func (q *Query) CountString() string {
+	output := fmt.Sprintf("SELECT count(*) from (%s) AS table_temp", q.String())
+	return output
 }
 func (q *Query) String() string {
 	output := ""
-
+	if !q.isSelect && !q.isDelete && !q.isInsert && !q.isUpdate {
+		q.isSelect = true
+	}
 	if q.isSelect {
 		output += "SELECT "
 
@@ -82,12 +171,75 @@ func (q *Query) String() string {
 
 	} else if q.isInsert {
 		output += "INSERT INTO " + q.TableName + " VALUES "
+	} else if q.isDelete {
+		output += "DELETE FROM " + q.TableName
+		if q.Condition != "" {
+			output += " WHERE " + q.Condition
+		}
 	}
 
 	return output
 }
-func (q *Query) Exec(toolkit.M) error {
-	return errors.New(errorlib.NotYetImplemented)
+func (q *Query) GetData(parm toolkit.M) ([]HiveRow, error) {
+	output := []HiveRow{}
+	data, exist := parm["data"]
+	if exist {
+		if toolkit.IsSlice(data) {
+			mArr, ok1 := data.([]HiveRow)
+			if !ok1 {
+				mArr2, ok2 := data.(*[]HiveRow)
+				if !ok2 {
+					return nil, ArrayIsNotHiveRowError
+				}
+				mArr = *mArr2
+			}
+			output = mArr
+		} else {
+			m, ok := data.(HiveRow)
+			if !ok {
+				return nil, DataNotImplementInterfaceError
+			}
+			output = append(output, m)
+		}
+	} else {
+		return nil, NoDataError
+	}
+	return output, nil
+}
+
+var NoDataError = errors.New("No Payload found")
+var DataNotImplementInterfaceError = errors.New("Data not implement HiveRow interface")
+var ArrayIsNotHiveRowError = errors.New("Data not implement HiveRow interface")
+
+func (q *Query) Exec(parm toolkit.M) error {
+	//return errors.New(errorlib.NotYetImplemented)
+
+	if q.isInsert {
+		execQ := q.String()
+		data, err := q.GetData(parm)
+		if err != nil {
+			return err
+		}
+		strData := []string{}
+		for _, d := range data {
+			strData = append(strData, ToHiveRow(d))
+		}
+		execQ += strings.Join(strData, ",")
+		//fmt.Println(execQ)
+		response, e := q.Conn.(*Connection).Conn.Query(execQ)
+		if e != nil {
+			return e
+		}
+		response.Close()
+	} else if q.isDelete {
+		execQ := q.String()
+		response, e := q.Conn.(*Connection).Conn.Query(execQ)
+		if e != nil {
+			return e
+		}
+		response.Close()
+	}
+	return nil
 }
 func (q *Query) ExecOut(toolkit.M) (int64, error) {
 	return 0, errors.New(errorlib.NotYetImplemented)
@@ -222,15 +374,27 @@ func (q *Query) Aggr(op string, field interface{}, alias string) dbox.IQuery {
 
 //-- op
 func (q *Query) Insert() dbox.IQuery {
+	q.isInsert = true
+	q.isSelect = false
+	q.isUpdate = false
+	q.isDelete = false
 	return q
 }
 func (q *Query) Save() dbox.IQuery {
 	return q
 }
 func (q *Query) Update() dbox.IQuery {
+	q.isInsert = false
+	q.isSelect = false
+	q.isUpdate = true
+	q.isDelete = false
 	return q
 }
 func (q *Query) Delete() dbox.IQuery {
+	q.isInsert = false
+	q.isSelect = false
+	q.isUpdate = false
+	q.isDelete = true
 	return q
 }
 
