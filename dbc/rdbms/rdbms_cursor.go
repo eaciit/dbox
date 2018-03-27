@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/kharism/dbox"
+	"github.com/eaciit/dbox"
 	//"github.com/eaciit/errorlib"
 	"reflect"
 	"strconv"

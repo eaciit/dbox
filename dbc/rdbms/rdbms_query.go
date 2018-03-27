@@ -12,7 +12,7 @@ import (
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
-	"github.com/kharism/dbox"
+	"github.com/eaciit/dbox"
 )
 
 const (
