@@ -3,11 +3,11 @@ package hivetr
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
 	"github.com/kharism/dbox"
-	"github.com/kharism/dbox/dbc/rdbms"
 	"github.com/kharism/gohive"
 )
 
@@ -17,7 +17,7 @@ const (
 )
 
 type Connection struct {
-	rdbms.Connection
+	info *dbox.ConnectionInfo
 	Conn *gohive.TSaslClientTransport
 }
 
@@ -47,6 +47,25 @@ func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
 	c.Conn = Conn
 	return c, nil
 }
+func (c *Connection) SetFb(fb dbox.IFilterBuilder) {
+
+}
+func (c *Connection) Fb() dbox.IFilterBuilder {
+	return &FilterBuilder{}
+}
+func (c *Connection) Info() *dbox.ConnectionInfo {
+	return c.info
+}
+func (c *Connection) SetInfo(info *dbox.ConnectionInfo) {
+	c.info = info
+}
+func (c *Connection) ObjectNames(obj dbox.ObjTypeEnum) []string {
+	if obj == dbox.ObjTypeTable {
+		q := c.NewRawQuery("SHOW TABLES")
+		q.Cursor(nil)
+	}
+	return []string{}
+}
 func (c *Connection) Connect() error {
 	e := c.Conn.Open()
 	if e != nil {
@@ -56,6 +75,7 @@ func (c *Connection) Connect() error {
 	if e != nil {
 		return err.Error(packageName, "Connection", "Open Connection", e.Error())
 	}
+	time.Sleep(500 * time.Millisecond)
 	return switchDb.Close()
 }
 func (c *Connection) Close() {
