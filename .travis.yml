@@ -1,0 +1,15 @@
+language: go
+os: linux
+services: mongodb
+
+go:
+  - go1.8
+  - go1.9
+  - go1.10
+
+before_script:
+  - sleep 15
+  - mongo mydb_test --eval 'db.createUser({ user:"eaciit", pwd:"eaciit", roles:["readWrite"] });'
+
+script:
+  - cd dbc/mongo && go test -cover -race -v ./

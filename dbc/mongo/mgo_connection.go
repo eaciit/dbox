@@ -1,18 +1,16 @@
 package mongo
 
 import (
+	"errors"
 	"fmt"
-	"os"
-	"sync"
-
 	"github.com/eaciit/dbox"
-	"gopkg.in/mgo.v2"
-
-	"regexp"
-	"time"
-
 	"github.com/eaciit/errorlib"
 	"github.com/eaciit/toolkit"
+	"gopkg.in/mgo.v2"
+	"os"
+	"regexp"
+	"sync"
+	"time"
 )
 
 const (
@@ -31,12 +29,19 @@ func init() {
 }
 
 func NewConnection(ci *dbox.ConnectionInfo) (dbox.IConnection, error) {
+	c := new(Connection)
+
+	if ci == nil {
+		return c, errors.New("ConnectionInfo is not initialized")
+	}
+
 	if ci.Settings == nil {
 		ci.Settings = toolkit.M{}
 	}
-	c := new(Connection)
+
 	c.SetInfo(ci)
 	c.SetFb(dbox.NewFilterBuilder(new(FilterBuilder)))
+
 	return c, nil
 }
 

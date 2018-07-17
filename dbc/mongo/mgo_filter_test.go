@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"errors"
 	db "github.com/eaciit/dbox"
 	tk "github.com/eaciit/toolkit"
 	"github.com/stretchr/testify/assert"
@@ -105,6 +106,30 @@ func TestFilterContains(t *testing.T) {
 		"$options": "i",
 	}}
 	assert.Equal(t, expected, filter)
+}
+
+// test dbox.Contains()
+func TestFilterContainsSlice(t *testing.T) {
+	filter, err := _buildFilter(db.Contains("someField", "some", "value"))
+	assert.NoError(t, err)
+
+	// expected := tk.M{
+	// 	"$or": []interface{}{
+	// 		tk.M{"someField": tk.M{"$regex": ".*some.*", "$options": "i"}},
+	// 		tk.M{"someField": tk.M{"$options": "i", "$regex": ".*value.*"}},
+	// 	},
+	// }
+
+	for _, each := range filter.(tk.M)["$or"].([]interface{}) {
+		field := each.(tk.M)["someField"]
+
+		regex := field.(tk.M)["$regex"]
+		options := field.(tk.M)["$options"]
+
+		if !((regex == ".*some.*" || regex == ".*value.*") && options == "i") {
+			assert.Error(t, errors.New("Invalid result"))
+		}
+	}
 }
 
 // test dbox.StartWith()
@@ -219,4 +244,45 @@ func TestFilterCombinationOfAll(t *testing.T) {
 		}},
 	}}
 	assert.Equal(t, expected, filter)
+}
+
+func TestFilterUsingFakeFilter(t *testing.T) {
+	filterFake := db.Filter{Field: "someField", Op: "apakah sama", Value: "some"}
+	filter, err := _buildFilter(&filterFake)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "is not defined")
+	assert.Nil(t, filter)
+}
+
+func TestParseFilterString(t *testing.T) {
+	constructedFilter := db.ParseFilter("fieldA", "valueString", db.DataString, "")
+	parsedFilter, err := _buildFilter(constructedFilter)
+
+	expected := tk.M{"fieldA": "valueString"}
+	assert.NoError(t, err)
+	assert.Equal(t, expected, parsedFilter)
+}
+
+func TestCombineFilters(t *testing.T) {
+	filterBuilder := db.NewFilterBuilder(new(FilterBuilder))
+	parsedFilter, err := filterBuilder.CombineFilters([]interface{}{
+		tk.M{"fieldA": "value"},
+		tk.M{"fieldB": "value"},
+	})
+
+	expected := tk.M{"$and": []tk.M{
+		tk.M{"fieldA": "value"},
+		tk.M{"fieldB": "value"},
+	}}
+	assert.NoError(t, err)
+	assert.Equal(t, expected, parsedFilter)
+}
+
+func TestCombineFiltersEmptySlice(t *testing.T) {
+	filterBuilder := db.NewFilterBuilder(new(FilterBuilder))
+	parsedFilter, err := filterBuilder.CombineFilters([]interface{}{})
+
+	expected := tk.M{}
+	assert.NoError(t, err)
+	assert.Equal(t, expected, parsedFilter)
 }

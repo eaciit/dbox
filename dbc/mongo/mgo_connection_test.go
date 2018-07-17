@@ -120,14 +120,6 @@ func TestInitConnectionIn200GoRoutine(t *testing.T) {
 	wg.Wait()
 }
 
-func TestInitConnectionWithNilConnectionInfo(t *testing.T) {
-	t.Skip("TestInitConnectionWithNilConnectionInfo is still error, need some fix")
-
-	_, err := db.NewConnection("mongo", nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "ConnectionInfo is not initialized")
-}
-
 func TestInitConnectionWithInvalidDriverName(t *testing.T) {
 	_, err := db.NewConnection("mondo", nil)
 	assert.Error(t, err)
@@ -135,7 +127,7 @@ func TestInitConnectionWithInvalidDriverName(t *testing.T) {
 }
 
 func TestInitConnectionOnInitializedConnection(t *testing.T) {
-	t.Skip("TestInitConnectionOnInitializedConnection is still error, need some fix")
+	t.Skip("TestInitConnectionOnInitializedConnection is failing and generates panic, need to fix the dbox first")
 
 	connection, err := db.NewConnection("mongo", connectionInfo)
 	assert.NoError(t, err)
@@ -146,4 +138,65 @@ func TestInitConnectionOnInitializedConnection(t *testing.T) {
 	err = connection.Connect()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Session is started already")
+}
+
+func TestInitConnectionWithNilNilSettings(t *testing.T) {
+	ci := &db.ConnectionInfo{
+		Host:     "localhost:27123",
+		Database: "dbtest",
+		UserName: "",
+		Password: "",
+		Settings: nil,
+	}
+
+	_, err := db.NewConnection("mongo", ci)
+	assert.NoError(t, err)
+}
+
+func TestInitConnectionConnectWithNilConnectionInfo(t *testing.T) {
+	connection, err := db.NewConnection("mongo", nil)
+	assert.NotNil(t, connection)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "ConnectionInfo is not initialized")
+}
+
+func TestInitConnectionConnectOnUninitalizedConnection(t *testing.T) {
+	connection, _ := db.NewConnection("mongo", nil)
+	err := connection.Connect()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "ConnectionInfo is not initialized")
+}
+
+func TestNewQuery(t *testing.T) {
+	connection, err := db.NewConnection("mongo", connectionInfo)
+	assert.NoError(t, err)
+
+	err = connection.Connect()
+	assert.NoError(t, err)
+
+	query := connection.NewQuery()
+	assert.NotNil(t, query)
+}
+
+func TestObjectNames(t *testing.T) {
+	connection, err := db.NewConnection("mongo", connectionInfo)
+	assert.NoError(t, err)
+
+	err = connection.Connect()
+	assert.NoError(t, err)
+
+	objectNames := connection.ObjectNames("")
+	assert.Equal(t, make([]string, 0), objectNames)
+}
+
+func TestFilterBuilder(t *testing.T) {
+	connection, err := db.NewConnection("mongo", connectionInfo)
+	assert.NoError(t, err)
+	assert.NotNil(t, connection.Fb())
+}
+
+func TestTrace(t *testing.T) {
+	StartTrace()
+	PrintTrace()
+	IsTraceEnable()
 }
