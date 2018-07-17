@@ -8,4 +8,4 @@ Then run `./coverage_test.sh` to start the testing (+ coverage test).
 
 ### Connection Leak Tracing
 
-Please refer [trace.md](/eaciit/dbox/blob/dev/dbc/mongo/Trace.md).
+Please refer [trace.md](https://github.com/eaciit/dbox/blob/dev/dbc/mongo/Trace.md).
