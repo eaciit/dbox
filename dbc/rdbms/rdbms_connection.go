@@ -2,11 +2,12 @@ package rdbms
 
 import (
 	"database/sql"
-	"github.com/eaciit/dbox"
+	"strings"
+
 	err "github.com/eaciit/errorlib"
 	"github.com/eaciit/hdc/hive"
 	"github.com/eaciit/toolkit"
-	"strings"
+	"github.com/eaciit/dbox"
 )
 
 const (
