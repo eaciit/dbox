@@ -1,5 +1,5 @@
-
 # Database Connection Leak
+
 Be careful when building your mongo connection. Each cursor should be
 closed. If forgot to close, the connection will linger and live until
 the program dead. This will take up server resources.
@@ -17,6 +17,7 @@ defer cur.Close()
 ```
 
 ## Detecting
+
 Connection leak can be found when connection count on database is keep
 increasing on alarming rate. You can count database connection using
 shell command.
@@ -39,6 +40,7 @@ command again. Number of established connection should not increase
 dramatically each time you open any page.
 
 ## Tracing (beta)
+
 Mongo driver comes with database connection tracing. To enable it, you
 must call StartTrace() before doing anything with database. And then
 call PrintTrace() to print the source of leaking connection.

@@ -1,3 +1,11 @@
 # Dbox Mongo Driver
 
-To test this driver, just run `./test.sh`. But before that, make sure you have running mongo server to test.
+### Testing
+
+First of all, start new mongo server, then adjust the connection credentials on the `mgo_connection_test.go` to reflect your mongo server.
+
+Then run `./coverage_test.sh` to start the testing (+ coverage test).
+
+### Connection Leak Tracing
+
+Please refer [trace.md](/eaciit/dbox/blob/dev/dbc/mongo/Trace.md).
