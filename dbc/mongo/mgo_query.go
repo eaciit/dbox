@@ -398,7 +398,7 @@ func (q *Query) Exec(parm toolkit.M) error {
 			if len(dataM) == 0 {
 				return errorlib.Error(packageName, modQuery+".Exec", commandType, "Update data points is empty")
 			}
-			updatedData := toolkit.M{}.Set("$set", dataM)
+			updatedData := toolkit.M{}.Set("$set", data)
 			_, e = mgoColl.UpdateAll(where, updatedData)
 		} else {
 			e = mgoColl.Update(where, data)
