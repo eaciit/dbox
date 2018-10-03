@@ -211,10 +211,4 @@ if err != nil {
     log.Fatal(err.Error())
     os.Exit(0)
 }
-
-err = conn.Connect()
-if err != nil {
-    log.Fatal(err.Error())
-    os.Exit(0)
-}
 ```
