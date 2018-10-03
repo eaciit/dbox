@@ -184,3 +184,35 @@ Delete is as simple as select.
         panic("Query Failed")
     }
 ```
+
+## Additional info for MongoDB driver
+
+For MongoDB driver, it is possible to pass optional authentication options through `Settings`. Those two are: `authenticationDatabase` and `authenticationMechanism`.
+
+Please refer to https://docs.mongodb.com/manual/reference/program/mongo/#authentication-options for more informations.
+
+### Example
+
+```go
+connInfo := &db.ConnectionInfo{
+    Host:     "localhost:27123",
+    Database: "dbname",
+    UserName: "",
+    Password: "",
+    Settings: tk.M{}.
+        Set("authenticationDatabase", "adminuser").
+        Set("authenticationMechanism", "SCRAM-SHA-256"),
+}
+
+conn, err := db.NewConnection("mongo", connInfo)
+if err != nil {
+    log.Fatal(err.Error())
+    os.Exit(0)
+}
+
+err = conn.Connect()
+if err != nil {
+    log.Fatal(err.Error())
+    os.Exit(0)
+}
+```
