@@ -189,6 +189,8 @@ Delete is as simple as select.
 
 For MongoDB driver, it is possible to pass optional authentication options through `Settings`. Those two are: `authenticationDatabase` and `authenticationMechanism`.
 
+The default value for `authenticationDatabase` is `admin`.
+
 Please refer to https://docs.mongodb.com/manual/reference/program/mongo/#authentication-options for more informations.
 
 ### Example
