@@ -131,7 +131,7 @@ func (c *Connection) Connect() error {
 	sess, e := mgo.DialWithInfo(info)
 	if e != nil {
 		return errorlib.Error(packageName, modConnection,
-			"Connect", e.Error()+" "+c.Info().UserName+"@"+c.Info().Host+"/"+c.Info().Database)
+			"Connect", e.Error()+" "+ci.UserName+"@"+ci.Host+"/"+ci.Database)
 	}
 	sess.SetMode(mgo.Monotonic, true)
 	c.session = sess
