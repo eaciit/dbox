@@ -93,11 +93,21 @@ func (c *Connection) Connect() error {
 	if ci == nil {
 		return errorlib.Error(packageName, modConnection, "Connect", "ConnectionInfo is not initialized")
 	}
+
 	if ci.UserName != "" {
 		info.Username = ci.UserName
 		info.Password = ci.Password
 		info.Source = "admin"
 	}
+
+	if ci.Settings != nil {
+		info.Mechanism = ci.Settings.GetString("authenticationMechanism")
+
+		if val := ci.Settings.GetString("authenticationDatabase"); val != "" {
+			info.Source = val
+		}
+	}
+
 	info.Addrs = []string{ci.Host}
 	info.Database = ci.Database
 
@@ -114,6 +124,8 @@ func (c *Connection) Connect() error {
 	if timeout > 0 {
 		info.Timeout = time.Duration(timeout) * time.Second
 	}
+
+	// toolkit.Printfn("----- %#v", *info)
 
 	//sess, e := mgo.Dial(info.Addrs[0])
 	sess, e := mgo.DialWithInfo(info)
